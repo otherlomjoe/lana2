@@ -135,7 +135,7 @@
 
 //
 // ---------------------------------------------------------
-// AUTO‑DERIVE HELPERS (match gallery3.html)
+// AUTO‑DERIVE HELPERS (match gallery.html)
 // ---------------------------------------------------------
 //
 function fileSlug(slug) {
@@ -188,13 +188,71 @@ function formatDescription(text) {
 // MAIN LOADER
 // ---------------------------------------------------------
 //
+function normalizeUploadedItem(item) {
+    if (!item || !item.slug) return null;
+
+    return {
+        ...item,
+        title: item.title || "",
+        medium: item.medium || "",
+        genre: item.genre || "",
+        description: item.description || "",
+        thumbnail: item.thumbnail || item.thumbnail_path || "",
+        full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
+        dateAdded: item.dateAdded || item.date_added || "",
+        disabled: Boolean(item.disabled),
+        sold: Boolean(item.sold),
+        source: item.source || "server"
+    };
+}
+
+async function getUploadedGalleryItems() {
+    try {
+        const response = await fetch("/gallery-api.php?action=list", {
+            headers: { Accept: "application/json" },
+            credentials: "same-origin"
+        });
+
+        if (!response.ok) {
+            throw new Error("Gallery API unavailable");
+        }
+
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : [];
+        const normalized = items.map(normalizeUploadedItem).filter(Boolean);
+
+        try {
+            localStorage.setItem("lana_gallery_uploaded_items", JSON.stringify(normalized));
+        } catch (error) {
+            // Ignore storage issues in browsers that block local storage.
+        }
+
+        return normalized;
+    } catch (error) {
+        try {
+            const raw = localStorage.getItem("lana_gallery_uploaded_items");
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed.map(normalizeUploadedItem).filter(Boolean) : [];
+        } catch (localError) {
+            return [];
+        }
+    }
+}
+
 async function loadArtwork() {
     const slug = window.location.hash.replace("#", "");
 
-    // Load new works.json
-    const items = await fetch("/gallery/works.json").then(r => r.json());
+    const remoteItems = await fetch("/gallery/works.json").then(r => r.json());
+    const uploadedItems = await getUploadedGalleryItems();
+    const merged = new Map();
+    [...uploadedItems, ...remoteItems].forEach(item => {
+        if (item && item.slug) {
+            merged.set(item.slug, item);
+        }
+    });
+    const items = Array.from(merged.values());
 
-    // Find the selected work
     const item = items.find(i => i.slug === slug);
 
     if (!item) {
@@ -233,7 +291,7 @@ async function loadArtwork() {
         formatDescription(item.description || "");
 	
 	//
-	// METADATA TAGS (clickable → gallery3 filters)
+	// METADATA TAGS (clickable → gallery filters)
 	//
 	const metaContainer = document.getElementById("item-meta");
 	let metaTags = [];
@@ -241,23 +299,23 @@ async function loadArtwork() {
 	// Genre
 	if (item.genre) {
 		const safe = item.genre.toLowerCase().replace(/\s+/g, '-');
-		metaTags.push(`<a class="tag" href="/gallery3.html#genre-${safe}">Genre: ${item.genre}</a>`);
+		metaTags.push(`<a class="tag" href="/gallery.html#genre-${safe}">Genre: ${item.genre}</a>`);
 	}
 
 	// Medium
 	if (item.medium) {
 		const safe = item.medium.toLowerCase().replace(/\s+/g, '-');
-		metaTags.push(`<a class="tag" href="/gallery3.html#medium-${safe}">Medium: ${item.medium}</a>`);
+		metaTags.push(`<a class="tag" href="/gallery.html#medium-${safe}">Medium: ${item.medium}</a>`);
 	}
 
 	// Date Added
 	if (item.dateAdded) {
-		metaTags.push(`<a class="tag" href="/gallery3.html#date-${item.dateAdded}">Added: ${item.dateAdded}</a>`);
+		metaTags.push(`<a class="tag" href="/gallery.html#date-${item.dateAdded}">Added: ${item.dateAdded}</a>`);
 	}
 
 	// Disabled (optional)
 	if (item.disabled) {
-		metaTags.push(`<a class="tag" href="/gallery3.html#disabled-true">Disabled</a>`);
+		metaTags.push(`<a class="tag" href="/gallery.html#disabled-true">Disabled</a>`);
 	}
 
 	metaContainer.innerHTML = metaTags.join("");
