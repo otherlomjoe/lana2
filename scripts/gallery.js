@@ -51,11 +51,74 @@ function getPage(item) {
 /* ---------------------------------------------------------
    LOAD JSON DATA
 --------------------------------------------------------- */
+function normalizeUploadedItem(item) {
+    if (!item || !item.slug) return null;
+
+    return {
+        ...item,
+        title: item.title || "",
+        medium: item.medium || "",
+        genre: item.genre || "",
+        description: item.description || "",
+        thumbnail: item.thumbnail || item.thumbnail_path || "",
+        full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
+        dateAdded: item.dateAdded || item.date_added || "",
+        disabled: Boolean(item.disabled),
+        sold: Boolean(item.sold),
+        source: item.source || "server"
+    };
+}
+
+async function getUploadedGalleryItems() {
+    try {
+        const response = await fetch("/gallery-api.php?action=list", {
+            headers: { Accept: "application/json" },
+            credentials: "same-origin"
+        });
+
+        if (!response.ok) {
+            throw new Error("Gallery API unavailable");
+        }
+
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : [];
+        const normalized = items.map(normalizeUploadedItem).filter(Boolean);
+
+        try {
+            localStorage.setItem("lana_gallery_uploaded_items", JSON.stringify(normalized));
+        } catch (error) {
+            // Ignore local storage errors in private mode or restricted browsers.
+        }
+
+        return normalized;
+    } catch (error) {
+        try {
+            const raw = localStorage.getItem("lana_gallery_uploaded_items");
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed.map(normalizeUploadedItem).filter(Boolean) : [];
+        } catch (localError) {
+            console.warn("Could not parse uploaded gallery items", localError);
+            return [];
+        }
+    }
+}
+
 async function loadData() {
     if (items.length && exhibitions.length) return;
 
     exhibitions = await fetch("/gallery/exhibitions.json").then(r => r.json());
-    items = await fetch("/gallery/works.json").then(r => r.json());
+    const remoteItems = await fetch("/gallery/works.json").then(r => r.json());
+    const uploadedItems = await getUploadedGalleryItems();
+
+    const merged = new Map();
+    [...uploadedItems, ...remoteItems].forEach(item => {
+        if (item && item.slug) {
+            merged.set(item.slug, item);
+        }
+    });
+
+    items = Array.from(merged.values());
 }
 
 /* ---------------------------------------------------------
@@ -180,7 +243,7 @@ function loadGalleryMode(filters) {
 		const thumb = ex.thumbnail || `/gallery/all/thumbs/${base}thumb.jpg`;
 
 		return {
-			link: ex.link || `gallery3.html#${ex.slug}`,
+			link: ex.link || `gallery.html#${ex.slug}`,
 			thumb: thumb,
 			text: `${ex.title || ex.name}<br>${ex.date || ""}`
 		};

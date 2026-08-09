@@ -29,7 +29,6 @@
     font-weight: bold;
 }
 
-/* Pagination styling */
 #pagination-exhibitions span,
 #pagination-works span {
     padding: 6px 12px;
@@ -102,68 +101,61 @@
         <span id="page-title"></span>
       </div>
 
-      <!-- Exhibition mode header -->
-		<div id="exhibition-header">
-			<h2 id="ex-title"></h2>
-			<div id="ex-meta"></div>
-			<div id="ex-hero"></div>
-			<p id="ex-description"></p>
-		</div>
+      <div id="exhibition-header">
+        <h2 id="ex-title"></h2>
+        <div id="ex-meta"></div>
+        <div id="ex-hero"></div>
+        <p id="ex-description"></p>
+      </div>
 
-      <!-- Exhibitions Section -->
       <h3 class="section-heading" id="exhibitions-heading">Solo Exhibitions and Art Fair Collections</h3>
       <ul id="exhibitions-list" class="da-thumbs"></ul>
       <div id="pagination-exhibitions" style="text-align:center; margin-top:20px;"></div>
 
-      <!-- Works Section -->
       <h3 class="section-heading" id="works-heading">Individual Works</h3>
-        
-        <!-- Filters Section -->
-        <div id="filters" class="filters-container">
-            <div class="filter-group">
-                <label>Medium:</label>
-                <select id="filter-medium">
-                    <option value="">All</option>                  
-                </select>
-            </div>
-			
-			<div class="filter-group">
-                <label>Genre:</label>
-                <select id="filter-genre">
-                    <option value="">All</option>                  
-                </select>
-            </div>
 
-            <div class="filter-group">
-                <label>Sold:</label>
-                <select id="filter-sold">
-                    <option value="">All</option>
-                    <option value="sold">Sold</option>
-                    <option value="available">Available</option>
-                </select>
-            </div>
+      <div id="filters" class="filters-container">
+          <div class="filter-group">
+              <label>Medium:</label>
+              <select id="filter-medium">
+                  <option value="">All</option>
+              </select>
+          </div>
 
-            <div class="filter-group">
-                <label>Search:</label>
-                <input type="text" id="filter-search" placeholder="Search title or medium">
-            </div>
+          <div class="filter-group">
+              <label>Genre:</label>
+              <select id="filter-genre">
+                  <option value="">All</option>
+              </select>
+          </div>
 
-            <button id="filter-reset" class="btn">Reset</button>
-        </div>
-        
+          <div class="filter-group">
+              <label>Sold:</label>
+              <select id="filter-sold">
+                  <option value="">All</option>
+                  <option value="sold">Sold</option>
+                  <option value="available">Available</option>
+              </select>
+          </div>
+
+          <div class="filter-group">
+              <label>Search:</label>
+              <input type="text" id="filter-search" placeholder="Search title or medium">
+          </div>
+
+          <button id="filter-reset" class="btn">Reset</button>
+          <a href="/gallery/admin.html" class="btn btn-primary">Manage gallery uploads</a>
+      </div>
+
       <ul id="works-list" class="da-thumbs"></ul>
       <div id="pagination-works" style="text-align:center; margin-top:20px;"></div>
 
-      <!-- ⭐ FOOTER INNER SEPARATOR -->
       <div id="footerInnerSeparator"></div>
 
     </div>
   </div>
 
-  <!-- ⭐ FOOTER OUTER SEPARATOR -->
   <div id="footerOuterSeparator"></div>
-
-  <!-- ⭐ FOOTER PLACEHOLDER -->
   <div id="footer-placeholder"></div>
 
 </div>
@@ -173,8 +165,6 @@
 <script src="directionaware/js/jquery.hoverdir.js"></script>
 <script src="../scripts/gallery.js"></script>
 
-
-<!-- ⭐ FOOTER LOADER -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   fetch("/footer.html")
