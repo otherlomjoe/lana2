@@ -1,0 +1,22 @@
+{
+  "requiredFields": {
+    "slug": "Unique identifier. Used to derive title, thumbnail, full image, and page link.",
+    "medium": "Displayed in gallery and filters.",
+    "description": "Optional but recommended. Shown on item page.",
+    "exhibitions": "Array of exhibition slugs."
+  },
+
+  "optionalOverrideFields": {
+    "title": "Override auto-derived title.",
+    "thumbnail": "Override auto-derived thumbnail path.",
+    "full": "Override auto-derived full image path.",
+    "page": "Override auto-derived item page link."
+  },
+
+  "autoDerivedRules": {
+    "title": "Derived from slug: 'cockatoo-couple' → 'Cockatoo Couple'",
+    "thumbnail": "gallery/all/thumbs/<slugNoHyphens>-thumb.jpg",
+    "full": "gallery/all/full/<slugNoHyphens>.jpg",
+    "page": "/gallery/item2.html#<slug>"
+  }
+}

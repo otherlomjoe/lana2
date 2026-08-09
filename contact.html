@@ -1,0 +1,202 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Contact Us</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="">
+<meta name="author" content="Html5TemplatesDreamweaver.com">
+<link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+<link href="scripts/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+
+<!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+<!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+<!-- Icons -->
+<link href="scripts/icons/general/stylesheets/general_foundicons.css" media="screen" rel="stylesheet" type="text/css" />
+<link href="scripts/icons/social/stylesheets/social_foundicons.css" media="screen" rel="stylesheet" type="text/css" />
+<!--[if lt IE 8]>
+        <link href="scripts/icons/general/stylesheets/general_foundicons_ie7.css" media="screen" rel="stylesheet" type="text/css" />
+        <link href="scripts/icons/social/stylesheets/social_foundicons_ie7.css" media="screen" rel="stylesheet" type="text/css" />
+    <![endif]-->
+<link rel="stylesheet" href="scripts/fontawesome/css/font-awesome.min.css">
+<!--[if IE 7]>
+        <link rel="stylesheet" href="scripts/fontawesome/css/font-awesome-ie7.min.css">
+    <![endif]-->
+
+<link href="http://fonts.googleapis.com/css?family=Syncopate" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Abel" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Maven+Pro" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Oxygen" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+<link href="styles/custom.css" rel="stylesheet" type="text/css" />
+
+<!-- Contact Form -->
+<script src="email/validation.js" type="text/javascript"></script>
+<!-- reCAPTCHA API -->
+<!--  <script src="https://www.google.com/recaptcha/api.js" async defer></script> -->
+</head>
+<body id="pageBody">
+	<div id="divBoxed" class="container">
+	  <div class="transparent-bg" style="position: absolute;top: 0;left: 0;width: 100%;height: 100%;z-index: -1;zoom: 1;"></div>
+	  <div class="divPanel notop nobottom">
+		<div class="row-fluid">
+		  <div class="span12"> 
+
+			<!--Edit Site Name and Slogan here-->
+			<div id="divLogo"> <a href="index.html" id="divSiteTitle">Lana-Leigh Lombard</a><br />
+			  <a href="index.html" id="divTagLine">Arty Adventures</a> </div>
+		  </div>
+		</div>
+		<div class="row-fluid">
+		  <div class="span12">
+			<div class="centered_menu"> 
+			  <!--Edit Navigation Menu here-->
+			  <div class="navbar">
+				<button type="button" class="btn btn-navbar-highlight btn-large btn-primary" data-toggle="collapse" data-target=".nav-collapse"> NAVIGATION <span class="icon-chevron-down icon-white"></span> </button>
+				<div class="nav-collapse collapse">
+				  <ul class="nav nav-pills ddmenu">
+					<li><a href="index.html">Home</a></li>
+					<li><a href="about.html">About</a></li>
+					<li><a href="services.html">Services</a></li>
+					<li><a href="gallery.html">Gallery</a></li>
+					<li><a href="contact.html">Contact</a></li>
+				  </ul>
+				</div>
+			  </div>
+			</div>
+		  </div>
+		</div>
+		<div class="row-fluid">
+		  <div class="span12">
+			<div id="contentInnerSeparator"></div>
+		  </div>
+		</div>
+	  </div>
+	  <div class="contentArea">
+		<div class="divPanel notop page-content">
+		  <div class="breadcrumbs"> <a href="index.html">Home</a> &nbsp;/&nbsp; <span>Contact Us</span> </div>
+
+		  <!--Edit Main Content Area here-->
+		  <div class="row-fluid">
+			<div class="span8" id="divMain">
+			  <h1>Contact Us</h1>
+			  <!-- Success Message (hidden by default) -->
+			  <hr>
+			  <!--Start Contact form -->
+			  <form name="enq" id="contact-form" method="post" action="https://formspree.io/f/xzzeojwd" onsubmit="return validation();">
+				<fieldset>
+				  <!-- Honeypot Field (hidden from users) -->
+				  <input type="text" name="_gotcha" style="display:none">
+
+				  <input type="text" name="name" id="name" value=""  class="input-block-level" placeholder="Name" />
+				  <input type="email" name="email" id="email" value="" class="input-block-level" placeholder="email" />
+				  <textarea rows="11" name="message" id="message" class="input-block-level" placeholder="Comments"></textarea>
+
+					<div id="form-message" style="display: none;"></div>
+					 <!-- reCAPTCHA v3 -->
+	<!--            <div class="g-recaptcha" data-sitekey="6Lc_YxYrAAAAACYdCUzN6uIWQZ9x7SogC3d38euC"></div> -->
+
+				<button type="submit">Send Message</button>
+
+				</fieldset>
+			  </form>
+			  <!--End Contact form --> 
+			</div>
+
+			<!-- Form Submission Handler -->
+		<script>
+			document.getElementById('contact-form').addEventListener('submit', function(e) {
+				e.preventDefault();
+				const form = e.target;
+				const messageDiv = document.getElementById('form-message');
+
+				fetch(form.action, {
+					method: 'POST',
+					body: new FormData(form),
+					headers: { 'Accept': 'application/json' }
+				})
+			  .then(response => {
+					if (response.ok) {
+						// Show success message
+						messageDiv.style.display = 'block';
+						messageDiv.innerHTML = '✓ Message sent successfully!';
+						messageDiv.style.color = 'green';
+						form.reset();
+
+						// Hide after 5 seconds
+						setTimeout(() => {
+							messageDiv.style.display = 'none';
+						}, 5000);
+					} else {
+						throw new Error('Failed to send');
+					}
+				})
+				.catch(error => {
+					messageDiv.style.display = 'block';
+					messageDiv.innerHTML = '⚠ Error sending message. Please try again.';
+					messageDiv.style.color = 'red';
+				});
+			});
+		</script>
+
+
+			<!--Edit Sidebar Content here-->
+			<div class="span4 sidebar">
+			  <div class="sidebox">
+				<h3 class="sidebox-title">Contact Information</h3>
+				<p>
+				<address>
+					<strong>Arty Adventures</strong><br />
+					<span class="obfuscate">9 Guyong Street<br />
+						Sydney, NSW, 2070<br /></span>
+					<abbr title="Phone">Mob:</abbr> <span class="obfuscate">0402 050 991</span>
+				</address>
+				<address>
+					<strong>Email</strong><br /><span class="obfuscate">lana@lombard.id.au</span>
+				</address>
+
+
+				<!-- Start Side Categories -->
+				<h4 class="sidebox-title">&nbsp;</h4>
+				<!-- End Side Categories --> 
+
+			  </div>
+			</div>
+			<!--/End Sidebar Content--> 
+
+
+					<div class="span8">
+			<iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d13263.987092299372!2d151.1441626!3d-33.7865815!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6b12a8b1c265cbc5%3A0x36f6d9eb78ee1f5e!2s9+Guyong+St%2C+Lindfield+NSW+2070!5e0!3m2!1sen!2sau!4v1518916345609" width="600" height="450" frameborder="0" style="border:0" allowfullscreen></iframe>
+			</div>
+			</div>
+		  </div>
+		   <div id="footerInnerSeparator"></div>
+		</div>
+
+	<div id="footerOuterSeparator"></div>
+	 <!-- Footer placeholder (this will be replaced by footer.html) -->
+	  <div id="footer-placeholder"></div>
+
+	  <!-- Include the script to load footer.html dynamically -->
+	  <script>
+		document.addEventListener("DOMContentLoaded", function () {
+		  fetch("/footer.html")
+			.then(res => res.text())
+			.then(html => {
+			  document.getElementById("footer-placeholder").innerHTML = html;
+			});
+		});
+	  </script>	
+	</div>
+<br />
+<br />
+<br />
+<script src="scripts/jquery.min.js" type="text/javascript"></script> 
+<script src="scripts/bootstrap/js/bootstrap.min.js" type="text/javascript"></script> 
+<script src="scripts/default.js" type="text/javascript"></script>
+</body>
+</html>

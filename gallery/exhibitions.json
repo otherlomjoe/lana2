@@ -1,0 +1,36 @@
+[
+  {
+    "slug": "lindfield-locals",
+    "title": "Lindfield Locals",
+    "imageSlug": "EmmaPrint",
+    "date": "2024-01-01",
+    "order": 1,
+    "location": "Quadrant Cafe, Lindfield Location",
+    "description": "2024 Exhibition Description"
+  },
+  {
+    "slug": "feathers-and-foam",
+    "imageSlug": "morningswim",
+    "date": "2024-03-01",
+    "order": 2,
+    "location": "Quadrant Cafe, Lindfield",
+    "description": "Mar & Apr 2024 Exhibition"
+  },
+  {
+    "slug": "weird-muti",
+    "imageSlug": "weirdmuti",
+    "date": "2007-01-01",
+    "order": 3,
+    "location": "Queanbeyan",
+    "description": "2007 Exhibition",
+	"link": "https://lana.lombard.id.au/weirdmuti.html"
+  },
+  {
+    "slug": "immersed",
+    "imageSlug": "immersed",
+    "date": "2018-01-01",
+    "order": 4,
+    "location": "Lindfield",
+    "description": "2018 Exhibition"
+  }
+]

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Works JSON Admin Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background: #f5f5f5;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+button {
+    padding: 8px 14px;
+    margin: 10px 5px 10px 0;
+    cursor: pointer;
+}
+
+#load-json { background: #444; color: #fff; }
+#add-row { background: #4CAF50; color: #fff; }
+#download-json { background: #2196F3; color: #fff; }
+#restore-local { background: #FF9800; color: #fff; }
+#clear-local { background: #E91E63; color: #fff; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    margin-top: 20px;
+}
+
+table th, table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    vertical-align: top;
+}
+
+table th {
+    background: #eee;
+}
+
+textarea {
+    width: 100%;
+    height: 80px;
+}
+
+input[type="text"], select {
+    width: 100%;
+}
+
+.img-preview {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border: 1px solid #ccc;
+    margin-bottom: 6px;
+}
+
+.delete-btn {
+    background: #d9534f;
+    color: white;
+    padding: 6px;
+    cursor: pointer;
+}
+
+.duplicate-btn {
+    background: #5bc0de;
+    color: white;
+    padding: 6px;
+    cursor: pointer;
+}
+
+#status {
+    margin-top: 10px;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Works JSON Admin Editor</h1>
+
+<button id="load-json">Load works.json</button>
+<button id="add-row">Add New Work</button>
+<button id="download-json">Download Updated JSON</button>
+<button id="restore-local">Restore Autosave</button>
+<button id="clear-local">Clear Autosave</button>
+
+<p id="status"></p>
+
+<table id="editor-table">
+    <thead>
+        <tr>
+            <th>Slug</th>
+            <th>Title</th>
+            <th>Medium</th>
+            <th>Sold</th>
+            <th>Exhibitions</th>
+            <th>Description</th>
+            <th>Images</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+let worksData = [];
+let exhibitionsData = [];
+let mediumList = [];
+
+/* ---------------------------------------------------------
+   LOAD works.json + exhibitions.json
+--------------------------------------------------------- */
+document.getElementById("load-json").addEventListener("click", async () => {
+    try {
+        const w = await fetch("/gallery/works.json").then(r => r.json());
+        const e = await fetch("/gallery/exhibitions.json").then(r => r.json());
+
+        worksData = w;
+        exhibitionsData = e;
+
+        mediumList = [...new Set(worksData.map(i => i.medium).filter(Boolean))].sort();
+
+        document.getElementById("status").innerText = "Loaded works.json + exhibitions.json";
+        renderTable();
+        autosave();
+    } catch (err) {
+        document.getElementById("status").innerText = "Error loading JSON files";
+    }
+});
+
+/* ---------------------------------------------------------
+   RENDER TABLE
+--------------------------------------------------------- */
+function renderTable() {
+    const tbody = document.querySelector("#editor-table tbody");
+    tbody.innerHTML = "";
+
+    worksData.forEach((item, index) => {
+        const row = document.createElement("tr");
+
+        const exhibitionsOptions = exhibitionsData
+            .map(ex => `<option value="${ex.slug}">${ex.title}</option>`)
+            .join("");
+
+        const mediumOptions = mediumList
+            .map(m => `<option value="${m}" ${item.medium === m ? "selected" : ""}>${m}</option>`)
+            .join("");
+
+        row.innerHTML = `
+            <td><input type="text" value="${item.slug}" data-field="slug" data-index="${index}"></td>
+
+            <td><input type="text" value="${item.title || ""}" data-field="title" data-index="${index}"></td>
+
+            <td>
+                <select data-field="medium" data-index="${index}">
+                    <option value="">(none)</option>
+                    ${mediumOptions}
+                </select>
+            </td>
+
+            <td>
+                <select data-field="sold" data-index="${index}">
+                    <option value="">No</option>
+                    <option value="true" ${item.sold ? "selected" : ""}>Yes</option>
+                </select>
+            </td>
+
+            <td>
+                <select multiple size="4" data-field="exhibitions" data-index="${index}">
+                    ${exhibitionsOptions}
+                </select>
+            </td>
+
+            <td><textarea data-field="description" data-index="${index}">${item.description || ""}</textarea></td>
+
+            <td>
+                <img class="img-preview" src="/gallery/all/thumbs/${item.slug.replace(/-/g,"")}thumb.jpg">
+                <br>
+                <img class="img-preview" src="/gallery/all/full/${item.slug.replace(/-/g,"")}.jpg">
+            </td>
+
+            <td>
+                <button class="duplicate-btn" onclick="duplicateWork(${index})">Duplicate</button>
+                <button class="delete-btn" onclick="deleteWork(${index})">Delete</button>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+    });
+
+    attachInputListeners();
+}
+
+/* ---------------------------------------------------------
+   UPDATE DATA WHEN INPUTS CHANGE
+--------------------------------------------------------- */
+function attachInputListeners() {
+    document.querySelectorAll("#editor-table input, #editor-table textarea, #editor-table select")
+        .forEach(el => {
+            el.addEventListener("input", () => {
+                const index = el.dataset.index;
+                const field = el.dataset.field;
+
+                let value = el.value;
+
+                if (field === "sold") {
+                    value = value === "true";
+                }
+
+                if (field === "exhibitions") {
+                    value = Array.from(el.selectedOptions).map(o => o.value);
+                }
+
+                worksData[index][field] = value;
+                autosave();
+            });
+        });
+}
+
+/* ---------------------------------------------------------
+   ADD NEW WORK
+--------------------------------------------------------- */
+document.getElementById("add-row").addEventListener("click", () => {
+    const newSlug = "new-work-" + Date.now();
+
+    worksData.push({
+        slug: newSlug,
+        title: "",
+        medium: "",
+        sold: false,
+        exhibitions: [],
+        description: ""
+    });
+
+    renderTable();
+    autosave();
+});
+
+/* ---------------------------------------------------------
+   DELETE WORK
+--------------------------------------------------------- */
+function deleteWork(index) {
+    if (!confirm("Delete this work?")) return;
+    worksData.splice(index, 1);
+    renderTable();
+    autosave();
+}
+
+/* ---------------------------------------------------------
+   DUPLICATE WORK
+--------------------------------------------------------- */
+function duplicateWork(index) {
+    const item = JSON.parse(JSON.stringify(worksData[index]));
+    item.slug = item.slug + "-copy";
+    worksData.push(item);
+    renderTable();
+    autosave();
+}
+
+/* ---------------------------------------------------------
+   AUTOSAVE TO LOCALSTORAGE
+--------------------------------------------------------- */
+function autosave() {
+    localStorage.setItem("works_autosave", JSON.stringify(worksData));
+    document.getElementById("status").innerText = "Autosaved locally";
+}
+
+document.getElementById("restore-local").addEventListener("click", () => {
+    const saved = localStorage.getItem("works_autosave");
+    if (!saved) {
+        alert("No autosave found");
+        return;
+    }
+    worksData = JSON.parse(saved);
+    renderTable();
+    document.getElementById("status").innerText = "Restored autosave";
+});
+
+document.getElementById("clear-local").addEventListener("click", () => {
+    localStorage.removeItem("works_autosave");
+    document.getElementById("status").innerText = "Autosave cleared";
+});
+
+/* ---------------------------------------------------------
+   DOWNLOAD UPDATED JSON
+--------------------------------------------------------- */
+document.getElementById("download-json").addEventListener("click", () => {
+    try {
+        const jsonStr = JSON.stringify(worksData, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "works.json";
+        a.click();
+
+        URL.revokeObjectURL(url);
+        document.getElementById("status").innerText = "Downloaded works.json";
+    } catch (err) {
+        document.getElementById("status").innerText = "JSON validation error";
+    }
+});
+</script>
+
+</body>
+</html>

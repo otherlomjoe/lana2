@@ -1,0 +1,17 @@
+{
+  "FishingintheShallows": {
+    "title": "Fishing in the Shallows",
+    "image": "/gallery/all/full/Fishing.jpg",
+    "medium": "Acrylic on Canvas, 90cm x 112cm",
+    "description": "Short test description.",
+    "tags": ["FeathersAndFoam"]
+  },
+
+  "TestPainting": {
+    "title": "Test Painting",
+    "image": "/gallery/all/full/Fishing.jpg",
+    "medium": "Oil on Canvas",
+    "description": "Another test description.",
+    "tags": ["TestExhibition"]
+  }
+}

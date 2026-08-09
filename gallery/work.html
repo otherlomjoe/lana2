@@ -1,0 +1,317 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Artwork</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="../../../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+<link href="../../../scripts/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+<link href="../../../scripts/icons/general/stylesheets/general_foundicons.css" rel="stylesheet">
+<link href="../../../scripts/icons/social/stylesheets/social_foundicons.css" rel="stylesheet">
+<link rel="stylesheet" href="../../../scripts/fontawesome/css/font-awesome.min.css">
+<link href="../../../styles/custom.css" rel="stylesheet">
+
+<style>
+  #art-image-wrapper {
+      padding: 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+  }
+  #art-image {
+      width: 100%;
+      height: auto;
+      display: block;
+  }
+  .nav-buttons {
+      margin-top: 20px;
+  }
+  .nav-buttons a {
+      margin-right: 10px;
+  }
+</style>
+</head>
+
+<body id="pageBody">
+<div id="divBoxed" class="container">
+
+  <!-- Transparent background overlay (CRITICAL) -->
+  <div class="transparent-bg" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;zoom:1;"></div>
+
+  <!-- Header -->
+  <div class="divPanel notop nobottom">
+    <div class="row-fluid">
+      <div class="span12">
+        <div id="divLogo">
+          <a href="../../../index.html" id="divSiteTitle">Lana-Leigh Lombard</a><br />
+          <a href="../../../index.html" id="divTagLine">Arty Adventures</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation bar (CRITICAL) -->
+    <div class="row-fluid">
+      <div class="span12">
+        <div class="centered_menu">
+          <div class="navbar">
+            <button type="button" class="btn btn-navbar-highlight btn-large btn-primary" data-toggle="collapse" data-target=".nav-collapse">
+              NAVIGATION <span class="icon-chevron-down icon-white"></span>
+            </button>
+            <div class="nav-collapse collapse">
+              <ul class="nav nav-pills ddmenu">
+                <li><a href="../../../index.html">Home</a></li>
+                <li><a href="../../../about.html">About</a></li>
+                <li><a href="../../../services.html">Services</a></li>
+                <li><a href="../../../gallery.html">Gallery</a></li>
+                <li><a href="../../../contact.html">Contact</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Separator (CRITICAL) -->
+    <div class="row-fluid">
+      <div class="span12">
+        <div id="contentInnerSeparator"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- White main content area -->
+  <div class="contentArea">
+    <div class="divPanel notop page-content">
+
+      <div class="breadcrumbs">
+        <a href="../../../index.html">Home</a> &nbsp;/&nbsp;
+        <a href="../../../gallery.html">Gallery</a> &nbsp;/&nbsp;
+        <span id="crumb-title"></span>
+      </div>
+
+      <div class="row-fluid">
+
+        <!-- IMAGE + TITLE -->
+        <div class="span8" id="divMain">
+          <h3 id="art-title"></h3>
+			<div id="item-meta" class="tags-container"></div>
+
+          <div id="art-image-wrapper">
+            <a id="art-image-link">
+              <img id="art-image" alt="Artwork image" />
+            </a>
+          </div>
+
+          <div class="nav-buttons">
+            <a id="prev-link" class="btn btn-small btn-info">← Previous</a>
+            <a id="next-link" class="btn btn-small btn-info">Next →</a>
+          </div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div class="span4">
+          <h3>Description</h3>
+          <h5 id="art-medium"></h5>
+          <p id="art-description"></p>
+        </div>
+
+      </div>
+
+      <div id="footerInnerSeparator"></div>
+    </div>
+  </div>
+
+  <div id="footerOuterSeparator"></div>
+
+  <!-- Footer placeholder -->
+  <div id="footer-placeholder"></div>
+
+</div>
+
+<!-- Dynamic loader -->
+<script>
+
+//
+// ---------------------------------------------------------
+// AUTO‑DERIVE HELPERS (match gallery3.html)
+// ---------------------------------------------------------
+//
+function fileSlug(slug) {
+    return slug.replace(/-/g, "");
+}
+
+function getTitle(item) {
+    return item.title && item.title.trim() !== ""
+        ? item.title
+        : item.slug
+            .split('-')
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' ');
+}
+
+function getFull(item) {
+    return item.full && item.full.trim() !== ""
+        ? item.full
+        : `/gallery/all/full/${fileSlug(item.slug)}.jpg`;
+}
+
+//
+// ---------------------------------------------------------
+// DESCRIPTION FORMATTER (your existing tiny‑markup parser)
+// ---------------------------------------------------------
+//
+function formatDescription(text) {
+    // Paragraphs
+    let html = text.split("\n\n")
+        .map(p => `<p>${p}</p>`)
+        .join("");
+
+    // Bold
+    html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+    // Italics
+    html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+    // Bullet lists
+    html = html.replace(/<p>- (.*?)<\/p>/g, "<ul><li>$1</li></ul>");
+
+    // Single line breaks
+    html = html.replace(/\n/g, "<br>");
+
+    return html;
+}
+
+//
+// ---------------------------------------------------------
+// MAIN LOADER
+// ---------------------------------------------------------
+//
+async function loadArtwork() {
+    const slug = window.location.hash.replace("#", "");
+
+    // Load new works.json
+    const items = await fetch("/gallery/works.json").then(r => r.json());
+
+    // Find the selected work
+    const item = items.find(i => i.slug === slug);
+
+    if (!item) {
+        document.getElementById("art-title").innerText = "Artwork not found";
+        return;
+    }
+
+    //
+    // TITLE + BREADCRUMB
+    //
+    const title = getTitle(item);
+    document.getElementById("crumb-title").innerText = title;
+    document.getElementById("art-title").innerText = title;
+
+    //
+    // FULL IMAGE (auto‑derived or overridden)
+    //
+    const fullImage = getFull(item);
+
+    document.getElementById("art-image").onerror = () => {
+        document.getElementById("art-image").src = "/gallery/all/full/fallback.jpg";
+    };
+
+    document.getElementById("art-image").src = fullImage;
+    document.getElementById("art-image-link").href = fullImage;
+
+    //
+    // MEDIUM
+    //
+    document.getElementById("art-medium").innerText = item.medium || "";
+
+    //
+    // DESCRIPTION
+    //
+    document.getElementById("art-description").innerHTML =
+        formatDescription(item.description || "");
+	
+	//
+	// METADATA TAGS (clickable → gallery3 filters)
+	//
+	const metaContainer = document.getElementById("item-meta");
+	let metaTags = [];
+
+	// Genre
+	if (item.genre) {
+		const safe = item.genre.toLowerCase().replace(/\s+/g, '-');
+		metaTags.push(`<a class="tag" href="/gallery3.html#genre-${safe}">Genre: ${item.genre}</a>`);
+	}
+
+	// Medium
+	if (item.medium) {
+		const safe = item.medium.toLowerCase().replace(/\s+/g, '-');
+		metaTags.push(`<a class="tag" href="/gallery3.html#medium-${safe}">Medium: ${item.medium}</a>`);
+	}
+
+	// Date Added
+	if (item.dateAdded) {
+		metaTags.push(`<a class="tag" href="/gallery3.html#date-${item.dateAdded}">Added: ${item.dateAdded}</a>`);
+	}
+
+	// Disabled (optional)
+	if (item.disabled) {
+		metaTags.push(`<a class="tag" href="/gallery3.html#disabled-true">Disabled</a>`);
+	}
+
+	metaContainer.innerHTML = metaTags.join("");
+	
+    //
+    // PREVIOUS / NEXT NAVIGATION
+    // (skip disabled works)
+    //
+    const enabledItems = items.filter(i => !i.disabled);
+    const index = enabledItems.findIndex(i => i.slug === slug);
+
+    const prev = enabledItems[index - 1];
+    const next = enabledItems[index + 1];
+
+    if (prev) {
+        document.getElementById("prev-link").href = `/gallery/work.html#${prev.slug}`;
+        document.getElementById("prev-link").style.display = "";
+    } else {
+        document.getElementById("prev-link").style.display = "none";
+    }
+
+    if (next) {
+        document.getElementById("next-link").href = `/gallery/work.html#${next.slug}`;
+        document.getElementById("next-link").style.display = "";
+    } else {
+        document.getElementById("next-link").style.display = "none";
+    }
+}
+
+//
+// ---------------------------------------------------------
+// INIT
+// ---------------------------------------------------------
+//
+loadArtwork();
+window.addEventListener("hashchange", loadArtwork);
+
+</script>
+
+
+<!-- Load footer -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  fetch("/footer.html")
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById("footer-placeholder").innerHTML = html;
+    });
+});
+</script>
+
+<script src="../../../scripts/jquery.min.js"></script>
+<script src="../../../scripts/bootstrap/js/bootstrap.min.js"></script>
+<script src="../../../scripts/default.js"></script>
+
+</body>
+</html>
