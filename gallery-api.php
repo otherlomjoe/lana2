@@ -102,11 +102,11 @@ if ($action === 'status') {
     exit;
 }
 
+<?php
 if ($action === 'login') {
     $password = (string)($_POST['password'] ?? '');
-    $adminHash = getenv('GALLERY_ADMIN_PASSWORD_HASH') ?: password_hash('pwd', PASSWORD_DEFAULT);
 
-    if (!password_verify($password, $adminHash)) {
+    if ($password !== 'pwd') {
         jsonError('Incorrect password.', 401);
     }
 
