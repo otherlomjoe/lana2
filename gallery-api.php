@@ -102,7 +102,6 @@ if ($action === 'status') {
     exit;
 }
 
-<?php
 if ($action === 'login') {
     $password = (string)($_POST['password'] ?? '');
 
