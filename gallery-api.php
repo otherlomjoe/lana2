@@ -4,7 +4,6 @@ declare(strict_types=1);
 putenv('GALLERY_DB_DSN=mysql:host=localhost;dbname=lana_gallery;charset=utf8mb4');
 putenv('GALLERY_DB_USER=lana_gallery_user');
 putenv('GALLERY_DB_PASS=LanaGallery!2026');
-putenv('GALLERY_ADMIN_PASSWORD_HASH=$2y$10$eS8A6j4cQYFyI9W0h0KpceY2hD822G1a4mI4s8QfR7L3Qm5Wv7b0a');
 
 // secure session cookie settings
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
