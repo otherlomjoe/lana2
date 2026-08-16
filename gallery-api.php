@@ -6,6 +6,16 @@ putenv('GALLERY_DB_USER=lana_gallery_user');
 putenv('GALLERY_DB_PASS=LanaGallery!2026');
 putenv('GALLERY_ADMIN_PASSWORD_HASH=$2y$10$eS8A6j4cQYFyI9W0h0KpceY2hD822G1a4mI4s8QfR7L3Qm5Wv7b0a');
 
+// secure session cookie settings
+$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+session_set_cookie_params([
+    'lifetime' => 60*60*4, // 4 hours
+    'path' => '/',
+    'domain' => $_SERVER['HTTP_HOST'] ?? '',
+    'secure' => $secure,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
@@ -105,14 +115,50 @@ if ($action === 'status') {
 if ($action === 'login') {
     $password = (string)($_POST['password'] ?? '');
 
-    if ($password !== 'pwd') {
+    // Try DB-backed admin user first (table created by setup), then fallback to env var, then to a safe test password for setup.
+    $pdo = connectDatabase();
+    $storedHash = null;
+    if ($pdo !== null) {
+        try {
+            $stmt = $pdo->prepare('SELECT password_hash FROM gallery_admins WHERE username = :username LIMIT 1');
+            $stmt->execute([':username' => 'admin']);
+            $row = $stmt->fetch();
+            if ($row && !empty($row['password_hash'])) {
+                $storedHash = $row['password_hash'];
+            }
+        } catch (Throwable $e) {
+            // ignore and fallback
+        }
+    }
+
+    if ($storedHash === null) {
+        $storedHash = getenv('GALLERY_ADMIN_PASSWORD_HASH') ?: null;
+    }
+
+    $ok = false;
+    if ($storedHash !== null) {
+        $ok = password_verify($password, $storedHash);
+    } else {
+        // initial safe default for first-time setup/testing only
+        $ok = ($password === 'pwd');
+    }
+
+    if (!$ok) {
         jsonError('Incorrect password.', 401);
     }
 
+    session_regenerate_id(true);
     $_SESSION['gallery_admin_authenticated'] = true;
+    $_SESSION['gallery_admin_user'] = 'admin';
+
+    // issue CSRF token for subsequent state-changing requests
+    $csrf = bin2hex(random_bytes(32));
+    $_SESSION['gallery_csrf_token'] = $csrf;
+
     echo json_encode([
         'success' => true,
         'authenticated' => true,
+        'csrf' => $csrf,
     ]);
     exit;
 }
@@ -144,6 +190,12 @@ if ($action === 'list') {
 if ($action === 'upload') {
     requireAuth();
 
+    // CSRF token required for state-changing operations
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (empty($_SESSION['gallery_csrf_token']) || !hash_equals($_SESSION['gallery_csrf_token'], (string)$csrf)) {
+        jsonError('Invalid CSRF token.', 403);
+    }
+
     $pdo = connectDatabase();
     if ($pdo === null) {
         jsonError('The gallery database is not configured yet. Update the credentials in the PHP config.', 503);
@@ -156,35 +208,64 @@ if ($action === 'upload') {
     $genre = trim((string)($_POST['genre'] ?? ''));
     $description = trim((string)($_POST['description'] ?? ''));
 
-    if (!$title || !$medium || !$genre || !$thumbFile || !$fullFile) {
-        jsonError('Please provide the title, medium, genre, thumbnail, and detail image.', 400);
+    if (!$title || !$thumbFile || !$fullFile) {
+        jsonError('Please provide the title, thumbnail, and detail image.', 400);
     }
+
+    // Basic upload validation
+    $allowedMimes = [
+        'image/jpeg' => '.jpg',
+        'image/png' => '.png',
+        'image/webp' => '.webp',
+    ];
+    $maxThumbBytes = 1 * 1024 * 1024; // 1MB
+    $maxFullBytes = 6 * 1024 * 1024; // 6MB
 
     try {
         ensureUploadDirectories();
 
-        $baseSlug = slugify($title) . '-' . time();
-        $thumbExtension = extensionFromFileName($thumbFile['name']);
-        $fullExtension = extensionFromFileName($fullFile['name']);
-
-        $thumbTarget = __DIR__ . '/uploads/gallery/thumbs/' . $baseSlug . '-thumb' . $thumbExtension;
-        $fullTarget = __DIR__ . '/uploads/gallery/full/' . $baseSlug . '-full' . $fullExtension;
-
         if (!is_uploaded_file($thumbFile['tmp_name']) || !is_uploaded_file($fullFile['tmp_name'])) {
             jsonError('Invalid upload file.', 400);
         }
+
+        if ($thumbFile['size'] > $maxThumbBytes || $fullFile['size'] > $maxFullBytes) {
+            jsonError('One or more files exceed the allowed size.', 400);
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $thumbMime = $finfo->file($thumbFile['tmp_name']);
+        $fullMime = $finfo->file($fullFile['tmp_name']);
+
+        if (!isset($allowedMimes[$thumbMime]) || !isset($allowedMimes[$fullMime])) {
+            jsonError('Only JPG, PNG and WEBP images are supported.', 400);
+        }
+
+        // create random filenames to avoid collisions and prevent disclosure of original names
+        $baseName = bin2hex(random_bytes(12));
+        $thumbExtension = $allowedMimes[$thumbMime];
+        $fullExtension = $allowedMimes[$fullMime];
+
+        $thumbFilename = $baseName . '-thumb' . $thumbExtension;
+        $fullFilename = $baseName . '-full' . $fullExtension;
+
+        $thumbTarget = __DIR__ . '/uploads/gallery/thumbs/' . $thumbFilename;
+        $fullTarget = __DIR__ . '/uploads/gallery/full/' . $fullFilename;
 
         if (!move_uploaded_file($thumbFile['tmp_name'], $thumbTarget)) {
             jsonError('Could not save the thumbnail image.', 500);
         }
 
         if (!move_uploaded_file($fullFile['tmp_name'], $fullTarget)) {
-            unlink($thumbTarget);
+            // cleanup thumb if full fails
+            if (is_file($thumbTarget)) {
+                unlink($thumbTarget);
+            }
             jsonError('Could not save the detail image.', 500);
         }
 
-        $thumbnailUrl = '/uploads/gallery/thumbs/' . basename($thumbTarget);
-        $fullUrl = '/uploads/gallery/full/' . basename($fullTarget);
+        $baseSlug = slugify($title) . '-' . time();
+        $thumbnailUrl = '/uploads/gallery/thumbs/' . $thumbFilename;
+        $fullUrl = '/uploads/gallery/full/' . $fullFilename;
 
         $statement = $pdo->prepare(
             'INSERT INTO gallery_items (slug, title, medium, genre, description, thumbnail_path, full_path, date_added, sold, disabled, is_active, created_at)
@@ -225,6 +306,12 @@ if ($action === 'upload') {
 
 if ($action === 'delete') {
     requireAuth();
+
+    // CSRF required for deletes
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (empty($_SESSION['gallery_csrf_token']) || !hash_equals($_SESSION['gallery_csrf_token'], (string)$csrf)) {
+        jsonError('Invalid CSRF token.', 403);
+    }
 
     $pdo = connectDatabase();
     if ($pdo === null) {

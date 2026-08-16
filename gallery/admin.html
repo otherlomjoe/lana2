@@ -218,7 +218,14 @@ function renderPreview(items) {
     button.addEventListener("click", async () => {
       const slug = button.getAttribute("data-remove");
       try {
-        await fetchJson(`${API_URL}?action=delete&slug=${encodeURIComponent(slug)}`, { method: "DELETE" });
+        // use POST with CSRF token for deletes
+        const body = new URLSearchParams();
+        body.append('action', 'delete');
+        body.append('slug', slug);
+        if (window.GALLERY_CSRF_TOKEN) body.append('csrf_token', window.GALLERY_CSRF_TOKEN);
+
+        await fetchJson(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body });
+
         const items = await syncPreviewFromServer();
         renderPreview(items);
         statusText.textContent = "Upload removed from the gallery.";
@@ -266,7 +273,7 @@ loginForm.addEventListener("submit", async function (event) {
   }
 
   try {
-    await fetchJson(API_URL, {
+    const result = await fetchJson(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -277,6 +284,12 @@ loginForm.addEventListener("submit", async function (event) {
     sessionStorage.setItem(AUTH_KEY, "true");
     authStatus.textContent = "Logged in.";
     passwordInput.value = "";
+
+    // store CSRF token returned by server for subsequent uploads/deletes
+    if (result && result.csrf) {
+      window.GALLERY_CSRF_TOKEN = result.csrf;
+    }
+
     const items = await syncPreviewFromServer();
     renderPreview(items);
     showUploadPanel();
@@ -309,6 +322,11 @@ uploadForm.addEventListener("submit", async function (event) {
     formData.append("description", description);
     formData.append("thumbnail", thumbFile);
     formData.append("fullImage", fullFile);
+
+    // include CSRF token provided at login
+    if (window.GALLERY_CSRF_TOKEN) {
+      formData.append('csrf_token', window.GALLERY_CSRF_TOKEN);
+    }
 
     const result = await fetchJson(API_URL, {
       method: "POST",
