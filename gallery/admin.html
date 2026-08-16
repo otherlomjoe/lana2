@@ -57,7 +57,7 @@
 
     <div id="gallery-admin-auth" class="gallery-admin-shell">
       <h1>Gallery Upload Access</h1>
-      <p>Use the password below to access the upload form. This static-host version is a browser-side gate only; a production host should use a server-side login and database.</p>
+      <p>Use the password below to access the upload form. Access is verified server-side using a secure password hash and session.</p>
       <form id="gallery-admin-login" class="gallery-admin-login">
         <div class="control-group">
           <label for="gallery-admin-password">Password</label>
@@ -116,7 +116,6 @@
 (function () {
   const AUTH_KEY = "lana_gallery_upload_auth";
   const STORAGE_KEY = "lana_gallery_uploaded_items";
-const DEFAULT_PASSWORD = "pwd";
 const API_URL = "/gallery-api.php";
 
   const authPanel = document.getElementById("gallery-admin-auth");

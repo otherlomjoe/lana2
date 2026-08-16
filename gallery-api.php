@@ -10,7 +10,6 @@ $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($
 session_set_cookie_params([
     'lifetime' => 60*60*4, // 4 hours
     'path' => '/',
-    'domain' => $_SERVER['HTTP_HOST'] ?? '',
     'secure' => $secure,
     'httponly' => true,
     'samesite' => 'Lax'
@@ -95,12 +94,6 @@ function ensureUploadDirectories(): void
     }
 }
 
-function extensionFromFileName(string $fileName): string
-{
-    $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-    return $extension !== '' ? '.' . $extension : '.jpg';
-}
-
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 
 if ($action === 'status') {
@@ -113,34 +106,12 @@ if ($action === 'status') {
 
 if ($action === 'login') {
     $password = (string)($_POST['password'] ?? '');
-
-    // Try DB-backed admin user first (table created by setup), then fallback to env var, then to a safe test password for setup.
-    $pdo = connectDatabase();
-    $storedHash = null;
-    if ($pdo !== null) {
-        try {
-            $stmt = $pdo->prepare('SELECT password_hash FROM gallery_admins WHERE username = :username LIMIT 1');
-            $stmt->execute([':username' => 'admin']);
-            $row = $stmt->fetch();
-            if ($row && !empty($row['password_hash'])) {
-                $storedHash = $row['password_hash'];
-            }
-        } catch (Throwable $e) {
-            // ignore and fallback
-        }
+    $storedHash = getenv('GALLERY_ADMIN_PASSWORD_HASH') ?: '';
+    if ($storedHash === '') {
+        jsonError('Admin password hash is not configured on the server.', 500);
     }
 
-    if ($storedHash === null) {
-        $storedHash = getenv('GALLERY_ADMIN_PASSWORD_HASH') ?: null;
-    }
-
-    $ok = false;
-    if ($storedHash !== null) {
-        $ok = password_verify($password, $storedHash);
-    } else {
-        // initial safe default for first-time setup/testing only
-        $ok = ($password === 'pwd');
-    }
+    $ok = password_verify($password, $storedHash);
 
     if (!$ok) {
         jsonError('Incorrect password.', 401);
