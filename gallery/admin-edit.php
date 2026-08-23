@@ -73,7 +73,7 @@ if ($id > 0) {
         <div class="control-group"><label>Copies sold</label><input type="number" min="0" name="copiesSold" value="<?= (int) ($item['copies_sold'] ?? 0) ?>"></div>
         </fieldset>
           <div class="control-group"><label>Full image</label><input id="full-image" type="file" name="full" accept="image/*"></div>
-        <div class="control-group"><label>Thumbnail (recommended)</label><input type="file" name="thumbnail" accept="image/*"><p class="help-block">Leave blank to keep the current thumbnail, or upload a matching image-name-thumb file.</p><label><input type="checkbox" name="generateThumbnail" value="1"> Generate a 200 x 165 thumbnail if no thumbnail is uploaded</label></div>
+        <div class="control-group"><label>Thumbnail (recommended)</label><input id="thumbnail-file" type="file" name="thumbnail" accept="image/*"><p class="help-block">Leave blank to keep the current thumbnail, or upload a matching image-name-thumb file.</p><div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-name-thumb.jpg.</div><label><input type="checkbox" name="generateThumbnail" value="1"> Generate a 200 x 165 thumbnail if no thumbnail is uploaded</label></div>
         <div class="form-actions">
           <button type="submit" name="save_mode" value="stay" class="btn btn-primary">Save and stay</button>
           <button type="submit" name="save_mode" value="list" class="btn btn-primary">Save and return to list</button>
@@ -93,6 +93,10 @@ if ($id > 0) {
             .replace(/\s+/g, ' ')
             .trim()
             .replace(/\b\w/g, character => character.toUpperCase());
+        });
+        document.getElementById('thumbnail-file').addEventListener('change', function () {
+          const name = this.files.length ? this.files[0].name.replace(/\.[^.]+$/, '') : '';
+          document.getElementById('thumbnail-warning').hidden = !name || /thumb$/i.test(name);
         });
       </script>
     <?php else: ?>

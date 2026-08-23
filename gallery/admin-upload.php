@@ -55,7 +55,7 @@ $exhibitions = gallery_list_exhibitions($pdo);
       <div class="control-group"><label>Copies sold</label><input type="number" min="0" name="copiesSold" value="0"></div>
       </fieldset>
       <div class="control-group"><label>Full image</label><input id="full-image" type="file" name="full" accept="image/*" required></div>
-      <div class="control-group"><label>Thumbnail (recommended)</label><input type="file" name="thumbnail" accept="image/*"><p class="help-block">Upload a matching image-name-thumb file when available.</p><label><input type="checkbox" name="generateThumbnail" value="1"> Generate a 200 x 165 thumbnail if no thumbnail is uploaded</label></div>
+      <div class="control-group"><label>Thumbnail (recommended)</label><input id="thumbnail-file" type="file" name="thumbnail" accept="image/*"><p class="help-block">Upload a matching image-name-thumb file when available.</p><div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-name-thumb.jpg.</div><label><input type="checkbox" name="generateThumbnail" value="1"> Generate a 200 x 165 thumbnail if no thumbnail is uploaded</label></div>
       <button type="submit" class="btn btn-primary">Save image</button>
     </form>
   </div>
@@ -70,6 +70,10 @@ $exhibitions = gallery_list_exhibitions($pdo);
           .replace(/\s+/g, ' ')
           .trim()
           .replace(/\b\w/g, character => character.toUpperCase());
+      });
+      document.getElementById('thumbnail-file').addEventListener('change', function () {
+        const name = this.files.length ? this.files[0].name.replace(/\.[^.]+$/, '') : '';
+        document.getElementById('thumbnail-warning').hidden = !name || /thumb$/i.test(name);
       });
     </script>
 </body>
