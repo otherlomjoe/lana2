@@ -11,6 +11,7 @@ if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_
 
 $pdo = gallery_init_db();
 $lookups = gallery_lookup_values($pdo);
+$exhibitions = gallery_list_exhibitions($pdo);
 $message = $_SESSION['gallery_admin_message'] ?? '';
 unset($_SESSION['gallery_admin_message']);
 $id = (int) ($_GET['id'] ?? 0);
@@ -19,6 +20,11 @@ if ($id > 0) {
     $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(t.name) AS tag_names FROM images i LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id WHERE i.id = :id GROUP BY i.id LIMIT 1');
     $stmt->execute([':id' => $id]);
     $item = $stmt->fetch();
+    if ($item) {
+      $exhibitionStmt = $pdo->prepare('SELECT exhibition_id FROM image_exhibitions WHERE image_id = :id ORDER BY sort_order LIMIT 1');
+      $exhibitionStmt->execute([':id' => $id]);
+      $item['exhibition_id'] = $exhibitionStmt->fetchColumn() ?: '';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -42,6 +48,7 @@ if ($id > 0) {
         <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"></div>
         <fieldset><legend>Public information</legend>
         <div class="control-group"><label>Public price</label><input type="text" name="pricePublic" value="<?= htmlspecialchars((string) ($item['price_public'] ?? '')) ?>"></div>
+        <div class="control-group"><label>Artwork creation date (editable)</label><input type="date" name="artworkCreatedAt" value="<?= htmlspecialchars((string) ($item['artwork_created_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><p class="help-block">This is the modifiable artwork date. New uploads default to the image EXIF date where available, otherwise the file timestamp.</p></div>
         <div class="control-group"><label>Available</label><select name="available"><option value="1"<?= ($item['available'] ?? 1) ? ' selected' : '' ?>>Yes</option><option value="0"<?= !($item['available'] ?? 1) ? ' selected' : '' ?>>No</option></select></div>
         <div class="control-group"><label>Medium</label><input type="text" name="medium" value="<?= htmlspecialchars((string) ($item['medium'] ?? '')) ?>" list="medium-options"><datalist id="medium-options"><?php foreach ($lookups['mediums'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
         <div class="control-group"><label>Genre</label><input type="text" name="genre" value="<?= htmlspecialchars((string) ($item['genre'] ?? '')) ?>" list="genre-options"><datalist id="genre-options"><?php foreach ($lookups['genres'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
@@ -49,9 +56,10 @@ if ($id > 0) {
         <div class="control-group"><label>Award title</label><input type="text" name="awardTitle" value="<?= htmlspecialchars((string) ($item['award_title'] ?? '')) ?>"></div>
         <div class="control-group"><label>Award description</label><textarea name="awardDescription"><?= htmlspecialchars((string) ($item['award_description'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Dimensions</label><input type="text" name="dimensions" value="<?= htmlspecialchars((string) ($item['dimensions'] ?? '')) ?>"></div>
-        <div class="control-group"><label>Description</label><textarea name="description" rows="8" placeholder="Use **bold**, *italic*, blank lines, - lists, and [links](https://example.com)"><?= htmlspecialchars((string) ($item['description'] ?? '')) ?></textarea></div>
+        <div class="control-group"><label>Description</label><p class="help-block">Formatting: <strong>**bold**</strong>, <em>*italic*</em>, blank lines for paragraphs, <code>- list items</code>, and <code>[link](https://example.com)</code>.</p><textarea name="description" rows="8"><?= htmlspecialchars((string) ($item['description'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Location</label><textarea name="location"><?= htmlspecialchars((string) ($item['location'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Tags</label><input type="text" name="tags" value="<?= htmlspecialchars((string) ($item['tag_names'] ?? '')) ?>"></div>
+        <div class="control-group"><label>Exhibition</label><select name="exhibition"><option value="">Not assigned</option><?php foreach ($exhibitions as $exhibition): ?><option value="<?= (int) $exhibition['id'] ?>"<?= (string) ($item['exhibition_id'] ?? '') === (string) $exhibition['id'] ? ' selected' : '' ?>><?= htmlspecialchars((string) $exhibition['title'], ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div>
         <div class="control-group"><label>Alt text</label><input type="text" name="altText" value="<?= htmlspecialchars((string) ($item['alt_text'] ?? '')) ?>"></div>
         </fieldset>
         <fieldset><legend>Private administration</legend>
