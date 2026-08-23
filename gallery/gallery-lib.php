@@ -661,19 +661,19 @@ function gallery_save_exhibition(array $data, array $files = []): array
     }
 
     if ($heroInput && !empty($heroInput['tmp_name'])) {
-        $storedHero = gallery_store_uploaded_asset($heroInput, __DIR__ . '/uploads/exhibitions/full', 'exhibition');
+        $storedHero = gallery_store_uploaded_named_asset($heroInput, __DIR__ . '/uploads/exhibitions/full', 'exhibition');
         $heroFile = $storedHero['path'];
         $heroImage = '/gallery/uploads/exhibitions/full/' . $storedHero['filename'];
     }
     if ($thumbnailInput && !empty($thumbnailInput['tmp_name'])) {
-        $storedThumbnail = gallery_store_uploaded_asset($thumbnailInput, __DIR__ . '/uploads/exhibitions/thumbs', 'thumb');
+        $storedThumbnail = gallery_store_uploaded_named_asset($thumbnailInput, __DIR__ . '/uploads/exhibitions/thumbs', 'thumb');
         $thumbnailFile = $storedThumbnail['path'];
         $thumbnailImage = '/gallery/uploads/exhibitions/thumbs/' . $storedThumbnail['filename'];
         if (!gallery_resize_image($thumbnailFile, $thumbnailFile, 200, 165, 88)) {
             throw new RuntimeException('Could not resize the exhibition thumbnail.');
         }
     } elseif ($thumbnailFile === '' && $heroFile !== '' && !empty($data['generateThumbnail'])) {
-        $thumbnailFilename = gallery_slugify($title) . '-thumb.jpg';
+        $thumbnailFilename = gallery_slugify($title) . 'thumb.jpg';
         $thumbnailFile = __DIR__ . '/uploads/exhibitions/thumbs/' . $thumbnailFilename;
         if (!gallery_resize_image($heroFile, $thumbnailFile, 200, 165, 88)) {
             throw new RuntimeException('Could not generate the exhibition thumbnail.');
@@ -726,7 +726,7 @@ function gallery_save_exhibition(array $data, array $files = []): array
         }
     }
 
-    return ['id' => $exhibitionId, 'slug' => $slug, 'title' => $title];
+    return ['id' => $exhibitionId, 'slug' => $slug, 'title' => $title, 'heroImage' => $heroImage, 'thumbnailImage' => $thumbnailImage];
 }
 
 function gallery_search_images(array $filters = [], int $page = 1, int $limit = 20): array
@@ -926,9 +926,10 @@ function gallery_save_image(array $data, array $files = []): array
     }
 
     if ($thumbPath === '' && $fullPath !== '' && $generateThumbnail) {
-        $thumbFilename = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . 'thumb.jpg';
+        $thumbnailBase = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME) ?: $title);
+        $thumbFilename = $thumbnailBase . 'thumb.jpg';
         if (is_file(__DIR__ . '/uploads/thumbs/' . $thumbFilename)) {
-            $thumbFilename = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . 'thumb-' . bin2hex(random_bytes(4)) . '.jpg';
+            $thumbFilename = $thumbnailBase . 'thumb-' . bin2hex(random_bytes(4)) . '.jpg';
         }
         $thumbPath = __DIR__ . '/uploads/thumbs/' . $thumbFilename;
         if (!gallery_resize_image($fullPath, $thumbPath, 200, 165, 88)) {
@@ -1176,6 +1177,54 @@ function gallery_hard_delete_image(int $imageId): bool
     }
 
     return $deleted;
+}
+
+function gallery_remove_image_asset(int $imageId, string $asset): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || !in_array($asset, ['full', 'thumbnail'], true)) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare('SELECT full_file, thumbnail_file FROM images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $imageId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return false;
+    }
+
+    $column = $asset === 'full' ? 'full_file' : 'thumbnail_file';
+    $urlColumn = $asset === 'full' ? 'full_url' : 'thumbnail_url';
+    $file = (string) ($row[$column] ?? '');
+    if ($file !== '' && is_file($file)) {
+        @unlink($file);
+    }
+
+    return $pdo->prepare("UPDATE images SET {$column} = NULL, {$urlColumn} = NULL WHERE id = :id")->execute([':id' => $imageId]);
+}
+
+function gallery_remove_exhibition_asset(int $exhibitionId, string $asset): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || !in_array($asset, ['hero', 'thumbnail'], true)) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare('SELECT hero_file, thumbnail_file FROM exhibitions WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $exhibitionId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return false;
+    }
+
+    $fileColumn = $asset === 'hero' ? 'hero_file' : 'thumbnail_file';
+    $urlColumn = $asset === 'hero' ? 'hero_image' : 'thumbnail_url';
+    $file = (string) ($row[$fileColumn] ?? '');
+    if ($file !== '' && is_file($file)) {
+        @unlink($file);
+    }
+
+    return $pdo->prepare("UPDATE exhibitions SET {$fileColumn} = NULL, {$urlColumn} = NULL WHERE id = :id")->execute([':id' => $exhibitionId]);
 }
 
 function gallery_require_auth(): void

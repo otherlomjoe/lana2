@@ -46,10 +46,26 @@ if ($id > 0) {
     <h1>Edit Image</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($item): ?>
-      <p><img src="<?= htmlspecialchars((string) ($item['thumbnail_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p>
-      <p><img src="<?= htmlspecialchars((string) ($item['full_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['full_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p>
       <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= htmlspecialchars((string) $item['id']) ?>">
+        <fieldset><legend>Images</legend>
+          <div class="control-group">
+            <label>Full image</label>
+            <?php if (!empty($item['full_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['full_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['full_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No full image is currently stored.</p><?php endif; ?>
+            <input id="full-image" type="file" name="full" accept="image/*">
+            <p class="help-block">Choose a replacement full image.</p>
+            <?php if (!empty($item['full_file'])): ?><form method="post" action="/gallery/asset-delete.php" style="display:inline" onsubmit="return confirm('Remove the full image from storage and the database?')"><input type="hidden" name="id" value="<?= (int) $item['id'] ?>"><input type="hidden" name="asset" value="full"><button type="submit" class="btn btn-small">Remove full image</button></form><?php endif; ?>
+          </div>
+          <div class="control-group">
+            <label>Thumbnail</label>
+            <?php if (!empty($item['thumbnail_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No thumbnail is currently stored.</p><?php endif; ?>
+            <input id="thumbnail-file" type="file" name="thumbnail" accept="image/*">
+            <p class="help-block">Choose a replacement thumbnail. The filename should end in <strong>thumb</strong>.</p>
+            <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>
+            <?php if (!empty($item['thumbnail_file'])): ?><form method="post" action="/gallery/asset-delete.php" style="display:inline" onsubmit="return confirm('Remove the thumbnail from storage and the database?')"><input type="hidden" name="id" value="<?= (int) $item['id'] ?>"><input type="hidden" name="asset" value="thumbnail"><button type="submit" class="btn btn-small">Remove thumbnail</button></form><?php endif; ?>
+            <label><input type="checkbox" name="generateThumbnail" value="1"> Generate a correctly named 200 x 165 thumbnail</label>
+          </div>
+        </fieldset>
         <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"></div>
         <fieldset><legend>Public information</legend>
         <div class="control-group"><label>Public price</label><input type="text" name="pricePublic" value="<?= htmlspecialchars((string) ($item['price_public'] ?? '')) ?>"></div>
@@ -72,8 +88,6 @@ if ($id > 0) {
         <div class="control-group"><label>Private notes</label><textarea name="privateNotes"><?= htmlspecialchars((string) ($item['private_notes'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Copies sold</label><input type="number" min="0" name="copiesSold" value="<?= (int) ($item['copies_sold'] ?? 0) ?>"></div>
         </fieldset>
-          <div class="control-group"><label>Full image</label><input id="full-image" type="file" name="full" accept="image/*"></div>
-        <div class="control-group"><label>Thumbnail (recommended)</label><input id="thumbnail-file" type="file" name="thumbnail" accept="image/*"><p class="help-block">Leave blank to keep the current thumbnail, or upload a matching image-name-thumb file.</p><div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-name-thumb.jpg.</div><label><input type="checkbox" name="generateThumbnail" value="1"> Generate a 200 x 165 thumbnail if no thumbnail is uploaded</label></div>
         <div class="form-actions">
           <button type="submit" name="save_mode" value="stay" class="btn btn-primary">Save and stay</button>
           <button type="submit" name="save_mode" value="list" class="btn btn-primary">Save and return to list</button>
