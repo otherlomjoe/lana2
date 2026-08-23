@@ -31,6 +31,7 @@ header('Content-Type: text/html; charset=utf-8');
           <div class="thumb-card">
             <a href="/gallery/public-image.php?id=${item.id}"><img src="${item.thumbnail || item.full}" alt="${item.title || 'Artwork'}"></a>
             <div><strong>${item.title}</strong></div>
+            ${item.price ? `<div>${item.price}</div>` : ''}
           </div>
         `).join('');
       });

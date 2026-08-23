@@ -10,6 +10,10 @@ if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_
 }
 
 $pdo = gallery_init_db();
+if (!$pdo) {
+  http_response_code(500);
+  exit('Gallery database is unavailable.');
+}
 $lookups = gallery_lookup_values($pdo);
 $exhibitions = gallery_list_exhibitions($pdo);
 ?>

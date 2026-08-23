@@ -39,6 +39,8 @@ header('Content-Type: text/html; charset=utf-8');
           <div class="well">
             <h3>${item.title}</h3>
             <img src="${item.thumbnail || item.full}" alt="${item.title || 'Artwork'}" style="max-width:220px;height:auto;">
+            ${item.price ? `<p>${item.price}</p>` : ''}
+            <div>${item.descriptionHtml || ''}</div>
           </div>
         `).join('');
       });
