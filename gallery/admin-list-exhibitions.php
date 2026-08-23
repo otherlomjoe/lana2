@@ -27,7 +27,7 @@ unset($_SESSION['gallery_admin_message']);
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <p><a href="/gallery/admin-exhibition-edit.php">Create exhibition</a> | <a href="/gallery/admin-exhibition-preview.php">Preview</a></p>
     <table class="table table-striped">
-      <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th></tr></thead>
+      <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th><th>Images</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($exhibitions as $exhibition): ?>
           <tr>
@@ -35,6 +35,8 @@ unset($_SESSION['gallery_admin_message']);
             <td><?= htmlspecialchars((string) $exhibition['title']) ?></td>
             <td><?= htmlspecialchars((string) $exhibition['location']) ?></td>
             <td><?= htmlspecialchars((string) ($exhibition['startDate'] ?? '')) ?> - <?= htmlspecialchars((string) ($exhibition['endDate'] ?? '')) ?></td>
+            <td><?= (int) ($exhibition['imageCount'] ?? 0) ?></td>
+            <td><a href="/gallery/admin-exhibition-edit.php?id=<?= (int) $exhibition['id'] ?>">Edit</a> | <a href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a></td>
           </tr>
         <?php endforeach; ?>
       </tbody>

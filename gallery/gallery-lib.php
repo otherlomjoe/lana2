@@ -108,6 +108,7 @@ function gallery_init_db(): ?PDO
         copies_sold INT UNSIGNED NOT NULL DEFAULT 0,
         orientation VARCHAR(32),
         alt_text VARCHAR(1024),
+        artwork_created_at DATE NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
@@ -116,6 +117,7 @@ function gallery_init_db(): ?PDO
         'deleted_at' => 'DATETIME NULL',
         'deleted_full_file' => 'VARCHAR(1024) NULL',
         'deleted_thumbnail_file' => 'VARCHAR(1024) NULL',
+        'artwork_created_at' => 'DATE NULL',
     ] as $column => $definition) {
         try {
             $pdo->exec("ALTER TABLE images ADD COLUMN {$column} {$definition}");
@@ -203,6 +205,24 @@ function gallery_detect_orientation(string $imagePath): string
     }
 
     return $size[0] >= $size[1] ? 'landscape' : 'portrait';
+}
+
+function gallery_detect_creation_date(string $imagePath): ?string
+{
+    if (!is_file($imagePath)) {
+        return null;
+    }
+
+    if (function_exists('exif_read_data') && @getimagesize($imagePath)[2] === IMAGETYPE_JPEG) {
+        $exif = @exif_read_data($imagePath, 'EXIF', true);
+        $date = $exif['EXIF']['DateTimeOriginal'] ?? $exif['EXIF']['DateTimeDigitized'] ?? null;
+        if (is_string($date) && preg_match('/^(\d{4}):(\d{2}):(\d{2})/', $date, $matches)) {
+            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
+        }
+    }
+
+    $timestamp = @filemtime($imagePath);
+    return $timestamp !== false ? date('Y-m-d', $timestamp) : null;
 }
 
 function gallery_string_or_empty($value): string
@@ -476,9 +496,18 @@ function gallery_normalize_image_row(array $row): array
         'tags' => $tags,
         'source' => 'server',
         'createdAt' => $row['created_at'] ?? null,
+        'artworkCreatedAt' => $row['artwork_created_at'] ?? null,
         'deletedAt' => $row['deleted_at'] ?? null,
         'status' => !empty($row['deleted_at']) ? 'Deleted' : (!empty($row['available']) ? 'Active' : 'Unavailable'),
     ];
+}
+
+function gallery_public_image(array $item): array
+{
+    foreach (['pricePrivate', 'privateNotes', 'copiesSold', 'deletedAt', 'status', 'source'] as $field) {
+        unset($item[$field]);
+    }
+    return $item;
 }
 
 function gallery_list_images(?PDO $pdo = null, bool $includeDeleted = false): array
@@ -495,7 +524,7 @@ function gallery_list_images(?PDO $pdo = null, bool $includeDeleted = false): ar
             LEFT JOIN tags t ON t.id = it.tag_id
             {$deletedCondition}
             GROUP BY i.id
-            ORDER BY i.created_at DESC";
+            ORDER BY COALESCE(i.artwork_created_at, DATE(i.created_at)) DESC, i.created_at DESC";
 
     $items = [];
     foreach ($pdo->query($sql) as $row) {
@@ -512,7 +541,7 @@ function gallery_list_exhibitions(?PDO $pdo = null): array
         return [];
     }
 
-    $stmt = $pdo->query("SELECT * FROM exhibitions ORDER BY start_date DESC, title ASC");
+    $stmt = $pdo->query("SELECT e.*, COUNT(ie.image_id) AS image_count FROM exhibitions e LEFT JOIN image_exhibitions ie ON ie.exhibition_id = e.id GROUP BY e.id ORDER BY e.start_date DESC, e.title ASC");
     $exhibitions = [];
     foreach ($stmt as $row) {
         $exhibitions[] = [
@@ -524,6 +553,8 @@ function gallery_list_exhibitions(?PDO $pdo = null): array
             'location' => $row['location'],
             'description' => $row['description'],
             'heroImage' => $row['hero_image'],
+            'imageCount' => (int) ($row['image_count'] ?? 0),
+            'createdAt' => $row['created_at'] ?? null,
         ];
     }
 
@@ -572,18 +603,16 @@ function gallery_save_exhibition(array $data): array
         $exhibitionId = (int) $pdo->lastInsertId();
     }
 
-    $imageIds = [];
-    if (!empty($data['imageIds'])) {
+    if (array_key_exists('imageIds', $data)) {
         $imageIds = array_map('intval', (array) $data['imageIds']);
-    }
-
-    $pdo->prepare('DELETE FROM image_exhibitions WHERE exhibition_id = :exhibition_id')->execute([':exhibition_id' => $exhibitionId]);
-    foreach ($imageIds as $index => $imageId) {
-        $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, :sort_order)')->execute([
-            ':image_id' => $imageId,
-            ':exhibition_id' => $exhibitionId,
-            ':sort_order' => $index,
-        ]);
+        $pdo->prepare('DELETE FROM image_exhibitions WHERE exhibition_id = :exhibition_id')->execute([':exhibition_id' => $exhibitionId]);
+        foreach ($imageIds as $index => $imageId) {
+            $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, :sort_order)')->execute([
+                ':image_id' => $imageId,
+                ':exhibition_id' => $exhibitionId,
+                ':sort_order' => $index,
+            ]);
+        }
     }
 
     return ['id' => $exhibitionId, 'slug' => $slug, 'title' => $title];
@@ -659,7 +688,7 @@ function gallery_search_images(array $filters = [], int $page = 1, int $limit = 
             LEFT JOIN tags t ON t.id = it.tag_id
             ' . $whereSql . '
             GROUP BY i.id
-            ORDER BY i.created_at DESC
+            ORDER BY COALESCE(i.artwork_created_at, DATE(i.created_at)) DESC, i.created_at DESC
             LIMIT :offset, :limit';
 
     $stmt = $pdo->prepare($sql);
@@ -676,6 +705,22 @@ function gallery_search_images(array $filters = [], int $page = 1, int $limit = 
     }
 
     return ['items' => $items, 'total' => $total, 'page' => $page, 'pages' => $pages, 'limit' => $limit];
+}
+
+function gallery_list_exhibition_images(int $exhibitionId, ?PDO $pdo = null): array
+{
+    $pdo = $pdo ?: gallery_init_db();
+    if (!$pdo || $exhibitionId <= 0) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names FROM images i INNER JOIN image_exhibitions ie ON ie.image_id = i.id LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id WHERE ie.exhibition_id = :exhibition_id AND i.deleted_at IS NULL GROUP BY i.id ORDER BY ie.sort_order ASC, i.artwork_created_at DESC, i.created_at DESC');
+    $stmt->execute([':exhibition_id' => $exhibitionId]);
+    $items = [];
+    foreach ($stmt as $row) {
+        $items[] = gallery_normalize_image_row($row);
+    }
+    return $items;
 }
 
 function gallery_save_image(array $data, array $files = []): array
@@ -707,7 +752,7 @@ function gallery_save_image(array $data, array $files = []): array
 
     $imageId = !empty($data['id']) ? (int) $data['id'] : null;
     if ($imageId !== null) {
-        $existingStmt = $pdo->prepare('SELECT full_file, thumbnail_file, full_url, thumbnail_url FROM images WHERE id = :id LIMIT 1');
+        $existingStmt = $pdo->prepare('SELECT full_file, thumbnail_file, full_url, thumbnail_url, artwork_created_at FROM images WHERE id = :id LIMIT 1');
         $existingStmt->execute([':id' => $imageId]);
         $existing = $existingStmt->fetch();
         if (!$existing) {
@@ -729,6 +774,9 @@ function gallery_save_image(array $data, array $files = []): array
         if ($title === '' && $filename === '') {
             $filename = basename((string) ($existing['full_file'] ?? ''));
             $title = gallery_build_title_from_filename($filename);
+        }
+        if (empty($data['artworkCreatedAt'])) {
+            $data['artworkCreatedAt'] = $existing['artwork_created_at'] ?? null;
         }
     }
 
@@ -812,9 +860,13 @@ function gallery_save_image(array $data, array $files = []): array
 
     $description = trim((string) ($data['description'] ?? ''));
     $location = trim((string) ($data['location'] ?? ''));
+    $artworkCreatedAt = trim((string) ($data['artworkCreatedAt'] ?? ''));
+    if ($artworkCreatedAt === '' && $imageId === null && $fullInput && !empty($fullInput['tmp_name'])) {
+        $artworkCreatedAt = gallery_detect_creation_date($fullInput['tmp_name']) ?? '';
+    }
 
     if ($imageId !== null) {
-        $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -840,10 +892,11 @@ function gallery_save_image(array $data, array $files = []): array
             ':copies_sold' => (int) ($data['copiesSold'] ?? 0),
             ':orientation' => $orientation,
             ':alt_text' => $altText,
+            ':artwork_created_at' => $artworkCreatedAt !== '' ? $artworkCreatedAt : null,
             ':id' => $imageId,
         ]);
     } else {
-        $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+        $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -869,6 +922,7 @@ function gallery_save_image(array $data, array $files = []): array
             ':copies_sold' => (int) ($data['copiesSold'] ?? 0),
             ':orientation' => $orientation,
             ':alt_text' => $altText,
+            ':artwork_created_at' => $artworkCreatedAt !== '' ? $artworkCreatedAt : null,
         ]);
         $imageId = (int) $pdo->lastInsertId();
     }
@@ -879,10 +933,10 @@ function gallery_save_image(array $data, array $files = []): array
     }
     gallery_ensure_tag_links($pdo, $imageId, $tags);
 
-    if (!empty($data['exhibition'])) {
+    if (array_key_exists('exhibition', $data)) {
         $exhibitionId = (int) $data['exhibition'];
+        $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :image_id')->execute([':image_id' => $imageId]);
         if ($exhibitionId > 0) {
-            $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :image_id')->execute([':image_id' => $imageId]);
             $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, 0)')->execute([
                 ':image_id' => $imageId,
                 ':exhibition_id' => $exhibitionId,

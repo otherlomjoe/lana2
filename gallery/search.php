@@ -12,6 +12,7 @@ try {
     }
 
     $result = gallery_search_images($filters, $page, $limit);
+    $result['items'] = array_map('gallery_public_image', $result['items']);
     echo json_encode(['success' => true, 'result' => $result]);
 } catch (Throwable $e) {
     http_response_code(500);

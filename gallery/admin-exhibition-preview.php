@@ -29,7 +29,7 @@ $exhibitions = gallery_list_exhibitions($pdo);
         <h3><?= htmlspecialchars((string) $exhibition['title']) ?></h3>
         <p><?= htmlspecialchars((string) ($exhibition['location'] ?? '')) ?></p>
         <div class="row-fluid">
-          <?php foreach ($images as $image): ?>
+          <?php foreach (gallery_list_exhibition_images((int) $exhibition['id'], $pdo) as $image): ?>
             <?php if (!empty($image['thumbnail'])): ?>
               <div class="span2">
                 <img src="<?= htmlspecialchars((string) $image['thumbnail']) ?>" alt="<?= htmlspecialchars((string) ($image['title'] ?? 'Artwork')) ?>" style="width:100%; height:auto;">

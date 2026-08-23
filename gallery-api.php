@@ -88,7 +88,7 @@ if ($action === 'db-setup') {
 }
 
 if ($action === 'list' || $action === 'list-images') {
-    $items = gallery_list_images(gallery_init_db(), false);
+    $items = array_map('gallery_public_image', gallery_list_images(gallery_init_db(), false));
     echo json_encode($items);
     exit;
 }

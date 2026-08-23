@@ -98,7 +98,12 @@ async function loadData() {
     }).then(r => r.ok ? r.json() : []);
 
     exhibitions = Array.isArray(exhibitionData) ? exhibitionData : [];
-    items = uploadedItems;
+    exhibitions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    items = uploadedItems.sort((a, b) => {
+        const dateA = a.artworkCreatedAt || a.dateAdded || a.createdAt || 0;
+        const dateB = b.artworkCreatedAt || b.dateAdded || b.createdAt || 0;
+        return new Date(dateB) - new Date(dateA);
+    });
 }
 
 /* ---------------------------------------------------------

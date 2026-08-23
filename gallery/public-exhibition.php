@@ -17,7 +17,8 @@ header('Content-Type: text/html; charset=utf-8');
     <div id="exhibition-output"></div>
   </div>
   <script>
-    fetch('/gallery/search.php?page=1&limit=20')
+    const slug = new URLSearchParams(window.location.search).get('slug') || window.location.hash.substring(1);
+    fetch('/gallery/search.php?page=1&limit=100&exhibition=' + encodeURIComponent(slug))
       .then(r => r.json())
       .then(payload => {
         const items = payload && payload.result ? payload.result.items : [];
