@@ -861,7 +861,7 @@ function gallery_save_image(array $data, array $files = []): array
     $thumbPath = trim((string) ($data['thumbnailPath'] ?? ($data['thumbnail'] ?? '')));
     $fullUrl = trim((string) ($data['fullUrl'] ?? ''));
     $thumbUrl = trim((string) ($data['thumbUrl'] ?? ($data['thumbnailUrl'] ?? '')));
-    $generateThumbnail = !empty($data['generateThumbnail']);
+    $generateThumbnail = !empty($data['generate_thumbnail']) || !empty($data['generateThumbnail']);
 
     $imageId = !empty($data['id']) ? (int) $data['id'] : null;
     $isUpdate = $imageId !== null;

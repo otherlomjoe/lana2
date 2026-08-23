@@ -63,7 +63,7 @@ if ($id > 0) {
             <p class="help-block">Choose a replacement thumbnail. The filename should end in <strong>thumb</strong>.</p>
             <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>
             <?php if (!empty($item['thumbnail_file'])): ?><form method="post" action="/gallery/asset-delete.php" style="display:inline" onsubmit="return confirm('Remove the thumbnail from storage and the database?')"><input type="hidden" name="id" value="<?= (int) $item['id'] ?>"><input type="hidden" name="asset" value="thumbnail"><button type="submit" class="btn btn-small">Remove thumbnail</button></form><?php endif; ?>
-            <label><input type="checkbox" name="generateThumbnail" value="1"> Generate a correctly named 200 x 165 thumbnail</label>
+            <button type="submit" name="generate_thumbnail" value="1" class="btn">Generate correctly named 200 x 165 thumbnail</button>
           </div>
         </fieldset>
         <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"></div>
