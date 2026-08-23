@@ -80,45 +80,25 @@ async function getUploadedGalleryItems() {
             throw new Error("Gallery API unavailable");
         }
 
-        const data = await response.json();
-        const items = Array.isArray(data) ? data : [];
-        const normalized = items.map(normalizeUploadedItem).filter(Boolean);
-
-        try {
-            localStorage.setItem("lana_gallery_uploaded_items", JSON.stringify(normalized));
-        } catch (error) {
-            // Ignore local storage errors in private mode or restricted browsers.
-        }
-
-        return normalized;
+        const payload = await response.json();
+        const items = Array.isArray(payload) ? payload : [];
+        return items.map(normalizeUploadedItem).filter(Boolean);
     } catch (error) {
-        try {
-            const raw = localStorage.getItem("lana_gallery_uploaded_items");
-            if (!raw) return [];
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed.map(normalizeUploadedItem).filter(Boolean) : [];
-        } catch (localError) {
-            console.warn("Could not parse uploaded gallery items", localError);
-            return [];
-        }
+        return [];
     }
 }
 
 async function loadData() {
     if (items.length && exhibitions.length) return;
 
-    exhibitions = await fetch("/gallery/exhibitions.json").then(r => r.json());
-    const remoteItems = await fetch("/gallery/works.json").then(r => r.json());
     const uploadedItems = await getUploadedGalleryItems();
+    const exhibitionData = await fetch("/gallery-api.php?action=list-exhibitions", {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin"
+    }).then(r => r.ok ? r.json() : []);
 
-    const merged = new Map();
-    [...uploadedItems, ...remoteItems].forEach(item => {
-        if (item && item.slug) {
-            merged.set(item.slug, item);
-        }
-    });
-
-    items = Array.from(merged.values());
+    exhibitions = Array.isArray(exhibitionData) ? exhibitionData : [];
+    items = uploadedItems;
 }
 
 /* ---------------------------------------------------------
