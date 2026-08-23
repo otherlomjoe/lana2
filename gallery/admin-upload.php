@@ -55,7 +55,7 @@ $exhibitions = gallery_list_exhibitions($pdo);
       <div class="control-group"><label>Copies sold</label><input type="number" min="0" name="copiesSold" value="0"></div>
       </fieldset>
       <div class="control-group"><label>Full image</label><input id="full-image" data-media-input="full image" type="file" name="full" accept="image/*" required><div data-media-preview="full-image"></div></div>
-      <div class="control-group"><label>Thumbnail (recommended)</label><input id="thumbnail-file" data-media-input="thumbnail" type="file" name="thumbnail" accept="image/*"><div data-media-preview="thumbnail-file"></div><p class="help-block">Upload a matching image-name-thumb file when available.</p><div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-name-thumb.jpg.</div><label><input type="checkbox" name="generateThumbnail" value="1"> Generate a 200 x 165 thumbnail if no thumbnail is uploaded</label></div>
+      <div class="control-group"><label>Thumbnail (recommended)</label><input id="thumbnail-file" data-media-input="thumbnail" type="file" name="thumbnail" accept="image/*"><div data-media-preview="thumbnail-file"></div><p class="help-block">Upload a matching image-name-thumb file when available.</p><div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-name-thumb.jpg.</div><button type="submit" name="generate_thumbnail" value="1" class="btn">Generate correctly named 200 x 165 thumbnail</button></div>
       <button type="submit" class="btn btn-primary">Save image</button>
     </form>
   </div>
