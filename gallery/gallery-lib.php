@@ -32,6 +32,7 @@ function gallery_ensure_upload_directories(): void
     $directories = [
         __DIR__ . '/uploads/full',
         __DIR__ . '/uploads/thumbs',
+        __DIR__ . '/uploads/deleted',
         __DIR__ . '/all/imported',
     ];
 
@@ -110,6 +111,20 @@ function gallery_init_db(): ?PDO
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
+
+    foreach ([
+        'deleted_at' => 'DATETIME NULL',
+        'deleted_full_file' => 'VARCHAR(1024) NULL',
+        'deleted_thumbnail_file' => 'VARCHAR(1024) NULL',
+    ] as $column => $definition) {
+        try {
+            $pdo->exec("ALTER TABLE images ADD COLUMN {$column} {$definition}");
+        } catch (PDOException $e) {
+            if ((int) $e->errorInfo[1] !== 1060) {
+                throw $e;
+            }
+        }
+    }
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS image_tags (
         image_id INT UNSIGNED NOT NULL,
@@ -461,20 +476,24 @@ function gallery_normalize_image_row(array $row): array
         'tags' => $tags,
         'source' => 'server',
         'createdAt' => $row['created_at'] ?? null,
+        'deletedAt' => $row['deleted_at'] ?? null,
+        'status' => !empty($row['deleted_at']) ? 'Deleted' : (!empty($row['available']) ? 'Active' : 'Unavailable'),
     ];
 }
 
-function gallery_list_images(?PDO $pdo = null): array
+function gallery_list_images(?PDO $pdo = null, bool $includeDeleted = false): array
 {
     $pdo = $pdo ?: gallery_init_db();
     if (!$pdo) {
         return [];
     }
 
-    $sql = "SELECT i.*, GROUP_CONCAT(DISTINCT t.name, ',') AS tag_names
+        $deletedCondition = $includeDeleted ? '' : ' WHERE i.deleted_at IS NULL';
+        $sql = "SELECT i.*, GROUP_CONCAT(DISTINCT t.name, ',') AS tag_names
             FROM images i
             LEFT JOIN image_tags it ON it.image_id = i.id
             LEFT JOIN tags t ON t.id = it.tag_id
+            {$deletedCondition}
             GROUP BY i.id
             ORDER BY i.created_at DESC";
 
@@ -577,7 +596,7 @@ function gallery_search_images(array $filters = [], int $page = 1, int $limit = 
         return ['items' => [], 'total' => 0, 'page' => $page, 'pages' => 0];
     }
 
-    $conditions = ['1 = 1'];
+    $conditions = ['i.deleted_at IS NULL'];
     $params = [];
     $query = trim((string) ($filters['q'] ?? ''));
 
@@ -879,30 +898,101 @@ function gallery_save_image(array $data, array $files = []): array
     return ['id' => $imageId, 'slug' => $slug, 'title' => $title, 'thumbnail' => $thumbUrl, 'full' => $fullUrl, 'orientation' => $orientation];
 }
 
-function gallery_delete_image(int $imageId): bool
+function gallery_soft_delete_image(int $imageId): bool
 {
     $pdo = gallery_init_db();
     if (!$pdo) {
         return false;
     }
 
-    $stmt = $pdo->prepare('SELECT full_file, thumbnail_file FROM images WHERE id = :id LIMIT 1');
+    gallery_ensure_upload_directories();
+    $stmt = $pdo->prepare('SELECT full_file, thumbnail_file, deleted_at FROM images WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $imageId]);
     $row = $stmt->fetch();
+    if (!$row || !empty($row['deleted_at'])) {
+        return false;
+    }
+
+    $deletedFull = $row['full_file'] ? __DIR__ . '/uploads/deleted/' . basename($row['full_file']) : null;
+    $deletedThumb = $row['thumbnail_file'] ? __DIR__ . '/uploads/deleted/' . basename($row['thumbnail_file']) : null;
+    if ($row['full_file'] && is_file($row['full_file']) && !rename($row['full_file'], $deletedFull)) {
+        throw new RuntimeException('Could not archive the full image.');
+    }
+    if ($row['thumbnail_file'] && is_file($row['thumbnail_file']) && !rename($row['thumbnail_file'], $deletedThumb)) {
+        throw new RuntimeException('Could not archive the thumbnail image.');
+    }
+
+    return $pdo->prepare('UPDATE images SET deleted_at = CURRENT_TIMESTAMP, deleted_full_file = :deleted_full, deleted_thumbnail_file = :deleted_thumb, available = 0 WHERE id = :id')->execute([
+        ':deleted_full' => $deletedFull,
+        ':deleted_thumb' => $deletedThumb,
+        ':id' => $imageId,
+    ]);
+}
+
+function gallery_restore_image(int $imageId): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare('SELECT full_file, thumbnail_file, deleted_full_file, deleted_thumbnail_file, deleted_at FROM images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $imageId]);
+    $row = $stmt->fetch();
+    if (!$row || empty($row['deleted_at'])) {
+        return false;
+    }
+
+    foreach ([['deleted_full_file', 'full_file'], ['deleted_thumbnail_file', 'thumbnail_file']] as $paths) {
+        [$archivedKey, $originalKey] = $paths;
+        $archived = (string) ($row[$archivedKey] ?? '');
+        $original = (string) ($row[$originalKey] ?? '');
+        if ($archived !== '' && is_file($archived)) {
+            if (!is_dir(dirname($original))) {
+                mkdir(dirname($original), 0775, true);
+            }
+            if (!rename($archived, $original)) {
+                throw new RuntimeException('Could not restore an archived image.');
+            }
+        }
+    }
+
+    return $pdo->prepare('UPDATE images SET deleted_at = NULL, deleted_full_file = NULL, deleted_thumbnail_file = NULL, available = 1 WHERE id = :id')->execute([':id' => $imageId]);
+}
+
+function gallery_delete_image(int $imageId): bool
+{
+    return gallery_soft_delete_image($imageId);
+}
+
+function gallery_hard_delete_image(int $imageId): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare('SELECT full_file, thumbnail_file, deleted_full_file, deleted_thumbnail_file FROM images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $imageId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return false;
+    }
 
     $pdo->prepare('DELETE FROM image_tags WHERE image_id = :id')->execute([':id' => $imageId]);
     $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :id')->execute([':id' => $imageId]);
     $deleted = $pdo->prepare('DELETE FROM images WHERE id = :id')->execute([':id' => $imageId]);
 
-    if ($deleted && $row) {
-        foreach ([$row['full_file'] ?? '', $row['thumbnail_file'] ?? ''] as $file) {
-            if ($file && is_file($file)) {
+    if ($deleted) {
+        foreach (['full_file', 'thumbnail_file', 'deleted_full_file', 'deleted_thumbnail_file'] as $column) {
+            $file = (string) ($row[$column] ?? '');
+            if ($file !== '' && is_file($file)) {
                 @unlink($file);
             }
         }
     }
 
-    return (bool) $deleted;
+    return $deleted;
 }
 
 function gallery_require_auth(): void

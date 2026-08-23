@@ -9,6 +9,8 @@ if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_
 }
 
 $exhibitions = gallery_list_exhibitions(gallery_init_db());
+$message = $_SESSION['gallery_admin_message'] ?? '';
+unset($_SESSION['gallery_admin_message']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -20,8 +22,10 @@ $exhibitions = gallery_list_exhibitions(gallery_init_db());
 </head>
 <body>
   <div class="container">
+    <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Exhibitions</h1>
-    <p><a href="/gallery/admin-upload.php">Add image</a> | <a href="/gallery/admin-exhibition-preview.php">Preview</a></p>
+    <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <p><a href="/gallery/admin-exhibition-edit.php">Create exhibition</a> | <a href="/gallery/admin-exhibition-preview.php">Preview</a></p>
     <table class="table table-striped">
       <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th></tr></thead>
       <tbody>

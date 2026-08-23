@@ -38,7 +38,10 @@ try {
 
     if ($isFormSubmission) {
         $_SESSION['gallery_admin_message'] = 'Image saved successfully.';
-        header('Location: /gallery/admin-list-images.php?saved=1', true, 303);
+        $destination = ($_POST['save_mode'] ?? 'list') === 'stay'
+            ? '/gallery/admin-edit.php?id=' . (int) $result['id']
+            : '/gallery/admin-list-images.php?saved=1';
+        header('Location: ' . $destination, true, 303);
         exit;
     }
 

@@ -22,6 +22,7 @@ $exhibitions = gallery_list_exhibitions($pdo);
 </head>
 <body>
   <div class="container">
+    <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Exhibition Preview</h1>
     <?php foreach ($exhibitions as $exhibition): ?>
       <div class="well">
