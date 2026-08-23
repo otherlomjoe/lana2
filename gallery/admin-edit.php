@@ -11,6 +11,8 @@ if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_
 
 $pdo = gallery_init_db();
 $lookups = gallery_lookup_values($pdo);
+$message = $_SESSION['gallery_admin_message'] ?? '';
+unset($_SESSION['gallery_admin_message']);
 $id = (int) ($_GET['id'] ?? 0);
 $item = null;
 if ($id > 0) {
@@ -30,13 +32,16 @@ if ($id > 0) {
 </head>
 <body>
   <div class="container">
+    <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Edit Image</h1>
+    <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($item): ?>
       <p><img src="<?= htmlspecialchars((string) ($item['thumbnail_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"> <img src="<?= htmlspecialchars((string) ($item['full_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"></p>
       <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= htmlspecialchars((string) $item['id']) ?>">
         <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"></div>
-        <div class="control-group"><label>Price</label><input type="text" name="pricePublic" value="<?= htmlspecialchars((string) ($item['price_public'] ?? '')) ?>"></div>
+        <fieldset><legend>Public information</legend>
+        <div class="control-group"><label>Public price</label><input type="text" name="pricePublic" value="<?= htmlspecialchars((string) ($item['price_public'] ?? '')) ?>"></div>
         <div class="control-group"><label>Available</label><select name="available"><option value="1"<?= ($item['available'] ?? 1) ? ' selected' : '' ?>>Yes</option><option value="0"<?= !($item['available'] ?? 1) ? ' selected' : '' ?>>No</option></select></div>
         <div class="control-group"><label>Medium</label><input type="text" name="medium" value="<?= htmlspecialchars((string) ($item['medium'] ?? '')) ?>" list="medium-options"><datalist id="medium-options"><?php foreach ($lookups['mediums'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
         <div class="control-group"><label>Genre</label><input type="text" name="genre" value="<?= htmlspecialchars((string) ($item['genre'] ?? '')) ?>" list="genre-options"><datalist id="genre-options"><?php foreach ($lookups['genres'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
@@ -47,9 +52,22 @@ if ($id > 0) {
         <div class="control-group"><label>Description</label><textarea name="description" rows="8" placeholder="Use **bold**, *italic*, blank lines, - lists, and [links](https://example.com)"><?= htmlspecialchars((string) ($item['description'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Location</label><textarea name="location"><?= htmlspecialchars((string) ($item['location'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Tags</label><input type="text" name="tags" value="<?= htmlspecialchars((string) ($item['tag_names'] ?? '')) ?>"></div>
+        <div class="control-group"><label>Alt text</label><input type="text" name="altText" value="<?= htmlspecialchars((string) ($item['alt_text'] ?? '')) ?>"></div>
+        </fieldset>
+        <fieldset><legend>Private administration</legend>
+        <div class="control-group"><label>Private price</label><input type="text" name="pricePrivate" value="<?= htmlspecialchars((string) ($item['price_private'] ?? '')) ?>"></div>
+        <div class="control-group"><label>Private notes</label><textarea name="privateNotes"><?= htmlspecialchars((string) ($item['private_notes'] ?? '')) ?></textarea></div>
+        <div class="control-group"><label>Copies sold</label><input type="number" min="0" name="copiesSold" value="<?= (int) ($item['copies_sold'] ?? 0) ?>"></div>
+        </fieldset>
           <div class="control-group"><label>Full image</label><input id="full-image" type="file" name="full" accept="image/*"></div>
         <div class="control-group"><label>Thumbnail (recommended)</label><input type="file" name="thumbnail" accept="image/*"><p class="help-block">Leave blank to keep the current thumbnail, or upload a matching image-name-thumb file.</p><label><input type="checkbox" name="generateThumbnail" value="1"> Generate a 200 x 165 thumbnail if no thumbnail is uploaded</label></div>
-        <button type="submit" class="btn btn-primary">Save changes</button>
+        <div class="form-actions">
+          <button type="submit" name="save_mode" value="stay" class="btn btn-primary">Save and stay</button>
+          <button type="submit" name="save_mode" value="list" class="btn btn-primary">Save and return to list</button>
+          <?php if (!empty($item['deleted_at'])): ?><a class="btn" href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a class="btn btn-danger" href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?><a class="btn" href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
+          <a class="btn" href="/gallery/admin-list-images.php">Cancel</a>
+          <a class="btn" href="/gallery/admin-list-images.php">Close</a>
+        </div>
       </form>
       <script>
         document.getElementById('full-image').addEventListener('change', function () {

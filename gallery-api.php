@@ -88,7 +88,7 @@ if ($action === 'db-setup') {
 }
 
 if ($action === 'list' || $action === 'list-images') {
-    $items = gallery_list_images(gallery_init_db());
+    $items = gallery_list_images(gallery_init_db(), false);
     echo json_encode($items);
     exit;
 }
@@ -155,17 +155,41 @@ if ($action === 'delete') {
     $slug = trim((string) ($_POST['slug'] ?? $_GET['slug'] ?? ''));
 
     if ($id > 0) {
-        $deleted = gallery_delete_image($id);
+        $deleted = gallery_soft_delete_image($id);
     } elseif ($slug !== '') {
         $pdo = gallery_init_db();
         $stmt = $pdo->prepare('SELECT id FROM images WHERE slug = :slug LIMIT 1');
         $stmt->execute([':slug' => $slug]);
         $row = $stmt->fetch();
-        $deleted = $row ? gallery_delete_image((int) $row['id']) : false;
+        $deleted = $row ? gallery_soft_delete_image((int) $row['id']) : false;
     } else {
         galleryApiError('No image id or slug supplied.', 400);
     }
 
+    echo json_encode(['success' => $deleted]);
+    exit;
+}
+
+if ($action === 'restore') {
+    galleryApiRequireAuth();
+    galleryApiEnsureCsrf();
+    $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    echo json_encode(['success' => $id > 0 && gallery_restore_image($id)]);
+    exit;
+}
+
+if ($action === 'hard-delete') {
+    galleryApiRequireAuth();
+    galleryApiEnsureCsrf();
+    $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    $pdo = gallery_init_db();
+    $stmt = $pdo ? $pdo->prepare('SELECT deleted_at FROM images WHERE id = :id LIMIT 1') : null;
+    $deleted = false;
+    if ($stmt) {
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch();
+        $deleted = $id > 0 && $row && !empty($row['deleted_at']) && gallery_hard_delete_image($id);
+    }
     echo json_encode(['success' => $deleted]);
     exit;
 }

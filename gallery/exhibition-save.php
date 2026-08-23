@@ -2,7 +2,8 @@
 require __DIR__ . '/gallery-lib.php';
 
 session_start();
-header('Content-Type: application/json; charset=utf-8');
+$isFormSubmission = $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !str_contains(strtolower((string) ($_SERVER['CONTENT_TYPE'] ?? '')), 'application/json');
 
 try {
     if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
@@ -18,8 +19,19 @@ try {
     }
 
     $result = gallery_save_exhibition($payload);
+    if ($isFormSubmission) {
+        $_SESSION['gallery_admin_message'] = 'Exhibition saved successfully.';
+        header('Location: /gallery/admin-list-exhibitions.php', true, 303);
+        exit;
+    }
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => true, 'result' => $result]);
 } catch (Throwable $e) {
+    if ($isFormSubmission) {
+        http_response_code(400);
+        echo '<h1>Save failed</h1><p>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>';
+        exit;
+    }
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }

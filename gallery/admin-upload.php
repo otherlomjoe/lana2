@@ -23,11 +23,13 @@ $lookups = gallery_lookup_values($pdo);
 </head>
 <body>
   <div class="container">
+    <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Admin Upload</h1>
     <p><a href="/gallery/admin-list-images.php">View images</a> | <a href="/gallery/admin-list-exhibitions.php">View exhibitions</a></p>
     <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
       <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title"></div>
-      <div class="control-group"><label>Price</label><input type="text" name="pricePublic"></div>
+      <fieldset><legend>Public information</legend>
+      <div class="control-group"><label>Public price</label><input type="text" name="pricePublic"></div>
       <div class="control-group"><label>Available</label><select name="available"><option value="1">Yes</option><option value="0">No</option></select></div>
       <div class="control-group"><label>Medium</label><input type="text" name="medium" list="medium-options"><datalist id="medium-options"><?php foreach ($lookups['mediums'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
       <div class="control-group"><label>Genre</label><input type="text" name="genre" list="genre-options"><datalist id="genre-options"><?php foreach ($lookups['genres'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
@@ -38,6 +40,13 @@ $lookups = gallery_lookup_values($pdo);
       <div class="control-group"><label>Description</label><textarea name="description" rows="8" placeholder="Use **bold**, *italic*, blank lines, - lists, and [links](https://example.com)"></textarea></div>
       <div class="control-group"><label>Location</label><textarea name="location"></textarea></div>
       <div class="control-group"><label>Tags</label><input type="text" name="tags"></div>
+      <div class="control-group"><label>Alt text</label><input type="text" name="altText"></div>
+      </fieldset>
+      <fieldset><legend>Private administration</legend>
+      <div class="control-group"><label>Private price</label><input type="text" name="pricePrivate"></div>
+      <div class="control-group"><label>Private notes</label><textarea name="privateNotes"></textarea></div>
+      <div class="control-group"><label>Copies sold</label><input type="number" min="0" name="copiesSold" value="0"></div>
+      </fieldset>
       <div class="control-group"><label>Full image</label><input id="full-image" type="file" name="full" accept="image/*" required></div>
       <div class="control-group"><label>Thumbnail (recommended)</label><input type="file" name="thumbnail" accept="image/*"><p class="help-block">Upload a matching image-name-thumb file when available.</p><label><input type="checkbox" name="generateThumbnail" value="1"> Generate a 200 x 165 thumbnail if no thumbnail is uploaded</label></div>
       <button type="submit" class="btn btn-primary">Save image</button>
