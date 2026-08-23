@@ -10,6 +10,8 @@ if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_
 
 $pdo = gallery_init_db();
 $items = gallery_list_images($pdo);
+$message = $_SESSION['gallery_admin_message'] ?? '';
+unset($_SESSION['gallery_admin_message']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -22,7 +24,8 @@ $items = gallery_list_images($pdo);
 <body>
   <div class="container">
     <h1>Images</h1>
-    <p><a href="/gallery/admin-upload.php">Add image</a> | <a href="/gallery/admin-manage-dropdowns.php">Manage dropdowns</a></p>
+    <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <p><a href="/gallery/admin-upload.php">Add image</a></p>
     <table class="table table-striped">
       <thead><tr><th>ID</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Actions</th></tr></thead>
       <tbody>
