@@ -480,6 +480,51 @@ function gallery_store_uploaded_asset(array $file, string $directory, string $pr
     return ['path' => $target, 'filename' => $filename, 'url' => '/gallery/uploads/' . basename(dirname($directory)) . '/' . $filename];
 }
 
+function gallery_resolve_stored_asset(string $storedPath, string $directory): string
+{
+    if ($storedPath === '' || is_file($storedPath)) {
+        return $storedPath;
+    }
+
+    $filename = basename(str_replace('\\', '/', $storedPath));
+    $candidate = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
+    return is_file($candidate) ? $candidate : $storedPath;
+}
+
+function gallery_store_uploaded_named_asset(array $file, string $directory, string $fallbackPrefix): array
+{
+    if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        throw new RuntimeException('Uploaded file is invalid.');
+    }
+
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = $finfo->file($file['tmp_name']);
+    if (!isset($allowed[$mime])) {
+        throw new RuntimeException('Only JPG, PNG, and WEBP images are supported.');
+    }
+
+    $originalName = basename((string) ($file['name'] ?? ''));
+    $name = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $originalName);
+    $name = trim((string) $name, '.-');
+    $extension = $allowed[$mime];
+    if ($name === '' || strtolower((string) pathinfo($name, PATHINFO_EXTENSION)) !== $extension) {
+        $name = $fallbackPrefix . '-' . bin2hex(random_bytes(8)) . '.' . $extension;
+    }
+
+    $target = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $name;
+    if (is_file($target)) {
+        $name = pathinfo($name, PATHINFO_FILENAME) . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $target = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $name;
+    }
+
+    if (!move_uploaded_file($file['tmp_name'], $target)) {
+        throw new RuntimeException('Could not save the uploaded file.');
+    }
+
+    return ['path' => $target, 'filename' => $name];
+}
+
 function gallery_normalize_image_row(array $row): array
 {
     $tags = [];
@@ -834,6 +879,8 @@ function gallery_save_image(array $data, array $files = []): array
         if ($thumbPath === '') {
             $thumbPath = (string) ($existing['thumbnail_file'] ?? '');
         }
+        $fullPath = gallery_resolve_stored_asset($fullPath, __DIR__ . '/uploads/full');
+        $thumbPath = gallery_resolve_stored_asset($thumbPath, __DIR__ . '/uploads/thumbs');
         if ($fullUrl === '') {
             $fullUrl = (string) ($existing['full_url'] ?? '');
         }
@@ -856,29 +903,32 @@ function gallery_save_image(array $data, array $files = []): array
     }
 
     if ($thumbInput && !empty($thumbInput['tmp_name'])) {
-        $storedThumb = gallery_store_uploaded_asset($thumbInput, __DIR__ . '/uploads/thumbs', 'thumb');
+        $storedThumb = gallery_store_uploaded_named_asset($thumbInput, __DIR__ . '/uploads/thumbs', 'thumb');
         $thumbPath = $storedThumb['path'];
         $thumbUrl = '/gallery/uploads/thumbs/' . $storedThumb['filename'];
         if (!gallery_resize_image($thumbPath, $thumbPath, 200, 165, 88)) {
             throw new RuntimeException('Could not resize the thumbnail image.');
         }
     } elseif ($imageId === null && $filename !== '') {
-        $thumbBase = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . '-thumb';
-        foreach (['jpg', 'png', 'webp'] as $thumbExtension) {
-            $candidateFilename = $thumbBase . '.' . $thumbExtension;
-            $candidatePath = __DIR__ . '/uploads/thumbs/' . $candidateFilename;
-            if (is_file($candidatePath)) {
-                $thumbPath = $candidatePath;
-                $thumbUrl = '/gallery/uploads/thumbs/' . $candidateFilename;
-                break;
+        $imageBase = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME));
+        $thumbBases = [$imageBase . 'thumb', $imageBase . '-thumb'];
+        foreach ($thumbBases as $thumbBase) {
+            foreach (['jpg', 'png', 'webp'] as $thumbExtension) {
+                $candidateFilename = $thumbBase . '.' . $thumbExtension;
+                $candidatePath = __DIR__ . '/uploads/thumbs/' . $candidateFilename;
+                if (is_file($candidatePath)) {
+                    $thumbPath = $candidatePath;
+                    $thumbUrl = '/gallery/uploads/thumbs/' . $candidateFilename;
+                    break 2;
+                }
             }
         }
     }
 
     if ($thumbPath === '' && $fullPath !== '' && $generateThumbnail) {
-        $thumbFilename = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . '-thumb.jpg';
+        $thumbFilename = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . 'thumb.jpg';
         if (is_file(__DIR__ . '/uploads/thumbs/' . $thumbFilename)) {
-            $thumbFilename = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . '-thumb-' . bin2hex(random_bytes(4)) . '.jpg';
+            $thumbFilename = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . 'thumb-' . bin2hex(random_bytes(4)) . '.jpg';
         }
         $thumbPath = __DIR__ . '/uploads/thumbs/' . $thumbFilename;
         if (!gallery_resize_image($fullPath, $thumbPath, 200, 165, 88)) {
@@ -891,15 +941,15 @@ function gallery_save_image(array $data, array $files = []): array
         throw new InvalidArgumentException('A full image is required.');
     }
 
-    if ($thumbPath === '') {
+    if ($thumbPath === '' && !$isUpdate) {
         throw new InvalidArgumentException('Upload a thumbnail, select an existing image-name-thumb file, or enable thumbnail generation.');
     }
 
-    if ($fullPath !== '' && !is_file($fullPath)) {
+    if ($fullPath !== '' && !is_file($fullPath) && (!$isUpdate || ($fullInput && !empty($fullInput['tmp_name'])))) {
         throw new InvalidArgumentException('The full image file does not exist on disk.');
     }
 
-    if ($thumbPath !== '' && !is_file($thumbPath)) {
+    if ($thumbPath !== '' && !is_file($thumbPath) && (!$isUpdate || ($thumbInput && !empty($thumbInput['tmp_name'])) || $generateThumbnail)) {
         throw new InvalidArgumentException('The thumbnail file does not exist on disk.');
     }
 
