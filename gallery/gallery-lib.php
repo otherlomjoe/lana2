@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+$configPath = dirname(__DIR__) . '/gallery-config.php';
+if (is_readable($configPath)) {
+    require_once $configPath;
+}
+
 function gallery_database(): ?PDO
 {
     $dsn = getenv('GALLERY_DB_DSN');
