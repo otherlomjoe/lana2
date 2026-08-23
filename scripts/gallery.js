@@ -223,16 +223,11 @@ function loadGalleryMode(filters) {
     exList.innerHTML = "";
     worksList.innerHTML = "";
 
-	const exData = exhibitions.map(ex => {
-		const base = ex.imageSlug.replace(/-/g, "");
-		const thumb = ex.thumbnail || `/gallery/all/thumbs/${base}thumb.jpg`;
-
-		return {
-			link: ex.link || `gallery.html#${ex.slug}`,
-			thumb: thumb,
-			text: `${ex.title || ex.name}<br>${ex.date || ""}`
-		};
-	});
+    const exData = exhibitions.map(ex => ({
+        link: `gallery.html#${ex.slug}`,
+        thumb: ex.heroImage || "",
+        text: `${ex.title || ex.name}<br>${ex.startDate || ""}`
+    }));
 
     let exPageSize = 4;
     let exCurrentPage = 1;
@@ -350,7 +345,8 @@ function loadExhibitionMode(tag, filters) {
 	document.getElementById("works-heading").innerText = `${title} Works`;
 
     // Date
-    document.getElementById("ex-meta").innerText = ex.date || "";
+    document.getElementById("ex-meta").innerText =
+        [ex.startDate, ex.endDate].filter(Boolean).join(" - ");
 
     // Location (optional)
     if (ex.location) {
@@ -362,15 +358,13 @@ function loadExhibitionMode(tag, filters) {
     document.getElementById("ex-description").innerText =
         ex.description || "";
 
-    // Auto‑derive hero + thumbnail from imageSlug
-    const base = ex.imageSlug.replace(/-/g, "");
-
-    const hero = ex.hero || `/gallery/all/full/${base}.jpg`;
-    const thumb = ex.thumbnail || `/gallery/all/thumbs/${base}thumb.jpg`;
+    // Use the database-backed exhibition image when one is configured.
+    const hero = ex.heroImage || "";
 
     // Show hero image under date
-    document.getElementById("ex-hero").innerHTML =
-        `<img src="${hero}" alt="${title}" style="max-width:100%;margin:20px 0;">`;
+    document.getElementById("ex-hero").innerHTML = hero
+        ? `<img src="${hero}" alt="${title}" style="max-width:100%;margin:20px 0;">`
+        : "";
 
     //
     // --- UI visibility ---
