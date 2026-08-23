@@ -52,14 +52,14 @@ if ($id > 0) {
           <div class="control-group">
             <label>Full image</label>
             <?php if (!empty($item['full_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['full_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['full_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No full image is currently stored.</p><?php endif; ?>
-            <input id="full-image" type="file" name="full" accept="image/*">
+            <input id="full-image" data-media-input="full image" type="file" name="full" accept="image/*"><div data-media-preview="full-image"></div>
             <p class="help-block">Choose a replacement full image.</p>
             <?php if (!empty($item['full_file'])): ?><form method="post" action="/gallery/asset-delete.php" style="display:inline" onsubmit="return confirm('Remove the full image from storage and the database?')"><input type="hidden" name="id" value="<?= (int) $item['id'] ?>"><input type="hidden" name="asset" value="full"><button type="submit" class="btn btn-small">Remove full image</button></form><?php endif; ?>
           </div>
           <div class="control-group">
             <label>Thumbnail</label>
             <?php if (!empty($item['thumbnail_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No thumbnail is currently stored.</p><?php endif; ?>
-            <input id="thumbnail-file" type="file" name="thumbnail" accept="image/*">
+            <input id="thumbnail-file" data-media-input="thumbnail" type="file" name="thumbnail" accept="image/*"><div data-media-preview="thumbnail-file"></div>
             <p class="help-block">Choose a replacement thumbnail. The filename should end in <strong>thumb</strong>.</p>
             <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>
             <?php if (!empty($item['thumbnail_file'])): ?><form method="post" action="/gallery/asset-delete.php" style="display:inline" onsubmit="return confirm('Remove the thumbnail from storage and the database?')"><input type="hidden" name="id" value="<?= (int) $item['id'] ?>"><input type="hidden" name="asset" value="thumbnail"><button type="submit" class="btn btn-small">Remove thumbnail</button></form><?php endif; ?>
@@ -117,5 +117,6 @@ if ($id > 0) {
       <p>Image not found.</p>
     <?php endif; ?>
   </div>
+  <script src="/scripts/admin-media-preview.js"></script>
 </body>
 </html>
