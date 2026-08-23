@@ -13,13 +13,26 @@ header('Content-Type: text/html; charset=utf-8');
 </head>
 <body>
   <div class="container">
-    <h1>Exhibition</h1>
+    <h1 id="exhibition-title">Exhibition</h1>
+    <div id="exhibition-image"></div>
     <div id="exhibition-output"></div>
   </div>
   <script>
     const slug = new URLSearchParams(window.location.search).get('slug') || window.location.hash.substring(1);
-    fetch('/gallery/search.php?page=1&limit=100&exhibition=' + encodeURIComponent(slug))
-      .then(r => r.json())
+    Promise.all([
+      fetch('/gallery-api.php?action=list-exhibitions').then(r => r.json()),
+      fetch('/gallery/search.php?page=1&limit=100&exhibition=' + encodeURIComponent(slug)).then(r => r.json())
+    ])
+      .then(([exhibitions, payload]) => {
+        const exhibition = (Array.isArray(exhibitions) ? exhibitions : []).find(item => item.slug === slug);
+        if (exhibition) {
+          document.getElementById('exhibition-title').textContent = exhibition.title;
+          if (exhibition.heroImage || exhibition.thumbnailImage) {
+            document.getElementById('exhibition-image').innerHTML = `<img src="${exhibition.heroImage || exhibition.thumbnailImage}" alt="${exhibition.title}" style="max-width:100%;height:auto;">`;
+          }
+        }
+        return payload;
+      })
       .then(payload => {
         const items = payload && payload.result ? payload.result.items : [];
         document.getElementById('exhibition-output').innerHTML = items.map(item => `

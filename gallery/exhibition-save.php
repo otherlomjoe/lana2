@@ -18,7 +18,7 @@ try {
         $payload = json_decode($raw ?: '{}', true) ?: [];
     }
 
-    $result = gallery_save_exhibition($payload);
+    $result = gallery_save_exhibition($payload, $_FILES ?? []);
     if ($isFormSubmission) {
         $_SESSION['gallery_admin_message'] = 'Exhibition saved successfully.';
         header('Location: /gallery/admin-list-exhibitions.php', true, 303);

@@ -142,7 +142,7 @@ if ($action === 'save-exhibition') {
         $payload = json_decode($raw ?: '{}', true) ?: [];
     }
 
-    $result = gallery_save_exhibition($payload);
+    $result = gallery_save_exhibition($payload, $_FILES ?? []);
     echo json_encode(['success' => true, 'result' => $result]);
     exit;
 }
