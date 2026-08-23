@@ -10,6 +10,10 @@ if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_
 }
 
 $pdo = gallery_init_db();
+if (!$pdo) {
+  http_response_code(500);
+  exit('Gallery database is unavailable.');
+}
 $lookups = gallery_lookup_values($pdo);
 $exhibitions = gallery_list_exhibitions($pdo);
 $message = $_SESSION['gallery_admin_message'] ?? '';
@@ -42,7 +46,8 @@ if ($id > 0) {
     <h1>Edit Image</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($item): ?>
-      <p><img src="<?= htmlspecialchars((string) ($item['thumbnail_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"> <img src="<?= htmlspecialchars((string) ($item['full_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"></p>
+      <p><img src="<?= htmlspecialchars((string) ($item['thumbnail_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p>
+      <p><img src="<?= htmlspecialchars((string) ($item['full_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['full_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p>
       <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= htmlspecialchars((string) $item['id']) ?>">
         <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"></div>

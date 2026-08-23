@@ -9,6 +9,10 @@ if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_
 }
 
 $pdo = gallery_init_db();
+if (!$pdo) {
+  http_response_code(500);
+  exit('Gallery database is unavailable.');
+}
 $items = gallery_list_images($pdo, true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
 unset($_SESSION['gallery_admin_message']);

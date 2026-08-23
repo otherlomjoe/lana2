@@ -111,6 +111,7 @@ async function loadData() {
 --------------------------------------------------------- */	
 function populateMediumFilter() {
     const select = document.getElementById("filter-medium");
+    select.querySelectorAll("option:not(:first-child)").forEach(option => option.remove());
 
     // Extract unique mediums
     const mediums = [...new Set(items.map(i => i.medium).filter(Boolean))];
@@ -126,6 +127,7 @@ function populateMediumFilter() {
 
 function populateGenreFilter() {
     const select = document.getElementById("filter-genre");
+    select.querySelectorAll("option:not(:first-child)").forEach(option => option.remove());
 
     // Extract unique genres
     const genres = [...new Set(items.map(i => i.genre).filter(Boolean))];
@@ -277,7 +279,7 @@ function loadGalleryMode(filters) {
     let worksData = applyFilters(items, filters).map(item => ({
         link: getPage(item),
         thumb: getThumb(item),
-        text: `${getTitle(item)}<br>${item.medium || ""}`
+        text: `${getTitle(item)}<br>${item.medium || ""}${item.price ? `<br>${item.price}` : ""}`
     }));
 
     let worksPageSize = 16;

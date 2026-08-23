@@ -819,7 +819,8 @@ function gallery_save_image(array $data, array $files = []): array
     $generateThumbnail = !empty($data['generateThumbnail']);
 
     $imageId = !empty($data['id']) ? (int) $data['id'] : null;
-    if ($imageId !== null) {
+    $isUpdate = $imageId !== null;
+    if ($isUpdate) {
         $existingStmt = $pdo->prepare('SELECT full_file, thumbnail_file, full_url, thumbnail_url, artwork_created_at FROM images WHERE id = :id LIMIT 1');
         $existingStmt->execute([':id' => $imageId]);
         $existing = $existingStmt->fetch();
@@ -933,7 +934,9 @@ function gallery_save_image(array $data, array $files = []): array
         $artworkCreatedAt = gallery_detect_creation_date($fullInput['tmp_name']) ?? '';
     }
 
-    if ($imageId !== null) {
+    $pdo->beginTransaction();
+    try {
+    if ($isUpdate) {
         $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             ':slug' => $slug,
@@ -1017,7 +1020,15 @@ function gallery_save_image(array $data, array $files = []): array
         $fullUrl = preg_replace('#^' . preg_quote(__DIR__, '#') . '#', '', $fullPath);
     }
 
+    $pdo->commit();
+
     return ['id' => $imageId, 'slug' => $slug, 'title' => $title, 'thumbnail' => $thumbUrl, 'full' => $fullUrl, 'orientation' => $orientation];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 }
 
 function gallery_soft_delete_image(int $imageId): bool

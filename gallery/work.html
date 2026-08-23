@@ -163,24 +163,22 @@ function getFull(item) {
 // ---------------------------------------------------------
 //
 function formatDescription(text) {
-    // Paragraphs
-    let html = text.split("\n\n")
-        .map(p => `<p>${p}</p>`)
-        .join("");
-
-    // Bold
-    html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-    // Italics
-    html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
-
-    // Bullet lists
-    html = html.replace(/<p>- (.*?)<\/p>/g, "<ul><li>$1</li></ul>");
-
-    // Single line breaks
-    html = html.replace(/\n/g, "<br>");
-
-    return html;
+  const escaped = (text || "").replace(/[&<>\"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
+  })[character]);
+  return escaped
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .split(/\n\s*\n/)
+    .map(paragraph => {
+      const lines = paragraph.split("\n").filter(Boolean);
+      if (lines.every(line => /^-\s+/.test(line))) {
+        return `<ul>${lines.map(line => `<li>${line.replace(/^-\s+/, "")}</li>`).join("")}</ul>`;
+      }
+      return `<p>${lines.join("<br>")}</p>`;
+    })
+    .join("");
 }
 
 //
@@ -197,6 +195,7 @@ function normalizeUploadedItem(item) {
         medium: item.medium || "",
         genre: item.genre || "",
         description: item.description || "",
+        price: item.price || "",
         thumbnail: item.thumbnail || item.thumbnail_path || "",
         full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
         dateAdded: item.dateAdded || item.date_added || "",
