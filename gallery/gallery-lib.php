@@ -484,7 +484,7 @@ function gallery_normalize_image_row(array $row): array
 {
     $tags = [];
     if (!empty($row['tag_names'])) {
-        $tags = array_values(array_unique(array_filter(array_map('trim', explode(',', (string) $row['tag_names']), 'strlen'))));
+        $tags = array_values(array_unique(array_filter(array_map('trim', explode(',', (string) $row['tag_names'])), static fn ($tag) => $tag !== '')));
     }
 
     return [
