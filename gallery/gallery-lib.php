@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+$configPath = dirname(__DIR__) . '/gallery-config.php';
+if (is_readable($configPath)) {
+    require_once $configPath;
+}
+
 function gallery_database(): ?PDO
 {
     $dsn = getenv('GALLERY_DB_DSN');
@@ -447,6 +452,7 @@ function gallery_normalize_image_row(array $row): array
         'awardDescription' => (string) ($row['award_description'] ?? ''),
         'dimensions' => (string) ($row['dimensions'] ?? ''),
         'description' => (string) ($row['description'] ?? ''),
+        'descriptionHtml' => gallery_render_formatted_text((string) ($row['description'] ?? '')),
         'location' => (string) ($row['location'] ?? ''),
         'privateNotes' => (string) ($row['private_notes'] ?? ''),
         'copiesSold' => (int) ($row['copies_sold'] ?? 0),
@@ -662,40 +668,95 @@ function gallery_save_image(array $data, array $files = []): array
 
     gallery_ensure_upload_directories();
 
+    $fullInput = $files['full'] ?? $files['fullImage'] ?? null;
+    $thumbInput = $files['thumbnail'] ?? $files['thumb'] ?? null;
+    $filename = trim((string) ($data['filename'] ?? ($fullInput['name'] ?? '')));
     $title = trim((string) ($data['title'] ?? ''));
-    $filename = trim((string) ($data['filename'] ?? ''));
     if ($title === '' && $filename !== '') {
         $title = gallery_build_title_from_filename($filename);
     }
 
     if ($title === '') {
-        throw new InvalidArgumentException('Image title is required.');
+        throw new InvalidArgumentException('Image title could not be derived. Enter a title or choose an image file.');
     }
-
-    $fullInput = $files['full'] ?? $files['fullImage'] ?? null;
-    $thumbInput = $files['thumbnail'] ?? $files['thumb'] ?? null;
 
     $fullPath = trim((string) ($data['fullPath'] ?? ($data['full'] ?? '')));
     $thumbPath = trim((string) ($data['thumbnailPath'] ?? ($data['thumbnail'] ?? '')));
+    $fullUrl = trim((string) ($data['fullUrl'] ?? ''));
+    $thumbUrl = trim((string) ($data['thumbUrl'] ?? ($data['thumbnailUrl'] ?? '')));
+    $generateThumbnail = !empty($data['generateThumbnail']);
+
+    $imageId = !empty($data['id']) ? (int) $data['id'] : null;
+    if ($imageId !== null) {
+        $existingStmt = $pdo->prepare('SELECT full_file, thumbnail_file, full_url, thumbnail_url FROM images WHERE id = :id LIMIT 1');
+        $existingStmt->execute([':id' => $imageId]);
+        $existing = $existingStmt->fetch();
+        if (!$existing) {
+            throw new InvalidArgumentException('Image not found.');
+        }
+
+        if ($fullPath === '') {
+            $fullPath = (string) ($existing['full_file'] ?? '');
+        }
+        if ($thumbPath === '') {
+            $thumbPath = (string) ($existing['thumbnail_file'] ?? '');
+        }
+        if ($fullUrl === '') {
+            $fullUrl = (string) ($existing['full_url'] ?? '');
+        }
+        if ($thumbUrl === '') {
+            $thumbUrl = (string) ($existing['thumbnail_url'] ?? '');
+        }
+        if ($title === '' && $filename === '') {
+            $filename = basename((string) ($existing['full_file'] ?? ''));
+            $title = gallery_build_title_from_filename($filename);
+        }
+    }
 
     if ($fullInput && !empty($fullInput['tmp_name'])) {
         $stored = gallery_store_uploaded_asset($fullInput, __DIR__ . '/uploads/full', 'full');
         $fullPath = $stored['path'];
         $fullUrl = '/gallery/uploads/full/' . $stored['filename'];
-    } elseif ($fullPath !== '') {
-        $fullUrl = $fullPath;
     }
 
     if ($thumbInput && !empty($thumbInput['tmp_name'])) {
         $storedThumb = gallery_store_uploaded_asset($thumbInput, __DIR__ . '/uploads/thumbs', 'thumb');
         $thumbPath = $storedThumb['path'];
         $thumbUrl = '/gallery/uploads/thumbs/' . $storedThumb['filename'];
-    } elseif ($thumbPath !== '') {
-        $thumbUrl = $thumbPath;
+        if (!gallery_resize_image($thumbPath, $thumbPath, 200, 165, 88)) {
+            throw new RuntimeException('Could not resize the thumbnail image.');
+        }
+    } elseif ($imageId === null && $filename !== '') {
+        $thumbBase = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . '-thumb';
+        foreach (['jpg', 'png', 'webp'] as $thumbExtension) {
+            $candidateFilename = $thumbBase . '.' . $thumbExtension;
+            $candidatePath = __DIR__ . '/uploads/thumbs/' . $candidateFilename;
+            if (is_file($candidatePath)) {
+                $thumbPath = $candidatePath;
+                $thumbUrl = '/gallery/uploads/thumbs/' . $candidateFilename;
+                break;
+            }
+        }
     }
 
-    if (($fullPath === '' || $thumbPath === '') && ($fullInput === null || $thumbInput === null)) {
-        throw new InvalidArgumentException('Need a full image and a thumbnail image.');
+    if ($thumbPath === '' && $fullPath !== '' && $generateThumbnail) {
+        $thumbFilename = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . '-thumb.jpg';
+        if (is_file(__DIR__ . '/uploads/thumbs/' . $thumbFilename)) {
+            $thumbFilename = gallery_slugify(pathinfo($filename, PATHINFO_FILENAME)) . '-thumb-' . bin2hex(random_bytes(4)) . '.jpg';
+        }
+        $thumbPath = __DIR__ . '/uploads/thumbs/' . $thumbFilename;
+        if (!gallery_resize_image($fullPath, $thumbPath, 200, 165, 88)) {
+            throw new RuntimeException('Could not generate the thumbnail image.');
+        }
+        $thumbUrl = '/gallery/uploads/thumbs/' . $thumbFilename;
+    }
+
+    if ($fullPath === '') {
+        throw new InvalidArgumentException('A full image is required.');
+    }
+
+    if ($thumbPath === '') {
+        throw new InvalidArgumentException('Upload a thumbnail, select an existing image-name-thumb file, or enable thumbnail generation.');
     }
 
     if ($fullPath !== '' && !is_file($fullPath)) {
@@ -707,7 +768,7 @@ function gallery_save_image(array $data, array $files = []): array
     }
 
     $slug = gallery_slugify((string) ($data['slug'] ?? $title));
-    $slug = gallery_create_slug_exists($pdo, $slug);
+    $slug = gallery_create_slug_exists($pdo, $slug, $imageId);
 
     $mediumValue = trim((string) ($data['medium'] ?? ''));
     $genreValue = trim((string) ($data['genre'] ?? ''));
@@ -717,8 +778,8 @@ function gallery_save_image(array $data, array $files = []): array
     $genreId = $genreValue !== '' ? gallery_get_or_create_lookup($pdo, 'genres', $genreValue) : null;
     $collectionId = $collectionValue !== '' ? gallery_get_or_create_lookup($pdo, 'collections', $collectionValue) : null;
 
-    $fullUrl = $fullUrl ?? '/gallery/uploads/full/' . basename($fullPath);
-    $thumbUrl = $thumbUrl ?? '/gallery/uploads/thumbs/' . basename($thumbPath);
+    $fullUrl = $fullUrl !== '' ? $fullUrl : '/gallery/uploads/full/' . basename($fullPath);
+    $thumbUrl = $thumbUrl !== '' ? $thumbUrl : '/gallery/uploads/thumbs/' . basename($thumbPath);
 
     $orientation = trim((string) ($data['orientation'] ?? ''));
     if ($orientation === '') {
@@ -733,9 +794,7 @@ function gallery_save_image(array $data, array $files = []): array
     $description = trim((string) ($data['description'] ?? ''));
     $location = trim((string) ($data['location'] ?? ''));
 
-    $imageId = null;
-    if (!empty($data['id'])) {
-        $imageId = (int) $data['id'];
+    if ($imageId !== null) {
         $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             ':slug' => $slug,

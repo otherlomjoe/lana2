@@ -33,7 +33,7 @@ $id = (int) ($_GET['id'] ?? 0);
           <p><strong>Medium:</strong> ${item.medium || ''}</p>
           <p><strong>Genre:</strong> ${item.genre || ''}</p>
           <p><strong>Collection:</strong> ${item.collection || ''}</p>
-          <p>${item.description || ''}</p>
+          <div>${item.descriptionHtml || ''}</div>
         `;
       });
   </script>

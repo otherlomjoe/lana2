@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/gallery-lib.php';
+
 session_start();
 header('Content-Type: text/html; charset=utf-8');
 
