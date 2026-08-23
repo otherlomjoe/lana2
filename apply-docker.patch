@@ -1,0 +1,131 @@
+*** Begin Patch
+*** Add File: docker-compose.yml
++version: "3.8"
++
++services:
++  web:
++    image: php:8.2-apache
++    container_name: lana_web
++    ports:
++      - "8000:80"
++    volumes:
++      - ./:/var/www/html:delegated
++      - uploads_data:/var/www/html/uploads
++    env_file:
++      - .env
++    depends_on:
++      db:
++        condition: service_healthy
++    restart: unless-stopped
++
++  db:
++    image: mysql:8.0
++    container_name: lana_db
++    environment:
++      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
++      MYSQL_DATABASE: ${MYSQL_DATABASE}
++      MYSQL_USER: ${MYSQL_USER}
++      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
++    volumes:
++      - db_data:/var/lib/mysql
++    healthcheck:
++      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
++      interval: 10s
++      timeout: 5s
++      retries: 5
++    restart: unless-stopped
++
++  phpmyadmin:
++    image: phpmyadmin/phpmyadmin
++    container_name: lana_phpmyadmin
++    environment:
++      PMA_HOST: db
++      PMA_USER: ${MYSQL_USER}
++      PMA_PASSWORD: ${MYSQL_PASSWORD}
++    ports:
++      - "8080:80"
++    depends_on:
++      - db
++    restart: unless-stopped
++
++volumes:
++  db_data:
++  uploads_data:
++
+*** End Patch
+*** Begin Patch
+*** Add File: .env.example
++## Copy to .env and edit (do NOT commit .env)
++
++# MySQL (used by docker-compose)
++MYSQL_ROOT_PASSWORD=change_me_root
++MYSQL_DATABASE=lana_gallery
++MYSQL_USER=lana_gallery_user
++MYSQL_PASSWORD=change_me_db
++
++# App env (read by gallery-api.php)
++# NOTE: when running in Docker the DB host is `db`
++GALLERY_DB_DSN=mysql:host=db;dbname=lana_gallery;charset=utf8mb4
++GALLERY_DB_USER=lana_gallery_user
++GALLERY_DB_PASS=change_me_db
++GALLERY_ADMIN_PASSWORD_HASH=$2y$...replace_with_hash...
++APP_ENV=development
++
+*** End Patch
+*** Begin Patch
+*** Add File: DOCKER_README.md
++This folder adds a simple Docker-based local environment for the site.
++
++Quick steps
++
++1. Copy and edit environment:
++
++   cp .env.example .env
++   # Edit .env: set MYSQL_ROOT_PASSWORD and MYSQL_PASSWORD and replace GALLERY_ADMIN_PASSWORD_HASH
++
++2. Start stack:
++
++   docker compose up -d
++
++3. Generate admin password hash (on host):
++
++   php -r "echo password_hash('your-admin-password', PASSWORD_DEFAULT) . PHP_EOL;"
++   # paste the result into GALLERY_ADMIN_PASSWORD_HASH in .env
++
++4. Initialize DB table (run once):
++
++   docker exec -i lana_db mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} <<'SQL'
++   CREATE TABLE IF NOT EXISTS gallery_items (
++     id INT AUTO_INCREMENT PRIMARY KEY,
++     slug VARCHAR(255) NOT NULL UNIQUE,
++     title VARCHAR(255) NOT NULL,
++     medium VARCHAR(255) DEFAULT '',
++     genre VARCHAR(255) DEFAULT '',
++     description TEXT,
++     thumbnail_path VARCHAR(1024),
++     full_path VARCHAR(1024),
++     date_added DATE,
++     sold TINYINT(1) DEFAULT 0,
++     disabled TINYINT(1) DEFAULT 0,
++     is_active TINYINT(1) DEFAULT 1,
++     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
++   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
++   SQL
++
++5. Test:
++
++   # API status
++   curl 'http://localhost:8000/gallery-api.php?action=status'
++
++   # phpMyAdmin: http://localhost:8080 (user/password from .env)
++
++Stop & cleanup
++
++   docker compose down
++   docker compose down -v   # remove volumes (DB + uploads)
++
++Notes
++- Do NOT commit `.env`.
++- `uploads` are stored in the named volume `uploads_data`; if you prefer a host folder, change the `volumes` mapping for `web`.
++
+*** End Patch

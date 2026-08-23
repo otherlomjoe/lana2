@@ -219,39 +219,17 @@ async function getUploadedGalleryItems() {
 
         const data = await response.json();
         const items = Array.isArray(data) ? data : [];
-        const normalized = items.map(normalizeUploadedItem).filter(Boolean);
-
-        try {
-            localStorage.setItem("lana_gallery_uploaded_items", JSON.stringify(normalized));
-        } catch (error) {
-            // Ignore storage issues in browsers that block local storage.
-        }
-
-        return normalized;
+        return items.map(normalizeUploadedItem).filter(Boolean);
     } catch (error) {
-        try {
-            const raw = localStorage.getItem("lana_gallery_uploaded_items");
-            if (!raw) return [];
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed.map(normalizeUploadedItem).filter(Boolean) : [];
-        } catch (localError) {
-            return [];
-        }
+        return [];
     }
 }
 
 async function loadArtwork() {
     const slug = window.location.hash.replace("#", "");
 
-    const remoteItems = await fetch("/gallery/works.json").then(r => r.json());
     const uploadedItems = await getUploadedGalleryItems();
-    const merged = new Map();
-    [...uploadedItems, ...remoteItems].forEach(item => {
-        if (item && item.slug) {
-            merged.set(item.slug, item);
-        }
-    });
-    const items = Array.from(merged.values());
+    const items = uploadedItems;
 
     const item = items.find(i => i.slug === slug);
 
