@@ -861,7 +861,7 @@ function gallery_save_image(array $data, array $files = []): array
     $thumbPath = trim((string) ($data['thumbnailPath'] ?? ($data['thumbnail'] ?? '')));
     $fullUrl = trim((string) ($data['fullUrl'] ?? ''));
     $thumbUrl = trim((string) ($data['thumbUrl'] ?? ($data['thumbnailUrl'] ?? '')));
-    $generateThumbnail = !empty($data['generate_thumbnail']) || !empty($data['generateThumbnail']);
+    $generateThumbnail = !empty($data['generateThumbnail']);
 
     $imageId = !empty($data['id']) ? (int) $data['id'] : null;
     $isUpdate = $imageId !== null;
@@ -897,7 +897,7 @@ function gallery_save_image(array $data, array $files = []): array
     }
 
     if ($fullInput && !empty($fullInput['tmp_name'])) {
-        $stored = gallery_store_uploaded_asset($fullInput, __DIR__ . '/uploads/full', 'full');
+        $stored = gallery_store_uploaded_named_asset($fullInput, __DIR__ . '/uploads/full', 'full');
         $fullPath = $stored['path'];
         $fullUrl = '/gallery/uploads/full/' . $stored['filename'];
     }
@@ -1201,30 +1201,6 @@ function gallery_remove_image_asset(int $imageId, string $asset): bool
     }
 
     return $pdo->prepare("UPDATE images SET {$column} = NULL, {$urlColumn} = NULL WHERE id = :id")->execute([':id' => $imageId]);
-}
-
-function gallery_remove_exhibition_asset(int $exhibitionId, string $asset): bool
-{
-    $pdo = gallery_init_db();
-    if (!$pdo || !in_array($asset, ['hero', 'thumbnail'], true)) {
-        return false;
-    }
-
-    $stmt = $pdo->prepare('SELECT hero_file, thumbnail_file FROM exhibitions WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $exhibitionId]);
-    $row = $stmt->fetch();
-    if (!$row) {
-        return false;
-    }
-
-    $fileColumn = $asset === 'hero' ? 'hero_file' : 'thumbnail_file';
-    $urlColumn = $asset === 'hero' ? 'hero_image' : 'thumbnail_url';
-    $file = (string) ($row[$fileColumn] ?? '');
-    if ($file !== '' && is_file($file)) {
-        @unlink($file);
-    }
-
-    return $pdo->prepare("UPDATE exhibitions SET {$fileColumn} = NULL, {$urlColumn} = NULL WHERE id = :id")->execute([':id' => $exhibitionId]);
 }
 
 function gallery_require_auth(): void
