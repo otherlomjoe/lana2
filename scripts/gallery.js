@@ -225,7 +225,7 @@ function loadGalleryMode(filters) {
 
     const exData = exhibitions.map(ex => ({
         link: `gallery.html#${ex.slug}`,
-        thumb: ex.heroImage || "",
+        thumb: ex.thumbnailImage || ex.heroImage || "",
         text: `${ex.title || ex.name}<br>${ex.startDate || ""}`
     }));
 

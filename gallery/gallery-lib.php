@@ -33,6 +33,8 @@ function gallery_ensure_upload_directories(): void
         __DIR__ . '/uploads/full',
         __DIR__ . '/uploads/thumbs',
         __DIR__ . '/uploads/deleted',
+        __DIR__ . '/uploads/exhibitions/full',
+        __DIR__ . '/uploads/exhibitions/thumbs',
         __DIR__ . '/all/imported',
     ];
 
@@ -121,6 +123,20 @@ function gallery_init_db(): ?PDO
     ] as $column => $definition) {
         try {
             $pdo->exec("ALTER TABLE images ADD COLUMN {$column} {$definition}");
+        } catch (PDOException $e) {
+            if ((int) $e->errorInfo[1] !== 1060) {
+                throw $e;
+            }
+        }
+    }
+
+    foreach ([
+        'hero_file' => 'VARCHAR(1024) NULL',
+        'thumbnail_file' => 'VARCHAR(1024) NULL',
+        'thumbnail_url' => 'VARCHAR(1024) NULL',
+    ] as $column => $definition) {
+        try {
+            $pdo->exec("ALTER TABLE exhibitions ADD COLUMN {$column} {$definition}");
         } catch (PDOException $e) {
             if ((int) $e->errorInfo[1] !== 1060) {
                 throw $e;
@@ -494,6 +510,7 @@ function gallery_normalize_image_row(array $row): array
         'orientation' => (string) ($row['orientation'] ?? 'landscape'),
         'altText' => (string) ($row['alt_text'] ?? ''),
         'tags' => $tags,
+        'exhibitions' => !empty($row['exhibition_slugs']) ? array_values(array_filter(array_map('trim', explode(',', (string) $row['exhibition_slugs'])))) : [],
         'source' => 'server',
         'createdAt' => $row['created_at'] ?? null,
         'artworkCreatedAt' => $row['artwork_created_at'] ?? null,
@@ -518,10 +535,12 @@ function gallery_list_images(?PDO $pdo = null, bool $includeDeleted = false): ar
     }
 
         $deletedCondition = $includeDeleted ? '' : ' WHERE i.deleted_at IS NULL';
-        $sql = "SELECT i.*, GROUP_CONCAT(DISTINCT t.name, ',') AS tag_names
+            $sql = "SELECT i.*, GROUP_CONCAT(DISTINCT t.name, ',') AS tag_names, GROUP_CONCAT(DISTINCT e.slug) AS exhibition_slugs
             FROM images i
             LEFT JOIN image_tags it ON it.image_id = i.id
             LEFT JOIN tags t ON t.id = it.tag_id
+                LEFT JOIN image_exhibitions ie ON ie.image_id = i.id
+                LEFT JOIN exhibitions e ON e.id = ie.exhibition_id
             {$deletedCondition}
             GROUP BY i.id
             ORDER BY COALESCE(i.artwork_created_at, DATE(i.created_at)) DESC, i.created_at DESC";
@@ -553,6 +572,7 @@ function gallery_list_exhibitions(?PDO $pdo = null): array
             'location' => $row['location'],
             'description' => $row['description'],
             'heroImage' => $row['hero_image'],
+            'thumbnailImage' => $row['thumbnail_url'],
             'imageCount' => (int) ($row['image_count'] ?? 0),
             'createdAt' => $row['created_at'] ?? null,
         ];
@@ -561,7 +581,7 @@ function gallery_list_exhibitions(?PDO $pdo = null): array
     return $exhibitions;
 }
 
-function gallery_save_exhibition(array $data): array
+function gallery_save_exhibition(array $data, array $files = []): array
 {
     $pdo = gallery_init_db();
     if (!$pdo) {
@@ -575,9 +595,49 @@ function gallery_save_exhibition(array $data): array
 
     $slug = gallery_slugify((string) ($data['slug'] ?? $title));
     $id = isset($data['id']) ? (int) $data['id'] : 0;
+    $heroInput = $files['hero'] ?? $files['full'] ?? null;
+    $thumbnailInput = $files['thumbnail'] ?? $files['thumb'] ?? null;
+    $heroFile = trim((string) ($data['heroFile'] ?? ''));
+    $thumbnailFile = trim((string) ($data['thumbnailFile'] ?? ''));
+    $heroImage = trim((string) ($data['heroImage'] ?? ''));
+    $thumbnailImage = trim((string) ($data['thumbnailImage'] ?? ''));
 
     if ($id > 0) {
-        $stmt = $pdo->prepare('UPDATE exhibitions SET slug = :slug, title = :title, start_date = :start_date, end_date = :end_date, location = :location, description = :description, hero_image = :hero_image WHERE id = :id');
+        $existingStmt = $pdo->prepare('SELECT hero_file, thumbnail_file, hero_image, thumbnail_url FROM exhibitions WHERE id = :id LIMIT 1');
+        $existingStmt->execute([':id' => $id]);
+        $existing = $existingStmt->fetch();
+        if (!$existing) {
+            throw new InvalidArgumentException('Exhibition not found.');
+        }
+        $heroFile = $heroFile ?: (string) ($existing['hero_file'] ?? '');
+        $thumbnailFile = $thumbnailFile ?: (string) ($existing['thumbnail_file'] ?? '');
+        $heroImage = $heroImage ?: (string) ($existing['hero_image'] ?? '');
+        $thumbnailImage = $thumbnailImage ?: (string) ($existing['thumbnail_url'] ?? '');
+    }
+
+    if ($heroInput && !empty($heroInput['tmp_name'])) {
+        $storedHero = gallery_store_uploaded_asset($heroInput, __DIR__ . '/uploads/exhibitions/full', 'exhibition');
+        $heroFile = $storedHero['path'];
+        $heroImage = '/gallery/uploads/exhibitions/full/' . $storedHero['filename'];
+    }
+    if ($thumbnailInput && !empty($thumbnailInput['tmp_name'])) {
+        $storedThumbnail = gallery_store_uploaded_asset($thumbnailInput, __DIR__ . '/uploads/exhibitions/thumbs', 'thumb');
+        $thumbnailFile = $storedThumbnail['path'];
+        $thumbnailImage = '/gallery/uploads/exhibitions/thumbs/' . $storedThumbnail['filename'];
+        if (!gallery_resize_image($thumbnailFile, $thumbnailFile, 200, 165, 88)) {
+            throw new RuntimeException('Could not resize the exhibition thumbnail.');
+        }
+    } elseif ($thumbnailFile === '' && $heroFile !== '' && !empty($data['generateThumbnail'])) {
+        $thumbnailFilename = gallery_slugify($title) . '-thumb.jpg';
+        $thumbnailFile = __DIR__ . '/uploads/exhibitions/thumbs/' . $thumbnailFilename;
+        if (!gallery_resize_image($heroFile, $thumbnailFile, 200, 165, 88)) {
+            throw new RuntimeException('Could not generate the exhibition thumbnail.');
+        }
+        $thumbnailImage = '/gallery/uploads/exhibitions/thumbs/' . $thumbnailFilename;
+    }
+
+    if ($id > 0) {
+        $stmt = $pdo->prepare('UPDATE exhibitions SET slug = :slug, title = :title, start_date = :start_date, end_date = :end_date, location = :location, description = :description, hero_image = :hero_image, hero_file = :hero_file, thumbnail_file = :thumbnail_file, thumbnail_url = :thumbnail_url WHERE id = :id');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -585,12 +645,15 @@ function gallery_save_exhibition(array $data): array
             ':end_date' => trim((string) ($data['endDate'] ?? $data['end_date'] ?? '')),
             ':location' => trim((string) ($data['location'] ?? '')),
             ':description' => trim((string) ($data['description'] ?? '')),
-            ':hero_image' => trim((string) ($data['heroImage'] ?? '')),
+            ':hero_image' => $heroImage,
+            ':hero_file' => $heroFile ?: null,
+            ':thumbnail_file' => $thumbnailFile ?: null,
+            ':thumbnail_url' => $thumbnailImage ?: null,
             ':id' => $id,
         ]);
         $exhibitionId = $id;
     } else {
-        $stmt = $pdo->prepare('INSERT INTO exhibitions (slug, title, start_date, end_date, location, description, hero_image) VALUES (:slug, :title, :start_date, :end_date, :location, :description, :hero_image)');
+        $stmt = $pdo->prepare('INSERT INTO exhibitions (slug, title, start_date, end_date, location, description, hero_image, hero_file, thumbnail_file, thumbnail_url) VALUES (:slug, :title, :start_date, :end_date, :location, :description, :hero_image, :hero_file, :thumbnail_file, :thumbnail_url)');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -598,7 +661,10 @@ function gallery_save_exhibition(array $data): array
             ':end_date' => trim((string) ($data['endDate'] ?? $data['end_date'] ?? '')),
             ':location' => trim((string) ($data['location'] ?? '')),
             ':description' => trim((string) ($data['description'] ?? '')),
-            ':hero_image' => trim((string) ($data['heroImage'] ?? '')),
+            ':hero_image' => $heroImage,
+            ':hero_file' => $heroFile ?: null,
+            ':thumbnail_file' => $thumbnailFile ?: null,
+            ':thumbnail_url' => $thumbnailImage ?: null,
         ]);
         $exhibitionId = (int) $pdo->lastInsertId();
     }
@@ -683,9 +749,11 @@ function gallery_search_images(array $filters = [], int $page = 1, int $limit = 
     $offset = ($page - 1) * $limit;
     $pages = $total > 0 ? (int) ceil($total / $limit) : 0;
 
-    $sql = 'SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names FROM images i
+        $sql = 'SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names, GROUP_CONCAT(DISTINCT e.slug) AS exhibition_slugs FROM images i
             LEFT JOIN image_tags it ON it.image_id = i.id
             LEFT JOIN tags t ON t.id = it.tag_id
+            LEFT JOIN image_exhibitions ie ON ie.image_id = i.id
+            LEFT JOIN exhibitions e ON e.id = ie.exhibition_id
             ' . $whereSql . '
             GROUP BY i.id
             ORDER BY COALESCE(i.artwork_created_at, DATE(i.created_at)) DESC, i.created_at DESC
