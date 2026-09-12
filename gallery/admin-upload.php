@@ -1,4 +1,14 @@
 <?php
+$version = 'unknown';
+$versionFile = dirname(__DIR__) . '/version.txt';
+if (is_file($versionFile)) {
+    $version = trim(file_get_contents($versionFile));
+} elseif (is_dir(dirname(__DIR__) . '/.git')) {
+    $git = @shell_exec('git -C ' . escapeshellarg(dirname(__DIR__)) . ' describe --tags --always 2>/dev/null');
+    if ($git) $version = trim($git);
+}
+echo '<div id="deploy-version">Version: ' . htmlspecialchars($version, ENT_QUOTES, 'UTF-8') . '</div>';
+
 require __DIR__ . '/gallery-lib.php';
 
 session_start();
@@ -28,6 +38,20 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
+  <style>
+#deploy-version {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 12px;
+  z-index: 10000;
+  border-radius: 3px;
+  pointer-events: none;
+}
+</style>
 </head>
 <body>
   <div class="container">
