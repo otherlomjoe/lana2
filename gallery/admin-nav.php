@@ -12,6 +12,7 @@
         <li><a href="/gallery/admin-list-exhibitions.php">Exhibitions</a></li>
         <li><a href="/gallery/admin-exhibition-edit.php">Create exhibition</a></li>
         <li><a href="/gallery/admin-exhibition-preview.php">Preview</a></li>
+        <li><a href="/gallery/admin-clear-all.php" onclick="return confirm('Open Clear All page? You will still have to confirm on that page.')">Clear all (destructive)</a></li>
         <li><a href="/gallery/admin-logout.php">Log out</a></li>
       </ul>
     </div>
