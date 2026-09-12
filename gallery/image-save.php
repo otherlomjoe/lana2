@@ -9,11 +9,10 @@ $isFormSubmission = $_SERVER['REQUEST_METHOD'] === 'POST'
 function imageSaveError(string $message, int $status): void
 {
     if ($GLOBALS['isFormSubmission']) {
-        http_response_code($status);
-        header('Content-Type: text/html; charset=utf-8');
-        echo '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Save failed</title></head><body>';
-        echo '<h1>Save failed</h1><p>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</p>';
-        echo '<p><a href="javascript:history.back()">Return to edit form</a></p></body></html>';
+        $_SESSION['gallery_admin_message_error'] = $message;
+        $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+        $target = $id > 0 ? '/gallery/admin-edit.php?id=' . $id : '/gallery/admin-upload.php';
+        header('Location: ' . $target, true, 303);
         exit;
     }
 
@@ -38,9 +37,15 @@ try {
 
     if ($isFormSubmission) {
         $_SESSION['gallery_admin_message'] = 'Image saved successfully.';
-        $destination = ($_POST['save_mode'] ?? 'list') === 'stay'
-            ? '/gallery/admin-edit.php?id=' . (int) $result['id']
-            : '/gallery/admin-list-images.php?saved=1';
+        $saveMode = ($_POST['save_mode'] ?? 'list');
+        if ($saveMode === 'stay') {
+            $destination = '/gallery/admin-edit.php?id=' . (int) $result['id'];
+        } else {
+            $destination = '/gallery/admin-list-images.php?saved=1';
+            if (!empty($_POST['exhibition'])) {
+                $destination = '/gallery/admin-list-images.php?exhibition=' . (int) $_POST['exhibition'] . '&saved=1';
+            }
+        }
         header('Location: ' . $destination, true, 303);
         exit;
     }

@@ -17,7 +17,8 @@ if (!$pdo) {
 $lookups = gallery_lookup_values($pdo);
 $exhibitions = gallery_list_exhibitions($pdo);
 $message = $_SESSION['gallery_admin_message'] ?? '';
-unset($_SESSION['gallery_admin_message']);
+$error = $_SESSION['gallery_admin_message_error'] ?? '';
+unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
 $id = (int) ($_GET['id'] ?? 0);
 $item = null;
 if ($id > 0) {
@@ -45,6 +46,7 @@ if ($id > 0) {
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Edit Image</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($item): ?>
       <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= htmlspecialchars((string) $item['id']) ?>">
@@ -63,7 +65,7 @@ if ($id > 0) {
             <p class="help-block">Choose a replacement thumbnail. The filename should end in <strong>thumb</strong>.</p>
             <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>
             <?php if (!empty($item['thumbnail_file'])): ?><form method="post" action="/gallery/asset-delete.php" style="display:inline" onsubmit="return confirm('Remove the thumbnail from storage and the database?')"><input type="hidden" name="id" value="<?= (int) $item['id'] ?>"><input type="hidden" name="asset" value="thumbnail"><button type="submit" class="btn btn-small">Remove thumbnail</button></form><?php endif; ?>
-            <button type="submit" name="generate_thumbnail" value="1" class="btn">Generate correctly named 200 x 165 thumbnail</button>
+            <button type="button" id="generate-thumbnail-btn" class="btn">Generate correctly named 200 x 165 thumbnail</button>
           </div>
         </fieldset>
         <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"></div>
@@ -96,6 +98,23 @@ if ($id > 0) {
           <a class="btn" href="/gallery/admin-list-images.php">Close</a>
         </div>
       </form>
+      <script>
+        document.getElementById('generate-thumbnail-btn').addEventListener('click', function () {
+          const form = this.form || document.querySelector('form');
+          if (!form) return;
+          let g = form.querySelector('input[name="generateThumbnail"]');
+          if (!g) {
+            g = document.createElement('input'); g.type = 'hidden'; g.name = 'generateThumbnail'; g.value = '1'; form.appendChild(g);
+          }
+          let s = form.querySelector('input[name="save_mode"]');
+          if (!s) {
+            s = document.createElement('input'); s.type = 'hidden'; s.name = 'save_mode'; s.value = 'stay'; s.id = 'save_mode_hidden'; form.appendChild(s);
+          } else {
+            s.value = 'stay';
+          }
+          form.submit();
+        });
+      </script>
       <script>
         document.getElementById('full-image').addEventListener('change', function () {
           const title = document.getElementById('image-title');

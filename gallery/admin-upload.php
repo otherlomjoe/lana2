@@ -16,6 +16,9 @@ if (!$pdo) {
 }
 $lookups = gallery_lookup_values($pdo);
 $exhibitions = gallery_list_exhibitions($pdo);
+$message = $_SESSION['gallery_admin_message'] ?? '';
+$error = $_SESSION['gallery_admin_message_error'] ?? '';
+unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,6 +33,8 @@ $exhibitions = gallery_list_exhibitions($pdo);
   <div class="container">
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Admin Upload</h1>
+    <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <p><a href="/gallery/admin-list-images.php">View images</a> | <a href="/gallery/admin-list-exhibitions.php">View exhibitions</a></p>
     <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
       <div class="control-group"><label>Full image</label><input id="full-image" data-media-input="full image" type="file" name="full" accept="image/*" required><div data-media-preview="full-image"></div></div>

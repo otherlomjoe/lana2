@@ -13,7 +13,12 @@ if (!$pdo) {
   http_response_code(500);
   exit('Gallery database is unavailable.');
 }
-$items = gallery_list_images($pdo, true);
+$filterExhibition = isset($_GET['exhibition']) ? (int) $_GET['exhibition'] : 0;
+if ($filterExhibition > 0) {
+  $items = gallery_list_exhibition_images($filterExhibition, $pdo);
+} else {
+  $items = gallery_list_images($pdo, true);
+}
 $message = $_SESSION['gallery_admin_message'] ?? '';
 unset($_SESSION['gallery_admin_message']);
 ?>
