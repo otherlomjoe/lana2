@@ -6,7 +6,7 @@
     <div class="admin-nav-collapse nav-collapse collapse">
       <ul class="nav nav-pills ddmenu">
         <li><a href="/index.html">Home</a></li>
-        <li><a href="/gallery/public-gallery.php">Public gallery</a></li>
+        <!-- Public gallery removed from admin menu -->
         <li><a href="/gallery/admin-list-images.php">Images</a></li>
         <li><a href="/gallery/admin-upload.php">Create image</a></li>
         <li><a href="/gallery/admin-list-exhibitions.php">Exhibitions</a></li>

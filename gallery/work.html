@@ -118,8 +118,10 @@
         <div class="span4">
           <h3>Description</h3>
           <h5 id="art-medium"></h5>
-          <p id="art-description"></p>
-          <div id="private-info" class="private-info" style="display:none"></div>
+            <p id="art-description"></p>
+            <div id="art-date" class="art-date" style="margin-top:6px;color:#666;font-size:0.95em"></div>
+            <div id="art-price-value" style="margin-top:8px"></div>
+            <div id="private-info" class="private-info" style="display:none"></div>
         </div>
 
       </div>
@@ -199,7 +201,8 @@ function normalizeUploadedItem(item) {
         title: item.title || "",
         medium: item.medium || "",
         genre: item.genre || "",
-        description: item.description || "",
+    description: item.description || "",
+    awardDescription: item.awardDescription || item.award_description || item.awardDesc || '',
         price: item.price || "",
         thumbnail: item.thumbnail || item.thumbnail_path || "",
         full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
@@ -296,10 +299,7 @@ async function loadArtwork() {
     metaTags.push(`<a class="tag" href="/gallery.html#collection-${safe}">Collection: ${item.collection}</a>`);
   }
 
-	// Date Added
-	if (item.dateAdded) {
-		metaTags.push(`<a class="tag" href="/gallery.html#date-${item.dateAdded}">Added: ${item.dateAdded}</a>`);
-	}
+  // Date Added (moved to under description on work page)
 
 	// Disabled (optional)
 	if (item.disabled) {
@@ -322,9 +322,12 @@ async function loadArtwork() {
     metaTags.push(`<a class="tag" href="/gallery.html#prints-true">Limited Prints Available</a>`);
   }
 
-  // Award
+  // Award (show badge and optional award description)
   if (item.awardTitle) {
-    document.getElementById('art-award').innerHTML = `<span class="award-badge">★ ${item.awardTitle}</span>`;
+    const desc = item.awardDescription || item.award_description || item.awardDesc || '';
+    const escapedDesc = (desc || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    const safeDesc = escapedDesc ? `<span class="award-desc" style="margin-left:8px;color:#444">${escapedDesc}</span>` : '';
+    document.getElementById('art-award').innerHTML = `<span class="award-badge">★ ${item.awardTitle}</span>` + safeDesc;
   }
 
 	metaContainer.innerHTML = metaTags.join("");

@@ -117,66 +117,86 @@ function renderAppliedFiltersAndBreadcrumb() {
     container.innerHTML = '';
     const parts = [];
 
+    const addBadge = (label, key, value) => {
+        const badge = document.createElement('span');
+        badge.className = 'filter-badge';
+        badge.textContent = label;
+
+        const rem = document.createElement('span');
+        rem.className = 'remove';
+        rem.setAttribute('role', 'button');
+        rem.setAttribute('tabindex', '0');
+        rem.setAttribute('aria-label', `Remove filter ${label}`);
+        rem.dataset.filter = key;
+        rem.dataset.value = value || '';
+        rem.textContent = '×';
+
+        rem.addEventListener('click', () => removeFilter(key));
+        rem.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                removeFilter(key);
+            }
+        });
+
+        badge.appendChild(rem);
+        container.appendChild(badge);
+    };
+
     if (currentFilters.medium) {
-        const b = document.createElement('span');
-        b.className = 'filter-badge';
-        b.innerHTML = `Medium: ${currentFilters.medium} <span class="remove" data-filter="medium">×</span>`;
-        container.appendChild(b);
-        parts.push(`Medium: ${currentFilters.medium}`);
+        const label = `Medium: ${currentFilters.medium}`;
+        parts.push(label);
+        addBadge(label, 'medium', currentFilters.medium);
     }
     if (currentFilters.genre) {
-        const b = document.createElement('span');
-        b.className = 'filter-badge';
-        b.innerHTML = `Genre: ${currentFilters.genre} <span class="remove" data-filter="genre">×</span>`;
-        container.appendChild(b);
-        parts.push(`Genre: ${currentFilters.genre}`);
+        const label = `Genre: ${currentFilters.genre}`;
+        parts.push(label);
+        addBadge(label, 'genre', currentFilters.genre);
     }
     if (currentFilters.sold) {
-        const b = document.createElement('span');
-        b.className = 'filter-badge';
-        b.innerHTML = `${currentFilters.sold === 'sold' ? 'Sold' : 'Available'} <span class="remove" data-filter="sold">×</span>`;
-        container.appendChild(b);
-        parts.push(currentFilters.sold === 'sold' ? 'Sold' : 'Available');
+        const label = currentFilters.sold === 'sold' ? 'Sold' : 'Available';
+        parts.push(label);
+        addBadge(label, 'sold', currentFilters.sold);
     }
     if (currentFilters.prints) {
-        const b = document.createElement('span');
-        b.className = 'filter-badge';
-        b.innerHTML = `Limited Prints Available <span class="remove" data-filter="prints">×</span>`;
-        container.appendChild(b);
-        parts.push('Limited Prints Available');
+        const label = 'Limited Prints Available';
+        parts.push(label);
+        addBadge(label, 'prints', String(currentFilters.prints));
     }
     if (currentFilters.search && currentFilters.search.trim() !== '') {
-        const b = document.createElement('span');
-        b.className = 'filter-badge';
-        b.innerHTML = `Search: ${currentFilters.search} <span class="remove" data-filter="search">×</span>`;
-        container.appendChild(b);
-        parts.push(`Search: ${currentFilters.search}`);
+        const label = `Search: ${currentFilters.search}`;
+        parts.push(label);
+        addBadge(label, 'search', currentFilters.search);
     }
 
+    // Keep textual breadcrumb in sync with badges
     breadcrumb.innerText = parts.join(' | ');
+}
 
-    // attach remove handlers and keyboard handlers
-    container.querySelectorAll('.remove').forEach(el => {
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
-        el.setAttribute('aria-label', 'Remove filter');
-        const removeFilter = () => {
-            const f = el.getAttribute('data-filter');
-            if (!f) return;
-            if (f === 'medium') document.getElementById('filter-medium').value = '';
-            if (f === 'genre') document.getElementById('filter-genre').value = '';
-            if (f === 'sold') document.getElementById('filter-sold').value = '';
-            if (f === 'search') document.getElementById('filter-search').value = '';
-            if (f === 'prints') {
-                const cb = document.getElementById('filter-prints'); if (cb) cb.checked = false;
-            }
-            currentFilters[f] = null;
-            updateURLWithFilters();
-            loadGallery();
-        };
-        el.addEventListener('click', removeFilter);
-        el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); removeFilter(); } });
-    });
+function removeFilter(key) {
+    if (!key) return;
+
+    try {
+        if (key === 'medium') {
+            currentFilters.medium = null;
+            const el = document.getElementById('filter-medium'); if (el) el.value = '';
+        } else if (key === 'genre') {
+            currentFilters.genre = null;
+            const el = document.getElementById('filter-genre'); if (el) el.value = '';
+        } else if (key === 'sold') {
+            currentFilters.sold = null;
+            const el = document.getElementById('filter-sold'); if (el) el.value = '';
+        } else if (key === 'prints') {
+            currentFilters.prints = null;
+            const el = document.getElementById('filter-prints'); if (el) el.checked = false;
+        } else if (key === 'search') {
+            currentFilters.search = '';
+            const el = document.getElementById('filter-search'); if (el) el.value = '';
+        }
+    } catch (e) { /* ignore missing elements */ }
+
+    updateURLWithFilters();
+    loadGallery();
 }
 
 /* ---------------------------------------------------------
@@ -368,6 +388,11 @@ function readFiltersFromURL() {
         currentFilters.medium = decodeURIComponent(hash.replace('medium-','')) || null;
     } else if (hash.startsWith('prints-')) {
         currentFilters.prints = hash.indexOf('true') !== -1;
+    } else if (hash.startsWith('available-')) {
+        // legacy available-true/false hash → map to sold filter
+        const val = hash.replace('available-','');
+        if (val.indexOf('true') !== -1) currentFilters.sold = 'available';
+        else currentFilters.sold = 'sold';
     }
 }
 

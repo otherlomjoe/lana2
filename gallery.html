@@ -149,18 +149,20 @@
             </div>
 
             <div class="filter-group">
-              <label>Limited prints:</label>
+              <label>Limited prints available:</label>
               <input type="checkbox" id="filter-prints" title="Show only items with limited prints available">
             </div>
 
             <button id="filter-reset" class="btn">Reset</button>
-            <a href="/gallery/admin-login.php" class="btn btn-primary">Manage gallery uploads</a>
             <div id="applied-filters" class="applied-filters-placeholder"></div>
             <div id="filter-breadcrumb" class="filter-breadcrumb"></div>
         </div>
         
       <ul id="works-list" class="da-thumbs"></ul>
       <div id="pagination-works" class="pagination-center"></div>
+      <div id="manage-gallery-wrapper" style="text-align:right;margin-top:12px">
+        <a id="manage-gallery" href="/gallery/admin-login.php" class="btn btn-primary">Manage gallery uploads</a>
+      </div>
 
       <!-- ⭐ FOOTER INNER SEPARATOR -->
       <div id="footerInnerSeparator"></div>
