@@ -93,6 +93,37 @@ if ($action === 'list' || $action === 'list-images') {
     exit;
 }
 
+if ($action === 'item') {
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        galleryApiError('Database connection failed.', 500);
+    }
+    $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
+    $slug = trim((string) ($_GET['slug'] ?? $_POST['slug'] ?? ''));
+    if ($id <= 0 && $slug === '') {
+        galleryApiError('No id or slug supplied.', 400);
+    }
+
+    $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names, GROUP_CONCAT(DISTINCT e.slug) AS exhibition_slugs FROM images i LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id LEFT JOIN image_exhibitions ie ON ie.image_id = i.id LEFT JOIN exhibitions e ON e.id = ie.exhibition_id WHERE ' . ($id > 0 ? 'i.id = :id' : 'i.slug = :slug') . ' GROUP BY i.id LIMIT 1');
+    $params = [];
+    if ($id > 0) {
+        $params[':id'] = $id;
+    } else {
+        $params[':slug'] = $slug;
+    }
+    $stmt->execute($params);
+    $row = $stmt->fetch();
+    if (!$row) {
+        galleryApiError('Item not found.', 404);
+    }
+    $item = gallery_normalize_image_row($row);
+    if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
+        $item = gallery_public_image($item);
+    }
+    echo json_encode(['success' => true, 'item' => $item]);
+    exit;
+}
+
 if ($action === 'list-exhibitions') {
     echo json_encode(gallery_list_exhibitions(gallery_init_db()));
     exit;

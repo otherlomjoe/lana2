@@ -120,6 +120,7 @@ function gallery_init_db(): ?PDO
         'deleted_full_file' => 'VARCHAR(1024) NULL',
         'deleted_thumbnail_file' => 'VARCHAR(1024) NULL',
         'artwork_created_at' => 'DATE NULL',
+        'prints_available' => 'TINYINT(1) NOT NULL DEFAULT 0',
     ] as $column => $definition) {
         try {
             $pdo->exec("ALTER TABLE images ADD COLUMN {$column} {$definition}");
@@ -561,6 +562,7 @@ function gallery_normalize_image_row(array $row): array
         'artworkCreatedAt' => $row['artwork_created_at'] ?? null,
         'deletedAt' => $row['deleted_at'] ?? null,
         'status' => !empty($row['deleted_at']) ? 'Deleted' : (!empty($row['available']) ? 'Active' : 'Unavailable'),
+        'printsAvailable' => !empty($row['prints_available']) ? true : false,
     ];
 }
 
@@ -985,10 +987,12 @@ function gallery_save_image(array $data, array $files = []): array
         $artworkCreatedAt = gallery_detect_creation_date($fullInput['tmp_name']) ?? '';
     }
 
+    $printsAvailable = !empty($data['printsAvailable']) || !empty($data['prints_available']) ? 1 : 0;
+
     $pdo->beginTransaction();
     try {
     if ($isUpdate) {
-        $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, prints_available = :prints_available, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -998,6 +1002,7 @@ function gallery_save_image(array $data, array $files = []): array
             ':thumbnail_url' => $thumbUrl,
             ':price_public' => trim((string) ($data['pricePublic'] ?? $data['price'] ?? '')),
             ':price_private' => trim((string) ($data['pricePrivate'] ?? '')),
+            ':prints_available' => $printsAvailable,
             ':available' => isset($data['available']) ? ((int) $data['available']) : 1,
             ':medium' => $mediumValue,
             ':medium_id' => $mediumId,
@@ -1018,7 +1023,7 @@ function gallery_save_image(array $data, array $files = []): array
             ':id' => $imageId,
         ]);
     } else {
-        $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+        $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, prints_available, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :prints_available, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -1028,6 +1033,7 @@ function gallery_save_image(array $data, array $files = []): array
             ':thumbnail_url' => $thumbUrl,
             ':price_public' => trim((string) ($data['pricePublic'] ?? $data['price'] ?? '')),
             ':price_private' => trim((string) ($data['pricePrivate'] ?? '')),
+            ':prints_available' => $printsAvailable,
             ':available' => isset($data['available']) ? ((int) $data['available']) : 1,
             ':medium' => $mediumValue,
             ':medium_id' => $mediumId,

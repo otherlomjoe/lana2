@@ -31,6 +31,9 @@
   .nav-buttons a {
       margin-right: 10px;
   }
+  .tags-container .tag { display:inline-block;margin-right:6px;padding:4px 8px;background:#f1f1f1;border-radius:3px;color:#333;text-decoration:none }
+  .award-badge { display:inline-block;margin-left:8px;padding:4px 8px;background:gold;color:#000;border-radius:4px;font-weight:700 }
+  .private-info { margin-top:18px;padding:10px;border:1px dashed #ccc;background:#fafafa }
 </style>
 </head>
 
@@ -42,7 +45,7 @@
 
   <!-- Header -->
   <div class="divPanel notop nobottom">
-    <div class="row-fluid">
+          <div class="row-fluid">
       <div class="span12">
         <div id="divLogo">
           <a href="../../../index.html" id="divSiteTitle">Lana-Leigh Lombard</a><br />
@@ -94,9 +97,10 @@
       <div class="row-fluid">
 
         <!-- IMAGE + TITLE -->
-        <div class="span8" id="divMain">
+          <div class="span8" id="divMain">
           <h3 id="art-title"></h3>
-			<div id="item-meta" class="tags-container"></div>
+            <span id="art-award"></span>
+            <div id="item-meta" class="tags-container"></div>
 
           <div id="art-image-wrapper">
             <a id="art-image-link">
@@ -115,6 +119,7 @@
           <h3>Description</h3>
           <h5 id="art-medium"></h5>
           <p id="art-description"></p>
+          <div id="private-info" class="private-info" style="display:none"></div>
         </div>
 
       </div>
@@ -285,6 +290,12 @@ async function loadArtwork() {
 		metaTags.push(`<a class="tag" href="/gallery.html#medium-${safe}">Medium: ${item.medium}</a>`);
 	}
 
+  // Collection
+  if (item.collection) {
+    const safe = item.collection.toLowerCase().replace(/\s+/g, '-');
+    metaTags.push(`<a class="tag" href="/gallery.html#collection-${safe}">Collection: ${item.collection}</a>`);
+  }
+
 	// Date Added
 	if (item.dateAdded) {
 		metaTags.push(`<a class="tag" href="/gallery.html#date-${item.dateAdded}">Added: ${item.dateAdded}</a>`);
@@ -294,6 +305,27 @@ async function loadArtwork() {
 	if (item.disabled) {
 		metaTags.push(`<a class="tag" href="/gallery.html#disabled-true">Disabled</a>`);
 	}
+
+  // Available
+  if (typeof item.available !== 'undefined') {
+    if (item.available) metaTags.push(`<a class="tag" href="/gallery.html#available-true">Available</a>`);
+    else metaTags.push(`<a class="tag" href="/gallery.html#available-false">Unavailable</a>`);
+  }
+
+  // Sold (copiesSold > 0)
+  if (typeof item.copiesSold !== 'undefined' && item.copiesSold > 0) {
+    metaTags.push(`<a class="tag" href="/gallery.html#sold-true">Sold</a>`);
+  }
+
+  // Prints available (boolean)
+  if (item.printsAvailable) {
+    metaTags.push(`<a class="tag" href="/gallery.html#prints-true">Prints</a>`);
+  }
+
+  // Award
+  if (item.awardTitle) {
+    document.getElementById('art-award').innerHTML = `<span class="award-badge">★ ${item.awardTitle}</span>`;
+  }
 
 	metaContainer.innerHTML = metaTags.join("");
 	
@@ -319,6 +351,28 @@ async function loadArtwork() {
         document.getElementById("next-link").style.display = "";
     } else {
         document.getElementById("next-link").style.display = "none";
+    }
+
+    // If the viewer is an authenticated admin, fetch full item to show private info
+    try {
+      const statusRes = await fetch('/gallery-api.php?action=status', { credentials: 'same-origin' });
+      if (statusRes.ok) {
+        const statusJson = await statusRes.json();
+        if (statusJson.authenticated) {
+          const itemRes = await fetch('/gallery-api.php?action=item&slug=' + encodeURIComponent(slug), { credentials: 'same-origin' });
+          if (itemRes.ok) {
+            const body = await itemRes.json();
+            if (body && body.success && body.item) {
+              const full = body.item;
+              const priv = document.getElementById('private-info');
+              priv.style.display = '';
+              priv.innerHTML = `<strong>Private administration</strong><br>Private price: ${full.pricePrivate || '(none)'}<br>Copies sold: ${full.copiesSold || 0}<br><div style="margin-top:8px">${full.privateNotes ? full.privateNotes : ''}</div>`;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // ignore silently
     }
 }
 

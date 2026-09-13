@@ -44,6 +44,15 @@ if ($id > 0) {
 <body>
   <div class="container">
     <?php require __DIR__ . '/admin-nav.php'; ?>
+    <?php
+      $versionFile = dirname(__DIR__) . '/version.txt';
+      if (is_readable($versionFile)) {
+        $v = trim((string) file_get_contents($versionFile));
+        if ($v !== '') {
+          echo '<div id="deploy-version" style="position:fixed;top:8px;left:8px;background:#222;color:#fff;padding:6px 10px;border-radius:4px;z-index:9999;font-size:12px;opacity:0.9">v' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+      }
+    ?>
     <h1>Edit Image</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
@@ -93,6 +102,7 @@ if ($id > 0) {
         <div class="control-group"><label>Private price</label><input type="text" name="pricePrivate" value="<?= htmlspecialchars((string) ($item['price_private'] ?? '')) ?>"></div>
         <div class="control-group"><label>Private notes</label><textarea name="privateNotes"><?= htmlspecialchars((string) ($item['private_notes'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Copies sold</label><input type="number" min="0" name="copiesSold" value="<?= (int) ($item['copies_sold'] ?? 0) ?>"></div>
+        <div class="control-group"><label>Prints available</label><input type="checkbox" name="printsAvailable" value="1" <?= !empty($item['prints_available']) ? 'checked' : '' ?>></div>
         </fieldset>
         <div class="form-actions">
           <button type="submit" name="save_mode" value="stay" class="btn btn-primary">Save and stay</button>
@@ -100,6 +110,7 @@ if ($id > 0) {
           <?php if (!empty($item['deleted_at'])): ?><a class="btn" href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a class="btn btn-danger" href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?><a class="btn" href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
           <a class="btn" href="/gallery/admin-list-images.php">Cancel</a>
           <a class="btn" href="/gallery/admin-list-images.php">Close</a>
+          <button type="button" class="btn" id="preview-work-btn">Preview</button>
         </div>
       </form>
       <script>
@@ -117,6 +128,13 @@ if ($id > 0) {
             s.value = 'stay';
           }
           form.submit();
+        });
+      </script>
+      <script>
+        document.getElementById('preview-work-btn').addEventListener('click', function () {
+          var slug = '<?= htmlspecialchars((string) $item['slug'], ENT_QUOTES, 'UTF-8') ?>';
+          if (!slug) return;
+          window.open('/gallery/work.html#' + encodeURIComponent(slug), '_blank');
         });
       </script>
       <script>
