@@ -32,15 +32,25 @@ unset($_SESSION['gallery_admin_message']);
 </head>
 <body>
   <div class="container">
+    <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Images</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-    <p><a href="/gallery/admin-upload.php">Add image</a> | <a href="/gallery/admin-exhibition-edit.php">Create exhibition</a> | <a href="/gallery/admin-list-exhibitions.php">Exhibitions</a></p>
+    <p><a href="/gallery/admin-upload.php">Add image</a></p>
     <table class="table table-striped">
-      <thead><tr><th>ID</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>ID</th><th>Image</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($items as $item): ?>
           <tr>
             <td><?= (int) $item['id'] ?></td>
+            <td>
+              <?php
+                $imagePath = (string) ($item['full_file'] ?? '');
+                $imageInfo = $imagePath !== '' && is_file($imagePath) ? @getimagesize($imagePath) : false;
+                $imageDetails = $imageInfo ? ((int) $imageInfo[0] . ' x ' . (int) $imageInfo[1] . ' px; ' . number_format((int) filesize($imagePath) / 1024, 1) . ' KB') : 'Dimensions unavailable';
+              ?>
+              <?php if (!empty($item['thumbnail_url'])): ?><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($item['title'] ?? 'Image'), ENT_QUOTES, 'UTF-8') ?>" style="width:100px;height:auto;"><br><?php endif; ?>
+              <small><?= htmlspecialchars($imageDetails, ENT_QUOTES, 'UTF-8') ?></small>
+            </td>
             <td><?= htmlspecialchars((string) $item['title']) ?></td>
             <td><?= htmlspecialchars((string) $item['medium']) ?></td>
             <td><?= htmlspecialchars((string) $item['genre']) ?></td>

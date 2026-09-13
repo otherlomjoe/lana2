@@ -71,7 +71,7 @@ if ($id > 0) {
           </div>
           <div class="control-group">
             <label>Thumbnail</label>
-            <?php if (!empty($item['thumbnail_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No thumbnail is currently stored.</p><?php endif; ?>
+            <?php if (!empty($item['thumbnail_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?><?php $thumbnailInfo = !empty($item['thumbnail_file']) && is_file($item['thumbnail_file']) ? @getimagesize($item['thumbnail_file']) : false; ?><?php if ($thumbnailInfo): ?> | <?= (int) $thumbnailInfo[0] ?> x <?= (int) $thumbnailInfo[1] ?> px; <?= number_format((int) filesize($item['thumbnail_file']) / 1024, 1) ?> KB<?php endif; ?></small></p><?php else: ?><p>No thumbnail is currently stored.</p><?php endif; ?>
             <input id="thumbnail-file" data-media-input="thumbnail" type="file" name="thumbnail" accept="image/*"><div data-media-preview="thumbnail-file"></div>
             <p class="help-block">Choose a replacement thumbnail. The filename should end in <strong>thumb</strong>.</p>
             <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>

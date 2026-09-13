@@ -41,7 +41,7 @@
 <div id="divBoxed" class="container">
 
   <!-- Transparent background overlay (CRITICAL) -->
-  <div class="transparent-bg" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;zoom:1;"></div>
+  <div class="transparent-bg"></div>
 
   <!-- Header -->
   <div class="divPanel notop nobottom">
@@ -119,9 +119,9 @@
           <h3>Description</h3>
           <h5 id="art-medium"></h5>
             <p id="art-description"></p>
-            <div id="art-date" class="art-date" style="margin-top:6px;color:#666;font-size:0.95em"></div>
-            <div id="art-price-value" style="margin-top:8px"></div>
-            <div id="private-info" class="private-info" style="display:none"></div>
+            <div id="art-date" class="art-date"></div>
+            <div id="art-price-value"></div>
+            <div id="private-info" class="private-info" hidden></div>
         </div>
 
       </div>
@@ -379,8 +379,8 @@ async function loadArtwork() {
             if (body && body.success && body.item) {
               const full = body.item;
               const priv = document.getElementById('private-info');
-              priv.style.display = '';
-              priv.innerHTML = `<strong>Private administration</strong><br>Private price: ${full.pricePrivate || '(none)'}<br>Copies sold: ${full.copiesSold || 0}<br><div style="margin-top:8px">${full.privateNotes ? full.privateNotes : ''}</div>`;
+              priv.hidden = false;
+              priv.innerHTML = `<strong>Private administration</strong><br>Private price: ${full.pricePrivate || '(none)'}<br>Copies sold: ${full.copiesSold || 0}<br><div class="private-notes">${full.privateNotes ? full.privateNotes : ''}</div>`;
             }
           }
         }
