@@ -119,8 +119,10 @@
       <h3 class="section-heading" id="works-heading">Individual Works</h3>
         
         <!-- Filters Section -->
-        <div id="filters" class="filters-container">
-            <div class="filter-group">
+        <div id="filters" class="filters-container collapsed">
+          <div id="filter-panel-toggle" class="filter-panel-toggle" role="button" tabindex="0">Search and Filter <span class="toggle-indicator">▼</span></div>
+          <div id="filters-body" class="filters-body">
+          <div class="filter-group">
                 <label>Medium:</label>
                   <select id="filter-medium" title="Filter by medium">
                     <option value="">All</option>                  
@@ -145,9 +147,8 @@
 
             <div class="filter-group">
               <label>Search:</label>
-              <button id="filter-search-toggle" class="btn btn-secondary" aria-expanded="false" type="button" style="margin-left:8px;padding:2px 8px">Show</button>
               <div style="display:inline-block;margin-left:8px">
-                <input type="text" id="filter-search" placeholder="Search title or description" style="display:none">
+                <input type="text" id="filter-search" placeholder="Search title or description">
               </div>
             </div>
 
@@ -159,13 +160,12 @@
             <button id="filter-reset" class="btn">Reset</button>
             <div id="applied-filters" class="applied-filters-placeholder"></div>
             <div id="filter-breadcrumb" class="filter-breadcrumb"></div>
-        </div>
+            </div>
+          </div>
         
       <ul id="works-list" class="da-thumbs"></ul>
       <div id="pagination-works" class="pagination-center"></div>
-      <div id="manage-gallery-wrapper" style="text-align:right;margin-top:12px">
-        <a id="manage-gallery" href="/gallery/admin-login.php" class="btn btn-primary">Manage gallery uploads</a>
-      </div>
+      
 
       <!-- ⭐ FOOTER INNER SEPARATOR -->
       <div id="footerInnerSeparator"></div>
@@ -178,6 +178,10 @@
 
   <!-- ⭐ FOOTER PLACEHOLDER -->
   <div id="footer-placeholder"></div>
+
+  <div id="manage-gallery-footer" style="position:fixed; right:12px; bottom:12px; font-size:0.95em">
+    <a id="manage-gallery" href="/gallery/admin-login.php" style="color:#666; text-decoration:underline; background:none; border:none; padding:0">Manage gallery uploads</a>
+  </div>
 
 </div>
 

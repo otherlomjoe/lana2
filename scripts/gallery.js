@@ -201,10 +201,22 @@ function removeFilter(key) {
         } else if (key === 'search') {
             currentFilters.search = '';
             const el = document.getElementById('filter-search'); if (el) el.value = '';
+        } else if (key === 'collection') {
+            currentFilters.collection = null;
+            const el = document.getElementById('filter-collection'); if (el) el.value = '';
         }
     } catch (e) { /* ignore missing elements */ }
 
     updateURLWithFilters();
+    // If legacy hash mode was used (e.g., #genre-..., #collection-...), clear it when removing the corresponding filter
+    try {
+        const h = (window.location.hash || '').replace('#','');
+        if ((key === 'genre' && h.startsWith('genre-')) || (key === 'medium' && h.startsWith('medium-')) || (key === 'collection' && h.startsWith('collection-')) || (key === 'sold' && (h.startsWith('available-') || h.startsWith('sold-')))) {
+            try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
+            try { window.location.hash = ''; } catch (e) {}
+        }
+    } catch (e) {}
+
     loadGallery();
 }
 
@@ -317,6 +329,12 @@ async function loadGallery() {
     } catch (e) {}
 
     renderAppliedFiltersAndBreadcrumb();
+
+    // Expand panel if any filters are active
+    try {
+        const anyActive = Boolean(currentFilters.medium || currentFilters.genre || currentFilters.sold || currentFilters.collection || (currentFilters.search && currentFilters.search.trim() !== '') || currentFilters.prints);
+        setFiltersPanelCollapsed(!anyActive);
+    } catch (e) {}
 
 	const hash = window.location.hash.replace("#", "");
 
@@ -785,45 +803,29 @@ document.getElementById("filter-search").addEventListener("input", e => {
     loadGallery();
 });
 
-// Collapsible search control: default collapsed. Toggle shows/hides the search input.
-function setSearchCollapsed(collapsed) {
-    const input = document.getElementById('filter-search');
-    const toggle = document.getElementById('filter-search-toggle');
-    if (!input || !toggle) return;
-    if (collapsed) {
-        input.style.display = 'none';
-        toggle.setAttribute('aria-expanded', 'false');
-        toggle.textContent = 'Show';
-    } else {
-        input.style.display = '';
-        toggle.setAttribute('aria-expanded', 'true');
-        toggle.textContent = 'Hide';
-        input.focus();
+// Filter panel toggle (collapsible/expandable box)
+function setFiltersPanelCollapsed(collapsed) {
+    const panel = document.getElementById('filters');
+    if (!panel) return;
+    if (collapsed) panel.classList.add('collapsed'); else panel.classList.remove('collapsed');
+    const toggle = document.getElementById('filter-panel-toggle');
+    if (toggle) {
+        const ind = toggle.querySelector('.toggle-indicator');
+        if (ind) ind.textContent = panel.classList.contains('collapsed') ? '▼' : '▲';
     }
 }
 
-const toggleBtn = document.getElementById('filter-search-toggle');
-if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-        const input = document.getElementById('filter-search');
-        if (!input) return;
-        const collapsed = input.style.display === 'none' || input.style.display === '' && window.getComputedStyle(input).display === 'none';
-        setSearchCollapsed(collapsed);
+const panelToggle = document.getElementById('filter-panel-toggle');
+if (panelToggle) {
+    panelToggle.addEventListener('click', () => {
+        const panel = document.getElementById('filters');
+        if (!panel) return;
+        panel.classList.toggle('collapsed');
     });
-    toggleBtn.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-            ev.preventDefault();
-            toggleBtn.click();
-        }
+    panelToggle.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); panelToggle.click(); }
     });
 }
-
-// Ensure search input is visible if there's an active search filter
-try {
-    const initialSearch = currentFilters.search || '';
-    if (initialSearch && initialSearch.trim() !== '') setSearchCollapsed(false);
-    else setSearchCollapsed(true);
-} catch (e) { /* ignore during early init */ }
 
 document.getElementById("filter-prints").addEventListener("change", e => {
     currentFilters.prints = e.target.checked ? true : null;
