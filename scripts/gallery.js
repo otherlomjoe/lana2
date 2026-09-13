@@ -68,6 +68,7 @@ function normalizeUploadedItem(item) {
         full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
         dateAdded: item.dateAdded || item.date_added || "",
         disabled: Boolean(item.disabled),
+        available: item.available !== false && item.available !== 0 && item.available !== "0",
         sold: Boolean(item.sold),
         source: item.source || "server"
     };
@@ -283,9 +284,9 @@ function applyFilters(list, filters) {
 	
     if (filters.sold) {
         if (filters.sold === "sold") {
-            filtered = filtered.filter(i => i.sold === true);
+            filtered = filtered.filter(i => i.available === false || i.sold === true);
         } else if (filters.sold === "available") {
-            filtered = filtered.filter(i => i.sold !== true);
+            filtered = filtered.filter(i => i.available !== false && i.sold !== true);
         }
     }
 
@@ -314,10 +315,19 @@ async function loadGallery() {
 
     // Sync dropdowns/selected UI based on currentFilters
     try {
-        if (currentFilters.medium) document.getElementById('filter-medium').value = currentFilters.medium;
-        if (currentFilters.genre) document.getElementById('filter-genre').value = currentFilters.genre;
-        if (currentFilters.sold) document.getElementById('filter-sold').value = currentFilters.sold;
-        if (currentFilters.search) document.getElementById('filter-search').value = currentFilters.search;
+        const selectFilterValue = (id, value) => {
+            const select = document.getElementById(id);
+            if (!select) return;
+            select.value = '';
+            if (!value) return;
+            const option = Array.from(select.options).find(item => item.value.toLowerCase() === String(value).toLowerCase());
+            if (option) select.value = option.value;
+        };
+        selectFilterValue('filter-medium', currentFilters.medium);
+        selectFilterValue('filter-genre', currentFilters.genre);
+        selectFilterValue('filter-sold', currentFilters.sold);
+        const search = document.getElementById('filter-search');
+        if (search) search.value = currentFilters.search || '';
         if (typeof currentFilters.prints !== 'undefined' && document.getElementById('filter-prints')) document.getElementById('filter-prints').checked = Boolean(currentFilters.prints === true || currentFilters.prints === 'true');
     } catch (e) { /* ignore if elements missing */ }
 
@@ -353,8 +363,11 @@ async function loadGallery() {
     } else if (hash.startsWith("collection-")) {
         loadCollectionMode(hash.replace("collection-", ""), currentFilters);
 
-	} else if (hash.startsWith("disabled-")) {
+    } else if (hash.startsWith("disabled-")) {
 		loadDisabledMode(currentFilters);
+
+    } else if (hash.startsWith("available-") || hash.startsWith("sold-") || hash.startsWith("prints-")) {
+        loadGalleryMode(currentFilters);
 
 	} else if (hash) {
 		loadExhibitionMode(hash, currentFilters);
@@ -416,7 +429,8 @@ function readFiltersFromURL() {
         Object.assign(currentFilters, f);
         return;
     }
-    // legacy hash modes
+    // Legacy hash modes. Keep these working for existing links, but map them
+    // to the same filter state used by the gallery query-string controls.
     const hash = h;
     if (hash.startsWith('genre-')) {
         currentFilters.genre = decodeURIComponent(hash.replace('genre-','')) || null;
@@ -427,10 +441,11 @@ function readFiltersFromURL() {
     } else if (hash.startsWith('collection-')) {
         currentFilters.collection = decodeURIComponent(hash.replace('collection-','')) || null;
     } else if (hash.startsWith('available-')) {
-        // legacy available-true/false hash → map to sold filter
         const val = hash.replace('available-','');
         if (val.indexOf('true') !== -1) currentFilters.sold = 'available';
         else currentFilters.sold = 'sold';
+    } else if (hash.startsWith('sold-')) {
+        currentFilters.sold = hash.endsWith('true') ? 'sold' : 'available';
     }
 }
 

@@ -283,43 +283,40 @@ async function loadArtwork() {
 
 	// Genre
 	if (item.genre) {
-		const safe = item.genre.toLowerCase().replace(/\s+/g, '-');
-		metaTags.push(`<a class="tag" href="/gallery.html#genre-${safe}">Genre: ${item.genre}</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?g=${encodeURIComponent(item.genre)}">Genre: ${item.genre}</a>`);
 	}
 
 	// Medium
 	if (item.medium) {
-		const safe = item.medium.toLowerCase().replace(/\s+/g, '-');
-		metaTags.push(`<a class="tag" href="/gallery.html#medium-${safe}">Medium: ${item.medium}</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?m=${encodeURIComponent(item.medium)}">Medium: ${item.medium}</a>`);
 	}
 
   // Collection
   if (item.collection) {
-    const safe = item.collection.toLowerCase().replace(/\s+/g, '-');
-    metaTags.push(`<a class="tag" href="/gallery.html#collection-${safe}">Collection: ${item.collection}</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?c=${encodeURIComponent(item.collection)}">Collection: ${item.collection}</a>`);
   }
 
   // Date Added (moved to under description on work page)
 
 	// Disabled (optional)
 	if (item.disabled) {
-		metaTags.push(`<a class="tag" href="/gallery.html#disabled-true">Disabled</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?d=1">Disabled</a>`);
 	}
 
   // Available
   if (typeof item.available !== 'undefined') {
-    if (item.available) metaTags.push(`<a class="tag" href="/gallery.html#available-true">Available</a>`);
-    else metaTags.push(`<a class="tag" href="/gallery.html#available-false">Unavailable</a>`);
+    if (item.available) metaTags.push(`<a class="tag" href="/gallery.html?s=available">Available</a>`);
+    else metaTags.push(`<a class="tag" href="/gallery.html?s=sold">Unavailable</a>`);
   }
 
   // Sold (copiesSold > 0)
   if (typeof item.copiesSold !== 'undefined' && item.copiesSold > 0) {
-    metaTags.push(`<a class="tag" href="/gallery.html#sold-true">Sold</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?s=sold">Sold</a>`);
   }
 
   // Prints available (boolean)
   if (item.printsAvailable) {
-    metaTags.push(`<a class="tag" href="/gallery.html#prints-true">Limited Prints Available</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?p=1">Limited Prints Available</a>`);
   }
 
   // Award (show badge and optional award description)

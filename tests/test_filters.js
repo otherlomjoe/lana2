@@ -4,6 +4,7 @@ function serializeFiltersObj(obj) {
     const parts = [];
     if (obj.medium) parts.push('m=' + encodeURIComponent(obj.medium));
     if (obj.genre) parts.push('g=' + encodeURIComponent(obj.genre));
+    if (obj.collection) parts.push('c=' + encodeURIComponent(obj.collection));
     if (obj.sold) parts.push('s=' + encodeURIComponent(obj.sold));
     if (obj.prints) parts.push('p=1');
     if (obj.search) parts.push('q=' + encodeURIComponent(obj.search));
@@ -12,21 +13,33 @@ function serializeFiltersObj(obj) {
 
 function deserializeFiltersFromQuery(query) {
     const q = new URLSearchParams(query.startsWith('?') ? query.slice(1) : query);
-    const filters = { medium: null, genre: null, sold: null, prints: null, search: '' };
+    const filters = { medium: null, genre: null, collection: null, sold: null, prints: null, search: '' };
     if (q.has('m')) filters.medium = q.get('m');
     if (q.has('g')) filters.genre = q.get('g');
+    if (q.has('c')) filters.collection = q.get('c');
     if (q.has('s')) filters.sold = q.get('s');
     if (q.has('p')) filters.prints = true;
     if (q.has('q')) filters.search = q.get('q');
     return filters;
 }
 
+function deserializeLegacyHash(hash) {
+    const filters = { medium: null, genre: null, collection: null, sold: null, prints: null, search: '' };
+    if (hash.startsWith('#available-')) {
+        filters.sold = hash.endsWith('true') ? 'available' : 'sold';
+    } else if (hash.startsWith('#sold-')) {
+        filters.sold = hash.endsWith('true') ? 'sold' : 'available';
+    }
+    return filters;
+}
+
 // Tests
 (function run() {
     // serialize basic
-    const s1 = serializeFiltersObj({ medium: 'Pastel', genre: 'Landscape', sold: 'available', prints: true, search: 'flower' });
+    const s1 = serializeFiltersObj({ medium: 'Pastel', genre: 'Landscape', collection: 'Spring Show', sold: 'available', prints: true, search: 'flower' });
     assert.ok(s1.includes('m=Pastel'));
     assert.ok(s1.includes('g=Landscape'));
+    assert.ok(s1.includes('c=Spring%20Show'));
     assert.ok(s1.includes('s=available'));
     assert.ok(s1.includes('p=1'));
     assert.ok(s1.includes('q=flower'));
@@ -35,9 +48,15 @@ function deserializeFiltersFromQuery(query) {
     const f = deserializeFiltersFromQuery('m=Pastel&g=Landscape&s=available&p=1&q=flower');
     assert.strictEqual(f.medium, 'Pastel');
     assert.strictEqual(f.genre, 'Landscape');
+    assert.strictEqual(f.collection, null);
     assert.strictEqual(f.sold, 'available');
     assert.strictEqual(f.prints, true);
     assert.strictEqual(f.search, 'flower');
+
+    // Gallery dropdown and work-page Available badge resolve identically
+    assert.strictEqual(deserializeFiltersFromQuery('s=available').sold, 'available');
+    assert.strictEqual(deserializeLegacyHash('#available-true').sold, 'available');
+    assert.strictEqual(deserializeLegacyHash('#available-false').sold, 'sold');
 
     // empty
     const empty = deserializeFiltersFromQuery('');
