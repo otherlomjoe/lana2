@@ -8,6 +8,7 @@ let currentFilters = {
     medium: null,
     sold: null,
     genre: null,
+    collection: null,
     prints: null,
     search: ""
 };
@@ -112,10 +113,13 @@ async function loadData() {
 function renderAppliedFiltersAndBreadcrumb() {
     const container = document.getElementById('applied-filters');
     const breadcrumb = document.getElementById('filter-breadcrumb');
-    if (!container || !breadcrumb) return;
+    if (!container) return;
 
     container.innerHTML = '';
     const parts = [];
+
+    // hide the textual breadcrumb — we use interactive badges instead
+    if (breadcrumb) breadcrumb.style.display = 'none';
 
     const addBadge = (label, key, value) => {
         const badge = document.createElement('span');
@@ -147,6 +151,11 @@ function renderAppliedFiltersAndBreadcrumb() {
         const label = `Medium: ${currentFilters.medium}`;
         parts.push(label);
         addBadge(label, 'medium', currentFilters.medium);
+    }
+    if (currentFilters.collection) {
+        const label = `Collection: ${currentFilters.collection}`;
+        parts.push(label);
+        addBadge(label, 'collection', currentFilters.collection);
     }
     if (currentFilters.genre) {
         const label = `Genre: ${currentFilters.genre}`;
@@ -248,6 +257,10 @@ function applyFilters(list, filters) {
         filtered = filtered.filter(i => i.genre === filters.genre);
     }
 
+    if (filters.collection) {
+        filtered = filtered.filter(i => (i.collection || '').toLowerCase() === (String(filters.collection) || '').toLowerCase());
+    }
+
     if (filters.prints) {
         if (filters.prints === true || filters.prints === "true") {
             filtered = filtered.filter(i => i.printsAvailable === true);
@@ -268,7 +281,7 @@ function applyFilters(list, filters) {
         const q = filters.search.toLowerCase();
         filtered = filtered.filter(i =>
             getTitle(i).toLowerCase().includes(q) ||
-            (i.medium || "").toLowerCase().includes(q)
+            (i.description || "").toLowerCase().includes(q)
         );
     }
 
@@ -319,6 +332,9 @@ async function loadGallery() {
 	} else if (hash.startsWith("date-")) {
 		loadDateMode(hash.replace("date-", ""), currentFilters);
 
+    } else if (hash.startsWith("collection-")) {
+        loadCollectionMode(hash.replace("collection-", ""), currentFilters);
+
 	} else if (hash.startsWith("disabled-")) {
 		loadDisabledMode(currentFilters);
 
@@ -337,6 +353,7 @@ function serializeFilters() {
     const parts = [];
     if (currentFilters.medium) parts.push('m=' + encodeURIComponent(currentFilters.medium));
     if (currentFilters.genre) parts.push('g=' + encodeURIComponent(currentFilters.genre));
+    if (currentFilters.collection) parts.push('c=' + encodeURIComponent(currentFilters.collection));
     if (currentFilters.sold) parts.push('s=' + encodeURIComponent(currentFilters.sold));
     if (currentFilters.prints) parts.push('p=1');
     if (currentFilters.search) parts.push('q=' + encodeURIComponent(currentFilters.search));
@@ -345,9 +362,10 @@ function serializeFilters() {
 
 function deserializeFiltersFromQuery(query) {
     const q = new URLSearchParams(query);
-    const filters = { medium: null, genre: null, sold: null, prints: null, search: '' };
+    const filters = { medium: null, genre: null, collection: null, sold: null, prints: null, search: '' };
     if (q.has('m')) filters.medium = q.get('m');
     if (q.has('g')) filters.genre = q.get('g');
+    if (q.has('c')) filters.collection = q.get('c');
     if (q.has('s')) filters.sold = q.get('s');
     if (q.has('p')) filters.prints = true;
     if (q.has('q')) filters.search = q.get('q');
@@ -388,6 +406,8 @@ function readFiltersFromURL() {
         currentFilters.medium = decodeURIComponent(hash.replace('medium-','')) || null;
     } else if (hash.startsWith('prints-')) {
         currentFilters.prints = hash.indexOf('true') !== -1;
+    } else if (hash.startsWith('collection-')) {
+        currentFilters.collection = decodeURIComponent(hash.replace('collection-','')) || null;
     } else if (hash.startsWith('available-')) {
         // legacy available-true/false hash → map to sold filter
         const val = hash.replace('available-','');
@@ -655,6 +675,14 @@ function loadExhibitionMode(tag, filters) {
 		renderFilteredList(`Medium: ${medium}`, filtered, filters);
 	}
 
+    function loadCollectionMode(collection, filters) {
+        const filtered = items.filter(i =>
+            i.collection &&
+            i.collection.toLowerCase() === collection.toLowerCase()
+        );
+        renderFilteredList(`Collection: ${collection}`, filtered, filters);
+    }
+
 	function loadDateMode(date, filters) {
 		const filtered = items.filter(i =>
 			i.dateAdded === date
@@ -757,6 +785,46 @@ document.getElementById("filter-search").addEventListener("input", e => {
     loadGallery();
 });
 
+// Collapsible search control: default collapsed. Toggle shows/hides the search input.
+function setSearchCollapsed(collapsed) {
+    const input = document.getElementById('filter-search');
+    const toggle = document.getElementById('filter-search-toggle');
+    if (!input || !toggle) return;
+    if (collapsed) {
+        input.style.display = 'none';
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.textContent = 'Show';
+    } else {
+        input.style.display = '';
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.textContent = 'Hide';
+        input.focus();
+    }
+}
+
+const toggleBtn = document.getElementById('filter-search-toggle');
+if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+        const input = document.getElementById('filter-search');
+        if (!input) return;
+        const collapsed = input.style.display === 'none' || input.style.display === '' && window.getComputedStyle(input).display === 'none';
+        setSearchCollapsed(collapsed);
+    });
+    toggleBtn.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            toggleBtn.click();
+        }
+    });
+}
+
+// Ensure search input is visible if there's an active search filter
+try {
+    const initialSearch = currentFilters.search || '';
+    if (initialSearch && initialSearch.trim() !== '') setSearchCollapsed(false);
+    else setSearchCollapsed(true);
+} catch (e) { /* ignore during early init */ }
+
 document.getElementById("filter-prints").addEventListener("change", e => {
     currentFilters.prints = e.target.checked ? true : null;
     updateURLWithFilters();
@@ -764,12 +832,20 @@ document.getElementById("filter-prints").addEventListener("change", e => {
 });
 
 document.getElementById("filter-reset").addEventListener("click", () => {
-    currentFilters = { medium: null, sold: null, genre: null, prints: null, search: "" };
+    currentFilters = { medium: null, sold: null, genre: null, collection: null, prints: null, search: "" };
 
-    document.getElementById("filter-medium").value = "";
-    document.getElementById("filter-genre").value = "";
-    document.getElementById("filter-sold").value = "";
-    document.getElementById("filter-search").value = "";
+    try {
+        const fm = document.getElementById("filter-medium"); if (fm) fm.value = "";
+        const fg = document.getElementById("filter-genre"); if (fg) fg.value = "";
+        const fs = document.getElementById("filter-sold"); if (fs) fs.value = "";
+        const fp = document.getElementById("filter-prints"); if (fp) fp.checked = false;
+        const fq = document.getElementById("filter-search"); if (fq) fq.value = "";
+    } catch (e) { /* ignore */ }
+
+    // Clear query string and hash so legacy hash filters (e.g. #collection-...) are removed
+    updateURLWithFilters();
+    try { history.replaceState(null, '', window.location.pathname + (window.location.search || '')); } catch (e) {}
+    try { window.location.hash = ''; } catch (e) {}
 
     loadGallery();
 });

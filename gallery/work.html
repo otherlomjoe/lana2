@@ -326,9 +326,23 @@ async function loadArtwork() {
   if (item.awardTitle) {
     const desc = item.awardDescription || item.award_description || item.awardDesc || '';
     const escapedDesc = (desc || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
-    const safeDesc = escapedDesc ? `<span class="award-desc" style="margin-left:8px;color:#444">${escapedDesc}</span>` : '';
+    const safeDesc = escapedDesc ? `<span class="award-desc">${escapedDesc}</span>` : '';
     document.getElementById('art-award').innerHTML = `<span class="award-badge">★ ${item.awardTitle}</span>` + safeDesc;
   }
+
+  // Public price / value under description
+  try {
+    const pv = document.getElementById('art-price-value');
+    if (pv) {
+        if (item.price && item.price !== '') {
+            pv.innerText = `Public price: ${item.price}`;
+            pv.style.display = '';
+        } else {
+            pv.innerText = '';
+            pv.style.display = 'none';
+        }
+    }
+  } catch (e) { /* ignore */ }
 
 	metaContainer.innerHTML = metaTags.join("");
 	

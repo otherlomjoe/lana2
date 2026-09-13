@@ -405,6 +405,13 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .filter-breadcrumb {color:#666;font-size:13px;margin-top:6px}
 .filter-selected {font-weight:700;background:#d0ecff}
 
+/* Award styling on work page */
+.award-desc { margin-left:8px; color:#444; font-style:italic; }
+.award-badge { background:#fff6d6; padding:4px 8px; border-radius:4px; margin-right:6px; border:1px solid #eedfa8 }
+
+/* Search input sizing */
+#filter-search { max-width:260px }
+
 /* Transparent background used on several pages */
 .transparent-bg {position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1}
 
