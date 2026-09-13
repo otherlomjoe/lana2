@@ -46,7 +46,10 @@ unset($_SESSION['gallery_admin_message']);
             <td><?= htmlspecialchars((string) $item['genre']) ?></td>
             <td><?= htmlspecialchars(implode(', ', (array) $item['tags'])) ?></td>
             <td><?= htmlspecialchars((string) $item['status']) ?></td>
-            <td><a href="/gallery/admin-edit.php?id=<?= (int) $item['id'] ?>">Edit</a><?php if ($item['status'] === 'Deleted'): ?> | <a href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> | <a href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?> | <a href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?></td>
+            <td>
+              <a href="/gallery/work.html#<?= urlencode((string) $item['slug']) ?>" target="_blank">Preview</a> | <a href="/gallery/admin-edit.php?id=<?= (int) $item['id'] ?>">Edit</a>
+              <?php if ($item['status'] === 'Deleted'): ?> | <a href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> | <a href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?> | <a href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
+            </td>
           </tr>
         <?php endforeach; ?>
       </tbody>

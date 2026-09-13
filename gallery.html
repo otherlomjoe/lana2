@@ -53,7 +53,7 @@
 <body id="pageBody">
 <div id="divBoxed" class="container">
 
-  <div class="transparent-bg" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;"></div>
+  <div class="transparent-bg"></div>
 
   <div class="divPanel notop nobottom">
     <div class="row-fluid">
@@ -113,7 +113,7 @@
       <!-- Exhibitions Section -->
       <h3 class="section-heading" id="exhibitions-heading">Solo Exhibitions and Art Fair Collections</h3>
       <ul id="exhibitions-list" class="da-thumbs"></ul>
-      <div id="pagination-exhibitions" style="text-align:center; margin-top:20px;"></div>
+      <div id="pagination-exhibitions" class="pagination-center"></div>
 
       <!-- Works Section -->
       <h3 class="section-heading" id="works-heading">Individual Works</h3>
@@ -122,21 +122,21 @@
         <div id="filters" class="filters-container">
             <div class="filter-group">
                 <label>Medium:</label>
-                <select id="filter-medium">
+                  <select id="filter-medium" title="Filter by medium">
                     <option value="">All</option>                  
                 </select>
             </div>
 			
 			<div class="filter-group">
                 <label>Genre:</label>
-                <select id="filter-genre">
+                <select id="filter-genre" title="Filter by genre">
                     <option value="">All</option>                  
                 </select>
             </div>
 
             <div class="filter-group">
                 <label>Sold:</label>
-                <select id="filter-sold">
+                <select id="filter-sold" title="Filter by sold status">
                     <option value="">All</option>
                     <option value="sold">Sold</option>
                     <option value="available">Available</option>
@@ -144,16 +144,23 @@
             </div>
 
             <div class="filter-group">
-                <label>Search:</label>
-                <input type="text" id="filter-search" placeholder="Search title or medium">
+              <label>Search:</label>
+              <input type="text" id="filter-search" placeholder="Search title or medium">
+            </div>
+
+            <div class="filter-group">
+              <label>Limited prints:</label>
+              <input type="checkbox" id="filter-prints" title="Show only items with limited prints available">
             </div>
 
             <button id="filter-reset" class="btn">Reset</button>
             <a href="/gallery/admin-login.php" class="btn btn-primary">Manage gallery uploads</a>
+            <div id="applied-filters" class="applied-filters-placeholder"></div>
+            <div id="filter-breadcrumb" class="filter-breadcrumb"></div>
         </div>
         
       <ul id="works-list" class="da-thumbs"></ul>
-      <div id="pagination-works" style="text-align:center; margin-top:20px;"></div>
+      <div id="pagination-works" class="pagination-center"></div>
 
       <!-- ⭐ FOOTER INNER SEPARATOR -->
       <div id="footerInnerSeparator"></div>

@@ -97,6 +97,7 @@ if ($id > 0) {
         <div class="control-group"><label>Tags</label><input type="text" name="tags" value="<?= htmlspecialchars((string) ($item['tag_names'] ?? '')) ?>"></div>
         <div class="control-group"><label>Exhibition</label><select name="exhibition"><option value="">Not assigned</option><?php foreach ($exhibitions as $exhibition): ?><option value="<?= (int) $exhibition['id'] ?>"<?= (string) ($item['exhibition_id'] ?? '') === (string) $exhibition['id'] ? ' selected' : '' ?>><?= htmlspecialchars((string) $exhibition['title'], ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div>
         <div class="control-group"><label>Alt text</label><input type="text" name="altText" value="<?= htmlspecialchars((string) ($item['alt_text'] ?? '')) ?>"></div>
+        <div class="control-group"><label>Prints available</label><input type="checkbox" name="printsAvailable" value="1" <?= !empty($item['prints_available']) ? 'checked' : '' ?>></div>
         </fieldset>
         <fieldset><legend>Private administration</legend>
         <div class="control-group"><label>Private price</label><input type="text" name="pricePrivate" value="<?= htmlspecialchars((string) ($item['price_private'] ?? '')) ?>"></div>

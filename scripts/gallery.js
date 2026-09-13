@@ -7,6 +7,8 @@ let exhibitions = [];
 let currentFilters = {
     medium: null,
     sold: null,
+    genre: null,
+    prints: null,
     search: ""
 };
 
@@ -59,6 +61,7 @@ function normalizeUploadedItem(item) {
         title: item.title || "",
         medium: item.medium || "",
         genre: item.genre || "",
+        printsAvailable: Boolean(item.printsAvailable || item.prints_available || item.prints),
         description: item.description || "",
         thumbnail: item.thumbnail || item.thumbnail_path || "",
         full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
@@ -103,6 +106,76 @@ async function loadData() {
         const dateA = a.artworkCreatedAt || a.dateAdded || a.createdAt || 0;
         const dateB = b.artworkCreatedAt || b.dateAdded || b.createdAt || 0;
         return new Date(dateB) - new Date(dateA);
+    });
+}
+
+function renderAppliedFiltersAndBreadcrumb() {
+    const container = document.getElementById('applied-filters');
+    const breadcrumb = document.getElementById('filter-breadcrumb');
+    if (!container || !breadcrumb) return;
+
+    container.innerHTML = '';
+    const parts = [];
+
+    if (currentFilters.medium) {
+        const b = document.createElement('span');
+        b.className = 'filter-badge';
+        b.innerHTML = `Medium: ${currentFilters.medium} <span class="remove" data-filter="medium">×</span>`;
+        container.appendChild(b);
+        parts.push(`Medium: ${currentFilters.medium}`);
+    }
+    if (currentFilters.genre) {
+        const b = document.createElement('span');
+        b.className = 'filter-badge';
+        b.innerHTML = `Genre: ${currentFilters.genre} <span class="remove" data-filter="genre">×</span>`;
+        container.appendChild(b);
+        parts.push(`Genre: ${currentFilters.genre}`);
+    }
+    if (currentFilters.sold) {
+        const b = document.createElement('span');
+        b.className = 'filter-badge';
+        b.innerHTML = `${currentFilters.sold === 'sold' ? 'Sold' : 'Available'} <span class="remove" data-filter="sold">×</span>`;
+        container.appendChild(b);
+        parts.push(currentFilters.sold === 'sold' ? 'Sold' : 'Available');
+    }
+    if (currentFilters.prints) {
+        const b = document.createElement('span');
+        b.className = 'filter-badge';
+        b.innerHTML = `Limited Prints Available <span class="remove" data-filter="prints">×</span>`;
+        container.appendChild(b);
+        parts.push('Limited Prints Available');
+    }
+    if (currentFilters.search && currentFilters.search.trim() !== '') {
+        const b = document.createElement('span');
+        b.className = 'filter-badge';
+        b.innerHTML = `Search: ${currentFilters.search} <span class="remove" data-filter="search">×</span>`;
+        container.appendChild(b);
+        parts.push(`Search: ${currentFilters.search}`);
+    }
+
+    breadcrumb.innerText = parts.join(' | ');
+
+    // attach remove handlers and keyboard handlers
+    container.querySelectorAll('.remove').forEach(el => {
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('aria-label', 'Remove filter');
+        const removeFilter = () => {
+            const f = el.getAttribute('data-filter');
+            if (!f) return;
+            if (f === 'medium') document.getElementById('filter-medium').value = '';
+            if (f === 'genre') document.getElementById('filter-genre').value = '';
+            if (f === 'sold') document.getElementById('filter-sold').value = '';
+            if (f === 'search') document.getElementById('filter-search').value = '';
+            if (f === 'prints') {
+                const cb = document.getElementById('filter-prints'); if (cb) cb.checked = false;
+            }
+            currentFilters[f] = null;
+            updateURLWithFilters();
+            loadGallery();
+        };
+        el.addEventListener('click', removeFilter);
+        el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); removeFilter(); } });
     });
 }
 
@@ -154,6 +227,14 @@ function applyFilters(list, filters) {
     if (filters.genre) {
         filtered = filtered.filter(i => i.genre === filters.genre);
     }
+
+    if (filters.prints) {
+        if (filters.prints === true || filters.prints === "true") {
+            filtered = filtered.filter(i => i.printsAvailable === true);
+        } else if (filters.prints === "false") {
+            filtered = filtered.filter(i => !i.printsAvailable);
+        }
+    }
 	
     if (filters.sold) {
         if (filters.sold === "sold") {
@@ -179,8 +260,30 @@ function applyFilters(list, filters) {
 --------------------------------------------------------- */
 async function loadGallery() {
     await loadData();
-	populateMediumFilter();
-	populateGenreFilter();
+
+    // read filters from URL (query/hash) and merge into currentFilters
+    readFiltersFromURL();
+
+    populateMediumFilter();
+    populateGenreFilter();
+
+    // Sync dropdowns/selected UI based on currentFilters
+    try {
+        if (currentFilters.medium) document.getElementById('filter-medium').value = currentFilters.medium;
+        if (currentFilters.genre) document.getElementById('filter-genre').value = currentFilters.genre;
+        if (currentFilters.sold) document.getElementById('filter-sold').value = currentFilters.sold;
+        if (currentFilters.search) document.getElementById('filter-search').value = currentFilters.search;
+        if (typeof currentFilters.prints !== 'undefined' && document.getElementById('filter-prints')) document.getElementById('filter-prints').checked = Boolean(currentFilters.prints === true || currentFilters.prints === 'true');
+    } catch (e) { /* ignore if elements missing */ }
+
+    // Toggle selected visual class
+    try {
+        const m = document.getElementById('filter-medium'); if (m) { if (currentFilters.medium) m.classList.add('filter-selected'); else m.classList.remove('filter-selected'); }
+        const g = document.getElementById('filter-genre'); if (g) { if (currentFilters.genre) g.classList.add('filter-selected'); else g.classList.remove('filter-selected'); }
+        const s = document.getElementById('filter-sold'); if (s) { if (currentFilters.sold) s.classList.add('filter-selected'); else s.classList.remove('filter-selected'); }
+    } catch (e) {}
+
+    renderAppliedFiltersAndBreadcrumb();
 
 	const hash = window.location.hash.replace("#", "");
 
@@ -205,6 +308,67 @@ async function loadGallery() {
 	} else {
 		loadGalleryMode(currentFilters);
 	}
+}
+
+/* ---------------------------------------------------------
+   URL serialization helpers
+--------------------------------------------------------- */
+function serializeFilters() {
+    const parts = [];
+    if (currentFilters.medium) parts.push('m=' + encodeURIComponent(currentFilters.medium));
+    if (currentFilters.genre) parts.push('g=' + encodeURIComponent(currentFilters.genre));
+    if (currentFilters.sold) parts.push('s=' + encodeURIComponent(currentFilters.sold));
+    if (currentFilters.prints) parts.push('p=1');
+    if (currentFilters.search) parts.push('q=' + encodeURIComponent(currentFilters.search));
+    return parts.join('&');
+}
+
+function deserializeFiltersFromQuery(query) {
+    const q = new URLSearchParams(query);
+    const filters = { medium: null, genre: null, sold: null, prints: null, search: '' };
+    if (q.has('m')) filters.medium = q.get('m');
+    if (q.has('g')) filters.genre = q.get('g');
+    if (q.has('s')) filters.sold = q.get('s');
+    if (q.has('p')) filters.prints = true;
+    if (q.has('q')) filters.search = q.get('q');
+    return filters;
+}
+
+function updateURLWithFilters() {
+    const serialized = serializeFilters();
+    const url = new URL(window.location.href);
+    if (serialized) {
+        url.search = serialized;
+    } else {
+        url.search = '';
+    }
+    history.replaceState(null, '', url.toString());
+}
+
+function readFiltersFromURL() {
+    // Priority: query string, then hash 'filters:', then legacy hash modes
+    if (window.location.search && window.location.search.length > 1) {
+        const f = deserializeFiltersFromQuery(window.location.search);
+        Object.assign(currentFilters, f);
+        return;
+    }
+    const h = (window.location.hash || '').replace('#','');
+    if (h.startsWith('filters:')) {
+        const q = h.replace('filters:','');
+        const parsed = new URLSearchParams(q);
+        const f = deserializeFiltersFromQuery(parsed.toString());
+        Object.assign(currentFilters, f);
+        return;
+    }
+    // legacy hash modes
+    const hash = h;
+    if (hash.startsWith('genre-')) {
+        currentFilters.genre = decodeURIComponent(hash.replace('genre-','')) || null;
+    } else if (hash.startsWith('medium-')) {
+        currentFilters.medium = decodeURIComponent(hash.replace('medium-','')) || null;
+    } else if (hash.startsWith('prints-')) {
+        currentFilters.prints = hash.indexOf('true') !== -1;
+    }
 }
 
 /* ---------------------------------------------------------
@@ -545,29 +709,40 @@ function loadExhibitionMode(tag, filters) {
 --------------------------------------------------------- */
 document.getElementById("filter-medium").addEventListener("change", e => {
     currentFilters.medium = e.target.value || null;
+    updateURLWithFilters();
     loadGallery();
 });
 
 document.getElementById("filter-genre").addEventListener("change", () => {
-    filters.genre = document.getElementById("filter-genre").value;
-    loadGalleryMode(filters);
+    currentFilters.genre = document.getElementById("filter-genre").value || null;
+    updateURLWithFilters();
+    loadGallery();
 });
 
 
 document.getElementById("filter-sold").addEventListener("change", e => {
     currentFilters.sold = e.target.value || null;
+    updateURLWithFilters();
     loadGallery();
 });
 
 document.getElementById("filter-search").addEventListener("input", e => {
     currentFilters.search = e.target.value;
+    updateURLWithFilters();
+    loadGallery();
+});
+
+document.getElementById("filter-prints").addEventListener("change", e => {
+    currentFilters.prints = e.target.checked ? true : null;
+    updateURLWithFilters();
     loadGallery();
 });
 
 document.getElementById("filter-reset").addEventListener("click", () => {
-    currentFilters = { medium: null, sold: null, search: "" };
+    currentFilters = { medium: null, sold: null, genre: null, prints: null, search: "" };
 
     document.getElementById("filter-medium").value = "";
+    document.getElementById("filter-genre").value = "";
     document.getElementById("filter-sold").value = "";
     document.getElementById("filter-search").value = "";
 
