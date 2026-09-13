@@ -116,7 +116,10 @@
       <div id="pagination-exhibitions" class="pagination-center"></div>
 
       <!-- Works Section -->
-      <h3 class="section-heading" id="works-heading">Individual Works</h3>
+      <div class="works-heading-row">
+        <h3 class="section-heading" id="works-heading">Individual Works</h3>
+        <div id="applied-filters" class="applied-filters-placeholder"></div>
+      </div>
         
         <!-- Filters Section -->
         <div id="filters" class="filters-container collapsed">
@@ -153,12 +156,23 @@
             </div>
 
             <div class="filter-group">
-              <label>Limited prints available:</label>
-              <input type="checkbox" id="filter-prints" title="Show only items with limited prints available">
+              <label>Limited Prints:</label>
+              <select id="filter-prints" title="Filter by limited print availability">
+                <option value="">All</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>Order by:</label>
+              <select id="filter-order" title="Order gallery works">
+                <option value="created-desc">Artwork Creation Date</option>
+                <option value="title-asc">Title</option>
+              </select>
             </div>
 
             <button id="filter-reset" class="btn">Reset</button>
-            <div id="applied-filters" class="applied-filters-placeholder"></div>
             <div id="filter-breadcrumb" class="filter-breadcrumb"></div>
             </div>
           </div>

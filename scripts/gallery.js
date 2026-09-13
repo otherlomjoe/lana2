@@ -10,7 +10,8 @@ let currentFilters = {
     genre: null,
     collection: null,
     prints: null,
-    search: ""
+    search: "",
+    order: "created-desc"
 };
 
 /* ---------------------------------------------------------
@@ -169,7 +170,7 @@ function renderAppliedFiltersAndBreadcrumb() {
         addBadge(label, 'sold', currentFilters.sold);
     }
     if (currentFilters.prints) {
-        const label = 'Limited Prints Available';
+        const label = currentFilters.prints === 'yes' ? 'Limited Prints: Yes' : 'Limited Prints: No';
         parts.push(label);
         addBadge(label, 'prints', String(currentFilters.prints));
     }
@@ -198,7 +199,7 @@ function removeFilter(key) {
             const el = document.getElementById('filter-sold'); if (el) el.value = '';
         } else if (key === 'prints') {
             currentFilters.prints = null;
-            const el = document.getElementById('filter-prints'); if (el) el.checked = false;
+            const el = document.getElementById('filter-prints'); if (el) el.value = '';
         } else if (key === 'search') {
             currentFilters.search = '';
             const el = document.getElementById('filter-search'); if (el) el.value = '';
@@ -275,9 +276,9 @@ function applyFilters(list, filters) {
     }
 
     if (filters.prints) {
-        if (filters.prints === true || filters.prints === "true") {
+        if (filters.prints === true || filters.prints === "true" || filters.prints === "yes") {
             filtered = filtered.filter(i => i.printsAvailable === true);
-        } else if (filters.prints === "false") {
+        } else if (filters.prints === "false" || filters.prints === "no") {
             filtered = filtered.filter(i => !i.printsAvailable);
         }
     }
@@ -299,6 +300,15 @@ function applyFilters(list, filters) {
     }
 
     return filtered;
+}
+
+function sortGalleryItems(list, order) {
+    return [...list].sort((a, b) => {
+        if (order === 'title-asc') return getTitle(a).localeCompare(getTitle(b), undefined, { sensitivity: 'base' });
+        const dateA = new Date(a.artworkCreatedAt || a.dateAdded || a.createdAt || 0).getTime();
+        const dateB = new Date(b.artworkCreatedAt || b.dateAdded || b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
 }
 
 /* ---------------------------------------------------------
@@ -328,7 +338,10 @@ async function loadGallery() {
         selectFilterValue('filter-sold', currentFilters.sold);
         const search = document.getElementById('filter-search');
         if (search) search.value = currentFilters.search || '';
-        if (typeof currentFilters.prints !== 'undefined' && document.getElementById('filter-prints')) document.getElementById('filter-prints').checked = Boolean(currentFilters.prints === true || currentFilters.prints === 'true');
+        const prints = document.getElementById('filter-prints');
+        if (prints) prints.value = currentFilters.prints || '';
+        const order = document.getElementById('filter-order');
+        if (order) order.value = currentFilters.order || 'created-desc';
     } catch (e) { /* ignore if elements missing */ }
 
     // Toggle selected visual class
@@ -386,20 +399,22 @@ function serializeFilters() {
     if (currentFilters.genre) parts.push('g=' + encodeURIComponent(currentFilters.genre));
     if (currentFilters.collection) parts.push('c=' + encodeURIComponent(currentFilters.collection));
     if (currentFilters.sold) parts.push('s=' + encodeURIComponent(currentFilters.sold));
-    if (currentFilters.prints) parts.push('p=1');
+    if (currentFilters.prints) parts.push('p=' + encodeURIComponent(currentFilters.prints));
     if (currentFilters.search) parts.push('q=' + encodeURIComponent(currentFilters.search));
+    if (currentFilters.order && currentFilters.order !== 'created-desc') parts.push('o=' + encodeURIComponent(currentFilters.order));
     return parts.join('&');
 }
 
 function deserializeFiltersFromQuery(query) {
     const q = new URLSearchParams(query);
-    const filters = { medium: null, genre: null, collection: null, sold: null, prints: null, search: '' };
+    const filters = { medium: null, genre: null, collection: null, sold: null, prints: null, search: '', order: 'created-desc' };
     if (q.has('m')) filters.medium = q.get('m');
     if (q.has('g')) filters.genre = q.get('g');
     if (q.has('c')) filters.collection = q.get('c');
     if (q.has('s')) filters.sold = q.get('s');
-    if (q.has('p')) filters.prints = true;
+    if (q.has('p')) filters.prints = q.get('p') === '1' ? 'yes' : q.get('p');
     if (q.has('q')) filters.search = q.get('q');
+    if (q.has('o')) filters.order = q.get('o') || 'created-desc';
     return filters;
 }
 
@@ -518,7 +533,7 @@ function loadGalleryMode(filters) {
 
     renderExPage();
 
-    let worksData = applyFilters(items, filters).map(item => ({
+    let worksData = sortGalleryItems(applyFilters(items, filters), filters.order).map(item => ({
         link: getPage(item),
         thumb: getThumb(item),
         text: `${getTitle(item)}<br>${item.medium || ""}${item.price ? `<br>${item.price}` : ""}`
@@ -633,7 +648,7 @@ function loadExhibitionMode(tag, filters) {
     //
     // --- Apply shared filters (medium, sold, search, genre, etc.) ---
     //
-    filtered = applyFilters(filtered, filters);
+    filtered = sortGalleryItems(applyFilters(filtered, filters), filters.order);
 	
 	// ⭐ NOW filtered exists — safe to update heading
 	document.getElementById("works-heading").innerText =
@@ -835,7 +850,7 @@ if (panelToggle) {
     panelToggle.addEventListener('click', () => {
         const panel = document.getElementById('filters');
         if (!panel) return;
-        panel.classList.toggle('collapsed');
+        setFiltersPanelCollapsed(!panel.classList.contains('collapsed'));
     });
     panelToggle.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); panelToggle.click(); }
@@ -843,20 +858,27 @@ if (panelToggle) {
 }
 
 document.getElementById("filter-prints").addEventListener("change", e => {
-    currentFilters.prints = e.target.checked ? true : null;
+    currentFilters.prints = e.target.value || null;
+    updateURLWithFilters();
+    loadGallery();
+});
+
+document.getElementById("filter-order").addEventListener("change", e => {
+    currentFilters.order = e.target.value || 'created-desc';
     updateURLWithFilters();
     loadGallery();
 });
 
 document.getElementById("filter-reset").addEventListener("click", () => {
-    currentFilters = { medium: null, sold: null, genre: null, collection: null, prints: null, search: "" };
+    currentFilters = { medium: null, sold: null, genre: null, collection: null, prints: null, search: "", order: "created-desc" };
 
     try {
         const fm = document.getElementById("filter-medium"); if (fm) fm.value = "";
         const fg = document.getElementById("filter-genre"); if (fg) fg.value = "";
         const fs = document.getElementById("filter-sold"); if (fs) fs.value = "";
-        const fp = document.getElementById("filter-prints"); if (fp) fp.checked = false;
+        const fp = document.getElementById("filter-prints"); if (fp) fp.value = "";
         const fq = document.getElementById("filter-search"); if (fq) fq.value = "";
+        const fo = document.getElementById("filter-order"); if (fo) fo.value = "created-desc";
     } catch (e) { /* ignore */ }
 
     // Clear query string and hash so legacy hash filters (e.g. #collection-...) are removed

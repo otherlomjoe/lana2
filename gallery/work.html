@@ -119,8 +119,9 @@
           <h3>Description</h3>
           <h5 id="art-medium"></h5>
             <p id="art-description"></p>
+            <div id="art-price-value" class="art-price"></div>
+            <div id="art-dimensions" class="art-dimensions"></div>
             <div id="art-date" class="art-date"></div>
-            <div id="art-price-value"></div>
             <div id="private-info" class="private-info" hidden></div>
         </div>
 
@@ -201,13 +202,16 @@ function normalizeUploadedItem(item) {
         title: item.title || "",
         medium: item.medium || "",
         genre: item.genre || "",
-    description: item.description || "",
-    awardDescription: item.awardDescription || item.award_description || item.awardDesc || '',
+        description: item.description || "",
+        awardDescription: item.awardDescription || item.award_description || item.awardDesc || '',
         price: item.price || "",
+        dimensions: item.dimensions || "",
+        printsAvailable: Boolean(item.printsAvailable || item.prints_available || item.prints),
         thumbnail: item.thumbnail || item.thumbnail_path || "",
         full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
         dateAdded: item.dateAdded || item.date_added || "",
         disabled: Boolean(item.disabled),
+        available: item.available !== false && item.available !== 0 && item.available !== "0",
         sold: Boolean(item.sold),
         source: item.source || "server"
     };
@@ -305,18 +309,17 @@ async function loadArtwork() {
 
   // Available
   if (typeof item.available !== 'undefined') {
-    if (item.available) metaTags.push(`<a class="tag" href="/gallery.html?s=available">Available</a>`);
-    else metaTags.push(`<a class="tag" href="/gallery.html?s=sold">Unavailable</a>`);
+    if (item.available) metaTags.push(`<a class="tag" href="/gallery.html?s=available">Original: Available</a>`);
+    else metaTags.push(`<a class="tag" href="/gallery.html?s=sold">Original: Sold</a>`);
   }
 
   // Sold (copiesSold > 0)
-  if (typeof item.copiesSold !== 'undefined' && item.copiesSold > 0) {
-    metaTags.push(`<a class="tag" href="/gallery.html?s=sold">Sold</a>`);
-  }
+  // Original status is shown above, so do not add a second sold badge.
 
   // Prints available (boolean)
-  if (item.printsAvailable) {
-    metaTags.push(`<a class="tag" href="/gallery.html?p=1">Limited Prints Available</a>`);
+  if (typeof item.printsAvailable !== 'undefined') {
+    const printStatus = item.printsAvailable ? 'Available' : 'Sold';
+    metaTags.push(`<a class="tag" href="/gallery.html?p=1">Limited Prints: ${printStatus}</a>`);
   }
 
   // Award (show badge and optional award description)
@@ -332,7 +335,7 @@ async function loadArtwork() {
     const pv = document.getElementById('art-price-value');
     if (pv) {
         if (item.price && item.price !== '') {
-            pv.innerText = `Public price: ${item.price}`;
+          pv.innerText = `Price: ${item.price}`;
             pv.style.display = '';
         } else {
             pv.innerText = '';
@@ -340,6 +343,12 @@ async function loadArtwork() {
         }
     }
   } catch (e) { /* ignore */ }
+
+  const dimensions = document.getElementById('art-dimensions');
+  if (dimensions) {
+    dimensions.innerText = item.dimensions ? `Dimensions: ${item.dimensions}` : '';
+    dimensions.style.display = item.dimensions ? '' : 'none';
+  }
 
 	metaContainer.innerHTML = metaTags.join("");
 	
