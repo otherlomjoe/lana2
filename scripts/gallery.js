@@ -79,7 +79,7 @@ function normalizeUploadedItem(item) {
         dateAdded: item.dateAdded || item.date_added || "",
         disabled: Boolean(item.disabled),
         available: item.available !== false && item.available !== 0 && item.available !== "0",
-        sold: Boolean(item.sold),
+        sold: item.sold === true || item.sold === 1 || item.sold === "1" || item.available === false || item.available === 0 || item.available === "0",
         source: item.source || "server"
     };
 }
@@ -186,7 +186,7 @@ function renderAppliedFiltersAndBreadcrumb() {
         addBadge(label, 'genre', currentFilters.genre);
     }
     if (currentFilters.sold) {
-        const label = currentFilters.sold === 'sold' ? 'Sold' : 'Available';
+        const label = currentFilters.sold === 'sold' ? 'Original: Sold' : 'Original: Available';
         parts.push(label);
         addBadge(label, 'sold', currentFilters.sold);
     }

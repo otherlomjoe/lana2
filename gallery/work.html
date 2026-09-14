@@ -106,6 +106,7 @@
             <a id="art-image-link">
               <img id="art-image" alt="Artwork image" />
             </a>
+            <a id="work-admin-edit" class="work-admin-edit" hidden>Edit</a>
           </div>
 
           <div class="nav-buttons">
@@ -212,7 +213,7 @@ function normalizeUploadedItem(item) {
         dateAdded: item.dateAdded || item.date_added || "",
         disabled: Boolean(item.disabled),
         available: item.available !== false && item.available !== 0 && item.available !== "0",
-        sold: Boolean(item.sold),
+        sold: item.sold === true || item.sold === 1 || item.sold === "1" || item.available === false || item.available === 0 || item.available === "0",
         source: item.source || "server"
     };
 }
@@ -316,10 +317,9 @@ async function loadArtwork() {
   // Sold (copiesSold > 0)
   // Original status is shown above, so do not add a second sold badge.
 
-  // Prints available (boolean)
-  if (typeof item.printsAvailable !== 'undefined') {
-    const printStatus = item.printsAvailable ? 'Available' : 'Sold';
-    metaTags.push(`<a class="tag" href="/gallery.html?p=1">Limited Prints: ${printStatus}</a>`);
+  // Only show a print badge when limited prints are available.
+  if (item.printsAvailable === true) {
+    metaTags.push(`<a class="tag" href="/gallery.html?p=yes">Limited Prints: Available</a>`);
   }
 
   // Award (show badge and optional award description)
@@ -382,6 +382,11 @@ async function loadArtwork() {
       if (statusRes.ok) {
         const statusJson = await statusRes.json();
         if (statusJson.authenticated) {
+          const editLink = document.getElementById('work-admin-edit');
+          if (editLink) {
+            editLink.href = '/gallery/admin-edit.php?id=' + encodeURIComponent(item.id || '');
+            editLink.hidden = !item.id;
+          }
           const itemRes = await fetch('/gallery-api.php?action=item&slug=' + encodeURIComponent(slug), { credentials: 'same-origin' });
           if (itemRes.ok) {
             const body = await itemRes.json();

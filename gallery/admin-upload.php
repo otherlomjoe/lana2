@@ -68,7 +68,7 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
       <fieldset><legend>Public information</legend>
       <div class="control-group"><label>Public price</label><input type="text" name="pricePublic"></div>
       <div class="control-group"><label>Artwork creation date (editable)</label><input id="artwork-created-at" type="date" name="artworkCreatedAt"><p class="help-block">Defaults to the image EXIF date where available, otherwise the file timestamp. You can change it.</p></div>
-      <div class="control-group"><label>Available</label><select name="available"><option value="1">Yes</option><option value="0">No</option></select></div>
+      <div class="control-group"><label><input type="checkbox" name="sold" value="1"> Sold</label></div>
       <div class="control-group"><label>Medium</label><input type="text" name="medium" list="medium-options"><datalist id="medium-options"><?php foreach ($lookups['mediums'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
       <div class="control-group"><label>Genre</label><input type="text" name="genre" list="genre-options"><datalist id="genre-options"><?php foreach ($lookups['genres'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
       <div class="control-group"><label>Collection</label><input type="text" name="collection" list="collection-options"><datalist id="collection-options"><?php foreach ($lookups['collections'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
