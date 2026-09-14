@@ -54,12 +54,6 @@ function getPage(item) {
     return `/gallery/work.html#${item.slug}`;
 }
 
-function getAdminEditLink(id, type = 'image') {
-    if (!isAdmin || !id) return '';
-    const page = type === 'exhibition' ? 'admin-exhibition-edit.php' : 'admin-edit.php';
-    return `<a class="admin-edit-link" href="/gallery/${page}?id=${encodeURIComponent(id)}">Edit</a>`;
-}
-
 /* ---------------------------------------------------------
    LOAD JSON DATA
 --------------------------------------------------------- */
@@ -395,9 +389,15 @@ async function loadGallery() {
         const search = document.getElementById('filter-search');
         if (search) search.value = currentFilters.search || '';
         const prints = document.getElementById('filter-prints');
-        if (prints) prints.value = currentFilters.prints || '';
+        if (prints) {
+            prints.value = currentFilters.prints || '';
+            prints.classList.toggle('filter-selected', Boolean(currentFilters.prints));
+        }
         const order = document.getElementById('filter-order');
-        if (order) order.value = currentFilters.order || 'created-desc';
+        if (order) {
+            order.value = currentFilters.order || 'created-desc';
+            order.classList.toggle('filter-selected', currentFilters.order && currentFilters.order !== 'created-desc');
+        }
     } catch (e) { /* ignore if elements missing */ }
 
     // Toggle selected visual class
@@ -564,7 +564,6 @@ function loadGalleryMode(filters) {
                         <img src="${item.thumb}">
                         <div><span>${item.text}</span></div>
                     </a>
-                    ${getAdminEditLink(item.id, 'exhibition')}
                 </li>
             `);
         });
@@ -617,7 +616,6 @@ function loadGalleryMode(filters) {
                         <img src="${item.thumb}">
                         <div><span>${item.text}</span></div>
                     </a>
-                    ${getAdminEditLink(item.id)}
                 </li>
             `);
         });
@@ -737,7 +735,6 @@ function loadExhibitionMode(tag, filters) {
                         <img src="${getThumb(item)}">
                         <div><span>${getTitle(item)}<br>${item.medium || ""}</span></div>
                     </a>
-                    ${getAdminEditLink(item.id)}
                 </li>
             `);
         });
@@ -839,7 +836,6 @@ function loadExhibitionMode(tag, filters) {
                         <img src="${getThumb(item)}">
                         <div><span>${getTitle(item)}<br>${item.medium || ""}</span></div>
                     </a>
-                    ${getAdminEditLink(item.id)}
                 </li>
             `);
         });

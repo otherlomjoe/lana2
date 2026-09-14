@@ -404,14 +404,13 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .filter-badge .remove:hover {color:#333}
 .filter-breadcrumb {color:#666;font-size:13px;margin-top:6px}
 .filter-selected {font-weight:700;background:#d0ecff}
-.works-heading-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap }
-.works-heading-row .section-heading { margin-bottom:10px }
+.works-heading-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:30px }
+.works-heading-row .section-heading { margin-top:0; margin-bottom:10px }
 .works-heading-row .applied-filters-placeholder { margin-left:0; margin-bottom:10px }
 .da-thumbs > li { position:relative }
-.admin-edit-link { position:absolute; right:6px; bottom:6px; z-index:3; padding:2px 6px; background:rgba(255,255,255,.92); border:1px solid #bbb; color:#555; font-size:12px; text-decoration:none }
-.admin-edit-link:hover { color:#222; background:#fff }
-.work-admin-edit { position:absolute; right:8px; bottom:8px; z-index:3; padding:3px 8px; background:rgba(255,255,255,.92); border:1px solid #aaa; color:#555; font-size:12px; text-decoration:none }
-.work-admin-edit:hover { color:#222; background:#fff }
+.admin-list-thumbnail { width:auto; max-width:70px; max-height:70px; height:auto; display:inline-block; vertical-align:middle }
+.work-admin-edit { position:absolute; right:8px; bottom:8px; z-index:3; color:#666; font-size:.95em; text-decoration:underline; background:none; border:0; padding:0 }
+.work-admin-edit:hover { color:#333 }
 
 /* Award styling on work page */
 .award-desc { margin-left:8px; color:#444; font-style:italic; }
@@ -423,7 +422,7 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 /* Collapsible filter panel */
 .filter-panel-toggle, #filter-panel-toggle, .filter-panel-toggle { cursor:pointer; background:#f5f5f5; padding:8px 10px; border:1px solid #e5e5e5; border-radius:4px; display:inline-block; margin-bottom:8px; font-weight:700 }
 .filters-container .filters-body { display:block; margin-top:8px }
-.filters-container.collapsed .filters-body { display:none }
+.filters-container.collapsed .filters-body { display:none !important }
 .filter-panel-toggle .toggle-indicator { margin-left:8px; font-weight:400; display:inline-block; min-width:10px }
 
 /* Transparent background used on several pages */
@@ -441,6 +440,8 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .filters-body .filter-group label { margin:0 0 4px 0 }
 .filters-body .filter-group select, .filters-body .filter-group input[type="text"] { box-sizing:border-box; width:100%; max-width:260px }
 .filters-body #filter-reset { justify-self:start; align-self:end }
+#filters select.filter-selected { background:#d0ecff !important; font-weight:700 }
+#filters td { vertical-align:middle }
 .image-title-active-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap }
 .image-title-active-row input[type="text"] { min-width:280px }
 .active-checkbox { white-space:nowrap; font-weight:600 }
