@@ -64,7 +64,7 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
       <div class="control-group"><label>Full image</label><input id="full-image" data-media-input="full image" type="file" name="full" accept="image/*" required><div data-media-preview="full-image"></div></div>
       <div class="control-group"><label>Thumbnail (recommended)</label><input id="thumbnail-file" data-media-input="thumbnail" type="file" name="thumbnail" accept="image/*"><div data-media-preview="thumbnail-file"></div><p class="help-block">Upload a matching image-name-thumb file when available.</p><div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-name-thumb.jpg.</div><button type="submit" name="generateThumbnail" value="1" class="btn">Generate correctly named 200 x 165 thumbnail</button></div>
 
-      <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title"></div>
+      <div class="control-group image-title-active-row"><label>Title</label><input id="image-title" type="text" name="title"><label class="active-checkbox"><input type="checkbox" name="active" value="1" checked> Active</label></div>
       <fieldset><legend>Public information</legend>
       <div class="control-group"><label>Public price</label><input type="text" name="pricePublic"></div>
       <div class="control-group"><label>Artwork creation date (editable)</label><input id="artwork-created-at" type="date" name="artworkCreatedAt"><p class="help-block">Defaults to the image EXIF date where available, otherwise the file timestamp. You can change it.</p></div>

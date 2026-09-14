@@ -4,11 +4,13 @@
 --------------------------------------------------------- */
 let items = [];
 let exhibitions = [];
+let isAdmin = false;
 let currentFilters = {
     medium: null,
     sold: null,
     genre: null,
     collection: null,
+    award: null,
     prints: null,
     search: "",
     order: "created-desc"
@@ -52,6 +54,12 @@ function getPage(item) {
     return `/gallery/work.html#${item.slug}`;
 }
 
+function getAdminEditLink(id, type = 'image') {
+    if (!isAdmin || !id) return '';
+    const page = type === 'exhibition' ? 'admin-exhibition-edit.php' : 'admin-edit.php';
+    return `<a class="admin-edit-link" href="/gallery/${page}?id=${encodeURIComponent(id)}">Edit</a>`;
+}
+
 /* ---------------------------------------------------------
    LOAD JSON DATA
 --------------------------------------------------------- */
@@ -63,6 +71,7 @@ function normalizeUploadedItem(item) {
         title: item.title || "",
         medium: item.medium || "",
         genre: item.genre || "",
+        awardTitle: item.awardTitle || item.award_title || item.award || "",
         printsAvailable: Boolean(item.printsAvailable || item.prints_available || item.prints),
         description: item.description || "",
         thumbnail: item.thumbnail || item.thumbnail_path || "",
@@ -104,6 +113,13 @@ async function loadData() {
     }).then(r => r.ok ? r.json() : []);
 
     exhibitions = Array.isArray(exhibitionData) ? exhibitionData : [];
+    try {
+        const statusResponse = await fetch('/gallery-api.php?action=status', { credentials: 'same-origin' });
+        const status = statusResponse.ok ? await statusResponse.json() : {};
+        isAdmin = Boolean(status.authenticated);
+    } catch (error) {
+        isAdmin = false;
+    }
     exhibitions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     items = uploadedItems.sort((a, b) => {
         const dateA = a.artworkCreatedAt || a.dateAdded || a.createdAt || 0;
@@ -159,6 +175,11 @@ function renderAppliedFiltersAndBreadcrumb() {
         parts.push(label);
         addBadge(label, 'collection', currentFilters.collection);
     }
+    if (currentFilters.award) {
+        const label = `Award: ${currentFilters.award}`;
+        parts.push(label);
+        addBadge(label, 'award', currentFilters.award);
+    }
     if (currentFilters.genre) {
         const label = `Genre: ${currentFilters.genre}`;
         parts.push(label);
@@ -206,6 +227,9 @@ function removeFilter(key) {
         } else if (key === 'collection') {
             currentFilters.collection = null;
             const el = document.getElementById('filter-collection'); if (el) el.value = '';
+        } else if (key === 'award') {
+            currentFilters.award = null;
+            const el = document.getElementById('filter-award'); if (el) el.value = '';
         }
     } catch (e) { /* ignore missing elements */ }
 
@@ -255,6 +279,30 @@ function populateGenreFilter() {
         select.appendChild(opt);
     });
 }
+
+function populateCollectionFilter() {
+    const select = document.getElementById('filter-collection');
+    if (!select) return;
+    select.querySelectorAll('option:not(:first-child)').forEach(option => option.remove());
+    [...new Set(items.map(item => item.collection).filter(Boolean))].sort().forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+}
+
+function populateAwardFilter() {
+    const select = document.getElementById('filter-award');
+    if (!select) return;
+    select.querySelectorAll('option:not(:first-child)').forEach(option => option.remove());
+    [...new Set(items.map(item => item.awardTitle).filter(Boolean))].sort().forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+}
 	
 
 /* ---------------------------------------------------------
@@ -273,6 +321,10 @@ function applyFilters(list, filters) {
 
     if (filters.collection) {
         filtered = filtered.filter(i => (i.collection || '').toLowerCase() === (String(filters.collection) || '').toLowerCase());
+    }
+
+    if (filters.award) {
+        filtered = filtered.filter(i => (i.awardTitle || '').toLowerCase() === String(filters.award).toLowerCase());
     }
 
     if (filters.prints) {
@@ -322,6 +374,8 @@ async function loadGallery() {
 
     populateMediumFilter();
     populateGenreFilter();
+    populateCollectionFilter();
+    populateAwardFilter();
 
     // Sync dropdowns/selected UI based on currentFilters
     try {
@@ -335,6 +389,8 @@ async function loadGallery() {
         };
         selectFilterValue('filter-medium', currentFilters.medium);
         selectFilterValue('filter-genre', currentFilters.genre);
+        selectFilterValue('filter-collection', currentFilters.collection);
+        selectFilterValue('filter-award', currentFilters.award);
         selectFilterValue('filter-sold', currentFilters.sold);
         const search = document.getElementById('filter-search');
         if (search) search.value = currentFilters.search || '';
@@ -349,13 +405,15 @@ async function loadGallery() {
         const m = document.getElementById('filter-medium'); if (m) { if (currentFilters.medium) m.classList.add('filter-selected'); else m.classList.remove('filter-selected'); }
         const g = document.getElementById('filter-genre'); if (g) { if (currentFilters.genre) g.classList.add('filter-selected'); else g.classList.remove('filter-selected'); }
         const s = document.getElementById('filter-sold'); if (s) { if (currentFilters.sold) s.classList.add('filter-selected'); else s.classList.remove('filter-selected'); }
+        const c = document.getElementById('filter-collection'); if (c) { if (currentFilters.collection) c.classList.add('filter-selected'); else c.classList.remove('filter-selected'); }
+        const a = document.getElementById('filter-award'); if (a) { if (currentFilters.award) a.classList.add('filter-selected'); else a.classList.remove('filter-selected'); }
     } catch (e) {}
 
     renderAppliedFiltersAndBreadcrumb();
 
     // Expand panel if any filters are active
     try {
-        const anyActive = Boolean(currentFilters.medium || currentFilters.genre || currentFilters.sold || currentFilters.collection || (currentFilters.search && currentFilters.search.trim() !== '') || currentFilters.prints);
+        const anyActive = Boolean(currentFilters.medium || currentFilters.genre || currentFilters.sold || currentFilters.collection || currentFilters.award || (currentFilters.search && currentFilters.search.trim() !== '') || currentFilters.prints);
         setFiltersPanelCollapsed(!anyActive);
     } catch (e) {}
 
@@ -398,6 +456,7 @@ function serializeFilters() {
     if (currentFilters.medium) parts.push('m=' + encodeURIComponent(currentFilters.medium));
     if (currentFilters.genre) parts.push('g=' + encodeURIComponent(currentFilters.genre));
     if (currentFilters.collection) parts.push('c=' + encodeURIComponent(currentFilters.collection));
+    if (currentFilters.award) parts.push('a=' + encodeURIComponent(currentFilters.award));
     if (currentFilters.sold) parts.push('s=' + encodeURIComponent(currentFilters.sold));
     if (currentFilters.prints) parts.push('p=' + encodeURIComponent(currentFilters.prints));
     if (currentFilters.search) parts.push('q=' + encodeURIComponent(currentFilters.search));
@@ -407,10 +466,11 @@ function serializeFilters() {
 
 function deserializeFiltersFromQuery(query) {
     const q = new URLSearchParams(query);
-    const filters = { medium: null, genre: null, collection: null, sold: null, prints: null, search: '', order: 'created-desc' };
+    const filters = { medium: null, genre: null, collection: null, award: null, sold: null, prints: null, search: '', order: 'created-desc' };
     if (q.has('m')) filters.medium = q.get('m');
     if (q.has('g')) filters.genre = q.get('g');
     if (q.has('c')) filters.collection = q.get('c');
+    if (q.has('a')) filters.award = q.get('a');
     if (q.has('s')) filters.sold = q.get('s');
     if (q.has('p')) filters.prints = q.get('p') === '1' ? 'yes' : q.get('p');
     if (q.has('q')) filters.search = q.get('q');
@@ -452,7 +512,7 @@ function readFiltersFromURL() {
     } else if (hash.startsWith('medium-')) {
         currentFilters.medium = decodeURIComponent(hash.replace('medium-','')) || null;
     } else if (hash.startsWith('prints-')) {
-        currentFilters.prints = hash.indexOf('true') !== -1;
+        currentFilters.prints = hash.indexOf('true') !== -1 ? 'yes' : 'no';
     } else if (hash.startsWith('collection-')) {
         currentFilters.collection = decodeURIComponent(hash.replace('collection-','')) || null;
     } else if (hash.startsWith('available-')) {
@@ -483,6 +543,7 @@ function loadGalleryMode(filters) {
     worksList.innerHTML = "";
 
     const exData = exhibitions.map(ex => ({
+        id: ex.id,
         link: `gallery.html#${ex.slug}`,
         thumb: ex.thumbnailImage || ex.heroImage || "",
         text: `${ex.title || ex.name}<br>${ex.startDate || ""}`
@@ -503,6 +564,7 @@ function loadGalleryMode(filters) {
                         <img src="${item.thumb}">
                         <div><span>${item.text}</span></div>
                     </a>
+                    ${getAdminEditLink(item.id, 'exhibition')}
                 </li>
             `);
         });
@@ -534,6 +596,7 @@ function loadGalleryMode(filters) {
     renderExPage();
 
     let worksData = sortGalleryItems(applyFilters(items, filters), filters.order).map(item => ({
+        id: item.id,
         link: getPage(item),
         thumb: getThumb(item),
         text: `${getTitle(item)}<br>${item.medium || ""}${item.price ? `<br>${item.price}` : ""}`
@@ -554,6 +617,7 @@ function loadGalleryMode(filters) {
                         <img src="${item.thumb}">
                         <div><span>${item.text}</span></div>
                     </a>
+                    ${getAdminEditLink(item.id)}
                 </li>
             `);
         });
@@ -673,6 +737,7 @@ function loadExhibitionMode(tag, filters) {
                         <img src="${getThumb(item)}">
                         <div><span>${getTitle(item)}<br>${item.medium || ""}</span></div>
                     </a>
+                    ${getAdminEditLink(item.id)}
                 </li>
             `);
         });
@@ -774,6 +839,7 @@ function loadExhibitionMode(tag, filters) {
                         <img src="${getThumb(item)}">
                         <div><span>${getTitle(item)}<br>${item.medium || ""}</span></div>
                     </a>
+                    ${getAdminEditLink(item.id)}
                 </li>
             `);
         });
@@ -816,6 +882,18 @@ document.getElementById("filter-medium").addEventListener("change", e => {
 
 document.getElementById("filter-genre").addEventListener("change", () => {
     currentFilters.genre = document.getElementById("filter-genre").value || null;
+    updateURLWithFilters();
+    loadGallery();
+});
+
+document.getElementById("filter-collection").addEventListener("change", e => {
+    currentFilters.collection = e.target.value || null;
+    updateURLWithFilters();
+    loadGallery();
+});
+
+document.getElementById("filter-award").addEventListener("change", e => {
+    currentFilters.award = e.target.value || null;
     updateURLWithFilters();
     loadGallery();
 });
@@ -870,11 +948,13 @@ document.getElementById("filter-order").addEventListener("change", e => {
 });
 
 document.getElementById("filter-reset").addEventListener("click", () => {
-    currentFilters = { medium: null, sold: null, genre: null, collection: null, prints: null, search: "", order: "created-desc" };
+    currentFilters = { medium: null, sold: null, genre: null, collection: null, award: null, prints: null, search: "", order: "created-desc" };
 
     try {
         const fm = document.getElementById("filter-medium"); if (fm) fm.value = "";
         const fg = document.getElementById("filter-genre"); if (fg) fg.value = "";
+        const fc = document.getElementById("filter-collection"); if (fc) fc.value = "";
+        const fa = document.getElementById("filter-award"); if (fa) fa.value = "";
         const fs = document.getElementById("filter-sold"); if (fs) fs.value = "";
         const fp = document.getElementById("filter-prints"); if (fp) fp.value = "";
         const fq = document.getElementById("filter-search"); if (fq) fq.value = "";

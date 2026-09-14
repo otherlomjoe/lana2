@@ -123,8 +123,14 @@
         
         <!-- Filters Section -->
         <div id="filters" class="filters-container collapsed">
-          <div id="filter-panel-toggle" class="filter-panel-toggle" role="button" tabindex="0">Search and Filter <span class="toggle-indicator">▼</span></div>
+          <div id="filter-panel-toggle" class="filter-panel-toggle" role="button" tabindex="0" aria-expanded="false">Search, Sort &amp; Filter <span class="toggle-indicator">▼</span></div>
           <div id="filters-body" class="filters-body">
+          <div class="filter-group">
+              <label>Search:</label>
+              <div class="filter-search-input-wrap">
+                <input type="text" id="filter-search" placeholder="Search title or description">
+              </div>
+            </div>
           <div class="filter-group">
                 <label>Medium:</label>
                   <select id="filter-medium" title="Filter by medium">
@@ -140,19 +146,26 @@
             </div>
 
             <div class="filter-group">
+              <label>Collection:</label>
+              <select id="filter-collection" title="Filter by collection">
+                <option value="">All</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>Award:</label>
+              <select id="filter-award" title="Filter by award">
+                <option value="">All</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
                 <label>Sold:</label>
                 <select id="filter-sold" title="Filter by sold status">
                     <option value="">All</option>
                     <option value="sold">Sold</option>
                     <option value="available">Available</option>
                 </select>
-            </div>
-
-            <div class="filter-group">
-              <label>Search:</label>
-              <div class="filter-search-input-wrap">
-                <input type="text" id="filter-search" placeholder="Search title or description">
-              </div>
             </div>
 
             <div class="filter-group">

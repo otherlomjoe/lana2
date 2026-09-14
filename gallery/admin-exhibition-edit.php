@@ -21,7 +21,7 @@ if ($id > 0) {
     $selectedImageIds = array_map('intval', array_column($links->fetchAll(), 'image_id'));
   }
 }
-$images = gallery_list_images($pdo);
+$images = gallery_list_images($pdo, true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
 unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);

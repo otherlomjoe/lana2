@@ -407,6 +407,9 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .works-heading-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap }
 .works-heading-row .section-heading { margin-bottom:10px }
 .works-heading-row .applied-filters-placeholder { margin-left:0; margin-bottom:10px }
+.da-thumbs > li { position:relative }
+.admin-edit-link { position:absolute; right:6px; bottom:6px; z-index:3; padding:2px 6px; background:rgba(255,255,255,.92); border:1px solid #bbb; color:#555; font-size:12px; text-decoration:none }
+.admin-edit-link:hover { color:#222; background:#fff }
 
 /* Award styling on work page */
 .award-desc { margin-left:8px; color:#444; font-style:italic; }
@@ -431,6 +434,16 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .art-dimensions { margin-top:8px; color:#555; font-size:.95em }
 .private-info[hidden] { display:none }
 .private-notes { margin-top:8px }
+.image-title-active-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap }
+.image-title-active-row input[type="text"] { min-width:280px }
+.active-checkbox { white-space:nowrap; font-weight:600 }
+.description-preview-layout { display:grid; grid-template-columns:minmax(280px, 1fr) minmax(280px, 1fr); gap:20px; align-items:start }
+.description-preview { min-height:190px; padding:10px; border:1px solid #ddd; background:#fafafa; line-height:1.5 }
+.description-preview p:first-child { margin-top:0 }
+
+@media (max-width: 767px) {
+    .description-preview-layout { grid-template-columns:1fr }
+}
 
 /* Centered pagination helper */
 .pagination-center {text-align:center;margin-top:20px}

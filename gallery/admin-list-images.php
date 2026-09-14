@@ -37,7 +37,7 @@ unset($_SESSION['gallery_admin_message']);
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <p><a href="/gallery/admin-upload.php">Add image</a></p>
     <table class="table table-striped">
-      <thead><tr><th>ID</th><th>Image</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>ID</th><th>Thumbnail</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Active</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($items as $item): ?>
           <tr>
@@ -55,6 +55,7 @@ unset($_SESSION['gallery_admin_message']);
             <td><?= htmlspecialchars((string) $item['medium']) ?></td>
             <td><?= htmlspecialchars((string) $item['genre']) ?></td>
             <td><?= htmlspecialchars(implode(', ', (array) $item['tags'])) ?></td>
+            <td><?= !empty($item['active']) ? 'Yes' : 'No' ?></td>
             <td><?= htmlspecialchars((string) $item['status']) ?></td>
             <td>
               <a href="/gallery/work.html#<?= urlencode((string) $item['slug']) ?>" target="_blank">Preview</a> | <a href="/gallery/admin-edit.php?id=<?= (int) $item['id'] ?>">Edit</a>
