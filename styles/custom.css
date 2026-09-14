@@ -408,7 +408,7 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .works-heading-row .section-heading { margin-top:0; margin-bottom:10px }
 .works-heading-row .applied-filters-placeholder { margin-left:0; margin-bottom:10px }
 .da-thumbs > li { position:relative }
-.admin-list-thumbnail { width:auto; max-width:70px; max-height:70px; height:auto; display:inline-block; vertical-align:middle }
+.admin-list-thumbnail { width:auto; max-width:50px; max-height:42px; height:auto; display:inline-block; vertical-align:middle }
 .work-admin-edit { position:absolute; right:8px; bottom:8px; z-index:3; color:#666; font-size:.95em; text-decoration:underline; background:none; border:0; padding:0 }
 .work-admin-edit:hover { color:#333 }
 
@@ -428,8 +428,8 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 /* Transparent background used on several pages */
 .transparent-bg {position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;zoom:1}
 .filter-search-input-wrap { display:inline-block; margin-left:8px }
-#manage-gallery-footer { position:fixed; right:12px; bottom:12px; font-size:0.95em }
-#manage-gallery-footer a { color:#666; text-decoration:underline; background:none; border:none; padding:0 }
+#manage-gallery-footer { margin-top:12px; padding:8px 12px; text-align:right; font-size:0.95em }
+#manage-gallery-footer a { color:#666; text-decoration:underline; background:none; border:0; padding:0 }
 .art-date { margin-top:6px; color:#666; font-size:0.95em }
 .art-price { margin-top:10px; padding:9px 12px; border-left:4px solid #c59a3d; background:#fff8e6; color:#6d4f13; font-size:1.05em; font-weight:700; letter-spacing:.02em }
 .art-dimensions { margin-top:8px; color:#555; font-size:.95em }

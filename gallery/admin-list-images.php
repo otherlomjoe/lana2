@@ -46,10 +46,10 @@ unset($_SESSION['gallery_admin_message']);
               <?php
                 $imagePath = (string) ($item['full_file'] ?? '');
                 $imageInfo = $imagePath !== '' && is_file($imagePath) ? @getimagesize($imagePath) : false;
-                $imageDetails = $imageInfo ? ((int) $imageInfo[0] . ' x ' . (int) $imageInfo[1] . ' px; ' . number_format((int) filesize($imagePath) / 1024, 1) . ' KB') : 'Dimensions unavailable';
+                $imageDetails = $imageInfo ? ((int) $imageInfo[0] . ' x ' . (int) $imageInfo[1] . ' px; ' . number_format((int) filesize($imagePath) / 1024, 1) . ' KB') : '';
               ?>
               <?php if (!empty($item['thumbnail'])): ?><img class="admin-list-thumbnail" src="<?= htmlspecialchars((string) $item['thumbnail'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($item['title'] ?? 'Image'), ENT_QUOTES, 'UTF-8') ?>"><br><?php endif; ?>
-              <small><?= htmlspecialchars($imageDetails, ENT_QUOTES, 'UTF-8') ?></small>
+              <?php if ($imageDetails !== ''): ?><small><?= htmlspecialchars($imageDetails, ENT_QUOTES, 'UTF-8') ?></small><?php endif; ?>
             </td>
             <td><?= htmlspecialchars((string) $item['title']) ?></td>
             <td><?= htmlspecialchars((string) $item['medium']) ?></td>

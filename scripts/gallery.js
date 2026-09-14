@@ -185,7 +185,7 @@ function renderAppliedFiltersAndBreadcrumb() {
         addBadge(label, 'sold', currentFilters.sold);
     }
     if (currentFilters.prints) {
-        const label = currentFilters.prints === 'yes' ? 'Limited Prints: Yes' : 'Limited Prints: No';
+        const label = currentFilters.prints === 'available' ? 'Limited Prints: Available' : 'Limited Prints: No';
         parts.push(label);
         addBadge(label, 'prints', String(currentFilters.prints));
     }
@@ -322,7 +322,7 @@ function applyFilters(list, filters) {
     }
 
     if (filters.prints) {
-        if (filters.prints === true || filters.prints === "true" || filters.prints === "yes") {
+        if (filters.prints === true || filters.prints === "true" || filters.prints === "yes" || filters.prints === "available") {
             filtered = filtered.filter(i => i.printsAvailable === true);
         } else if (filters.prints === "false" || filters.prints === "no") {
             filtered = filtered.filter(i => !i.printsAvailable);

@@ -459,6 +459,45 @@ function gallery_resize_image(string $sourcePath, string $destinationPath, int $
     return $saved;
 }
 
+function gallery_resize_cover(string $sourcePath, string $destinationPath, int $width, int $height, int $quality = 88): bool
+{
+    if (!is_file($sourcePath) || $width < 1 || $height < 1) return false;
+    $size = getimagesize($sourcePath);
+    if ($size === false) return false;
+
+    $sourceWidth = (int) $size[0];
+    $sourceHeight = (int) $size[1];
+    $type = $size[2];
+    $image = null;
+    switch ($type) {
+        case IMAGETYPE_JPEG: $image = imagecreatefromjpeg($sourcePath); break;
+        case IMAGETYPE_PNG: $image = imagecreatefrompng($sourcePath); break;
+        case IMAGETYPE_WEBP: $image = imagecreatefromwebp($sourcePath); break;
+        default: return false;
+    }
+    if ($image === false) return false;
+
+    $scale = max($width / $sourceWidth, $height / $sourceHeight);
+    $scaledWidth = (int) ceil($sourceWidth * $scale);
+    $scaledHeight = (int) ceil($sourceHeight * $scale);
+    $offsetX = (int) floor(($scaledWidth - $width) / 2);
+    $offsetY = (int) floor(($scaledHeight - $height) / 2);
+    $canvas = imagecreatetruecolor($width, $height);
+    imagealphablending($canvas, false);
+    imagesavealpha($canvas, true);
+    imagecopyresampled($canvas, $image, -$offsetX, -$offsetY, 0, 0, $scaledWidth, $scaledHeight, $sourceWidth, $sourceHeight);
+
+    $saved = false;
+    switch ($type) {
+        case IMAGETYPE_JPEG: $saved = imagejpeg($canvas, $destinationPath, $quality); break;
+        case IMAGETYPE_PNG: $saved = imagepng($canvas, $destinationPath, 9); break;
+        case IMAGETYPE_WEBP: $saved = imagewebp($canvas, $destinationPath, $quality); break;
+    }
+    imagedestroy($image);
+    imagedestroy($canvas);
+    return $saved;
+}
+
 function gallery_store_uploaded_asset(array $file, string $directory, string $prefix): array
 {
     if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
@@ -916,7 +955,7 @@ function gallery_save_image(array $data, array $files = []): array
         $storedThumb = gallery_store_uploaded_named_asset($thumbInput, __DIR__ . '/uploads/thumbs', 'thumb');
         $thumbPath = $storedThumb['path'];
         $thumbUrl = '/gallery/uploads/thumbs/' . $storedThumb['filename'];
-        if (!gallery_resize_image($thumbPath, $thumbPath, 200, 165, 88)) {
+        if (!gallery_resize_cover($thumbPath, $thumbPath, 200, 165, 88)) {
             throw new RuntimeException('Could not resize the thumbnail image.');
         }
     } elseif ($imageId === null && $filename !== '') {
@@ -942,7 +981,7 @@ function gallery_save_image(array $data, array $files = []): array
             $thumbFilename = $thumbnailBase . 'thumb-' . bin2hex(random_bytes(4)) . '.jpg';
         }
         $thumbPath = __DIR__ . '/uploads/thumbs/' . $thumbFilename;
-        if (!gallery_resize_image($fullPath, $thumbPath, 200, 165, 88)) {
+        if (!gallery_resize_cover($fullPath, $thumbPath, 200, 165, 88)) {
             throw new RuntimeException('Could not generate the thumbnail image.');
         }
         $thumbUrl = '/gallery/uploads/thumbs/' . $thumbFilename;
@@ -1034,7 +1073,6 @@ function gallery_save_image(array $data, array $files = []): array
     } else {
         $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, prints_available, active, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :prints_available, :active, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
         $stmt->execute([
-            ':slug' => $slug,
             ':title' => $title,
             ':full_file' => $fullPath,
             ':thumbnail_file' => $thumbPath,
