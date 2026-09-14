@@ -18,6 +18,13 @@ document.addEventListener('DOMContentLoaded', function () {
       const name = document.createElement('div');
       name.textContent = file.name;
 
+      const details = document.createElement('small');
+      details.textContent = (file.size / 1024).toFixed(1) + ' KB';
+      image.addEventListener('load', function () {
+        details.textContent = image.naturalWidth + ' x ' + image.naturalHeight + ' px; ' + (file.size / 1024).toFixed(1) + ' KB';
+        URL.revokeObjectURL(image.src);
+      });
+
       const clear = document.createElement('button');
       clear.type = 'button';
       clear.className = 'btn btn-small';
@@ -30,6 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       preview.appendChild(image);
       preview.appendChild(name);
+      preview.appendChild(details);
       preview.appendChild(clear);
     };
 

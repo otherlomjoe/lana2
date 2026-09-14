@@ -94,6 +94,7 @@ function gallery_init_db(): ?PDO
         thumbnail_url VARCHAR(1024),
         price_public VARCHAR(255),
         price_private VARCHAR(255),
+        active TINYINT(1) NOT NULL DEFAULT 1,
         available TINYINT(1) NOT NULL DEFAULT 1,
         medium VARCHAR(255),
         medium_id INT UNSIGNED,
@@ -120,6 +121,8 @@ function gallery_init_db(): ?PDO
         'deleted_full_file' => 'VARCHAR(1024) NULL',
         'deleted_thumbnail_file' => 'VARCHAR(1024) NULL',
         'artwork_created_at' => 'DATE NULL',
+        'prints_available' => 'TINYINT(1) NOT NULL DEFAULT 0',
+        'active' => 'TINYINT(1) NOT NULL DEFAULT 1',
     ] as $column => $definition) {
         try {
             $pdo->exec("ALTER TABLE images ADD COLUMN {$column} {$definition}");
@@ -456,6 +459,45 @@ function gallery_resize_image(string $sourcePath, string $destinationPath, int $
     return $saved;
 }
 
+function gallery_resize_cover(string $sourcePath, string $destinationPath, int $width, int $height, int $quality = 88): bool
+{
+    if (!is_file($sourcePath) || $width < 1 || $height < 1) return false;
+    $size = getimagesize($sourcePath);
+    if ($size === false) return false;
+
+    $sourceWidth = (int) $size[0];
+    $sourceHeight = (int) $size[1];
+    $type = $size[2];
+    $image = null;
+    switch ($type) {
+        case IMAGETYPE_JPEG: $image = imagecreatefromjpeg($sourcePath); break;
+        case IMAGETYPE_PNG: $image = imagecreatefrompng($sourcePath); break;
+        case IMAGETYPE_WEBP: $image = imagecreatefromwebp($sourcePath); break;
+        default: return false;
+    }
+    if ($image === false) return false;
+
+    $scale = max($width / $sourceWidth, $height / $sourceHeight);
+    $scaledWidth = (int) ceil($sourceWidth * $scale);
+    $scaledHeight = (int) ceil($sourceHeight * $scale);
+    $offsetX = (int) floor(($scaledWidth - $width) / 2);
+    $offsetY = (int) floor(($scaledHeight - $height) / 2);
+    $canvas = imagecreatetruecolor($width, $height);
+    imagealphablending($canvas, false);
+    imagesavealpha($canvas, true);
+    imagecopyresampled($canvas, $image, -$offsetX, -$offsetY, 0, 0, $scaledWidth, $scaledHeight, $sourceWidth, $sourceHeight);
+
+    $saved = false;
+    switch ($type) {
+        case IMAGETYPE_JPEG: $saved = imagejpeg($canvas, $destinationPath, $quality); break;
+        case IMAGETYPE_PNG: $saved = imagepng($canvas, $destinationPath, 9); break;
+        case IMAGETYPE_WEBP: $saved = imagewebp($canvas, $destinationPath, $quality); break;
+    }
+    imagedestroy($image);
+    imagedestroy($canvas);
+    return $saved;
+}
+
 function gallery_store_uploaded_asset(array $file, string $directory, string $prefix): array
 {
     if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
@@ -540,6 +582,7 @@ function gallery_normalize_image_row(array $row): array
         'thumbnail' => (string) ($row['thumbnail_url'] ?? $row['thumbnail_file'] ?? ''),
         'price' => (string) (($row['price_public'] ?? '') !== '' ? $row['price_public'] : ($row['price_private'] ?? '')),
         'pricePrivate' => (string) ($row['price_private'] ?? ''),
+        'active' => (bool) ($row['active'] ?? 1),
         'available' => (bool) ($row['available'] ?? 1),
         'medium' => (string) ($row['medium'] ?? ''),
         'genre' => (string) ($row['genre'] ?? ''),
@@ -561,6 +604,7 @@ function gallery_normalize_image_row(array $row): array
         'artworkCreatedAt' => $row['artwork_created_at'] ?? null,
         'deletedAt' => $row['deleted_at'] ?? null,
         'status' => !empty($row['deleted_at']) ? 'Deleted' : (!empty($row['available']) ? 'Active' : 'Unavailable'),
+        'printsAvailable' => !empty($row['prints_available']) ? true : false,
     ];
 }
 
@@ -579,7 +623,12 @@ function gallery_list_images(?PDO $pdo = null, bool $includeDeleted = false): ar
         return [];
     }
 
-        $deletedCondition = $includeDeleted ? '' : ' WHERE i.deleted_at IS NULL';
+        $conditions = [];
+        if (!$includeDeleted) {
+            $conditions[] = 'i.deleted_at IS NULL';
+            $conditions[] = 'i.active = 1';
+        }
+        $deletedCondition = $conditions ? ' WHERE ' . implode(' AND ', $conditions) : '';
             $sql = "SELECT i.*, GROUP_CONCAT(DISTINCT t.name, ',') AS tag_names, GROUP_CONCAT(DISTINCT e.slug) AS exhibition_slugs
             FROM images i
             LEFT JOIN image_tags it ON it.image_id = i.id
@@ -906,7 +955,7 @@ function gallery_save_image(array $data, array $files = []): array
         $storedThumb = gallery_store_uploaded_named_asset($thumbInput, __DIR__ . '/uploads/thumbs', 'thumb');
         $thumbPath = $storedThumb['path'];
         $thumbUrl = '/gallery/uploads/thumbs/' . $storedThumb['filename'];
-        if (!gallery_resize_image($thumbPath, $thumbPath, 200, 165, 88)) {
+        if (!gallery_resize_cover($thumbPath, $thumbPath, 200, 165, 88)) {
             throw new RuntimeException('Could not resize the thumbnail image.');
         }
     } elseif ($imageId === null && $filename !== '') {
@@ -932,7 +981,7 @@ function gallery_save_image(array $data, array $files = []): array
             $thumbFilename = $thumbnailBase . 'thumb-' . bin2hex(random_bytes(4)) . '.jpg';
         }
         $thumbPath = __DIR__ . '/uploads/thumbs/' . $thumbFilename;
-        if (!gallery_resize_image($fullPath, $thumbPath, 200, 165, 88)) {
+        if (!gallery_resize_cover($fullPath, $thumbPath, 200, 165, 88)) {
             throw new RuntimeException('Could not generate the thumbnail image.');
         }
         $thumbUrl = '/gallery/uploads/thumbs/' . $thumbFilename;
@@ -985,10 +1034,12 @@ function gallery_save_image(array $data, array $files = []): array
         $artworkCreatedAt = gallery_detect_creation_date($fullInput['tmp_name']) ?? '';
     }
 
+    $printsAvailable = !empty($data['printsAvailable']) || !empty($data['prints_available']) ? 1 : 0;
+
     $pdo->beginTransaction();
     try {
     if ($isUpdate) {
-        $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, prints_available = :prints_available, active = :active, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -998,7 +1049,9 @@ function gallery_save_image(array $data, array $files = []): array
             ':thumbnail_url' => $thumbUrl,
             ':price_public' => trim((string) ($data['pricePublic'] ?? $data['price'] ?? '')),
             ':price_private' => trim((string) ($data['pricePrivate'] ?? '')),
-            ':available' => isset($data['available']) ? ((int) $data['available']) : 1,
+            ':prints_available' => $printsAvailable,
+            ':active' => isset($data['active']) ? ((int) $data['active']) : 1,
+            ':available' => !empty($data['sold']) ? 0 : (isset($data['available']) ? ((int) $data['available']) : 1),
             ':medium' => $mediumValue,
             ':medium_id' => $mediumId,
             ':genre' => $genreValue,
@@ -1018,9 +1071,8 @@ function gallery_save_image(array $data, array $files = []): array
             ':id' => $imageId,
         ]);
     } else {
-        $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+        $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, prints_available, active, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :prints_available, :active, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
         $stmt->execute([
-            ':slug' => $slug,
             ':title' => $title,
             ':full_file' => $fullPath,
             ':thumbnail_file' => $thumbPath,
@@ -1028,7 +1080,9 @@ function gallery_save_image(array $data, array $files = []): array
             ':thumbnail_url' => $thumbUrl,
             ':price_public' => trim((string) ($data['pricePublic'] ?? $data['price'] ?? '')),
             ':price_private' => trim((string) ($data['pricePrivate'] ?? '')),
-            ':available' => isset($data['available']) ? ((int) $data['available']) : 1,
+            ':prints_available' => $printsAvailable,
+            ':active' => isset($data['active']) ? ((int) $data['active']) : 1,
+            ':available' => !empty($data['sold']) ? 0 : (isset($data['available']) ? ((int) $data['available']) : 1),
             ':medium' => $mediumValue,
             ':medium_id' => $mediumId,
             ':genre' => $genreValue,

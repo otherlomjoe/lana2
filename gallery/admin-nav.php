@@ -6,13 +6,11 @@
     <div class="admin-nav-collapse nav-collapse collapse">
       <ul class="nav nav-pills ddmenu">
         <li><a href="/index.html">Home</a></li>
-        <li><a href="/gallery/public-gallery.php">Public gallery</a></li>
-        <li><a href="/gallery/admin-list-images.php">Images</a></li>
-        <li><a href="/gallery/admin-upload.php">Create image</a></li>
+        <!-- Public gallery removed from admin menu -->
         <li><a href="/gallery/admin-list-exhibitions.php">Exhibitions</a></li>
-        <li><a href="/gallery/admin-exhibition-edit.php">Create exhibition</a></li>
-        <li><a href="/gallery/admin-exhibition-preview.php">Preview</a></li>
-        <li><a href="/gallery/admin-logout.php">Log out</a></li>
+        <li><a href="/gallery/admin-list-images.php">Images</a></li>
+        <li><a href="/gallery/admin-clear-all.php" onclick="return confirm('Open Clear All page? You will still have to confirm on that page.')">Clear All</a></li>
+        <li><a href="/gallery/admin-logout.php">Logout</a></li>
       </ul>
     </div>
   </div>
