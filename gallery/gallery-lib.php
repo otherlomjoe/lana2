@@ -1073,6 +1073,7 @@ function gallery_save_image(array $data, array $files = []): array
     } else {
         $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, prints_available, active, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :prints_available, :active, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
         $stmt->execute([
+            ':slug' => $slug,
             ':title' => $title,
             ':full_file' => $fullPath,
             ':thumbnail_file' => $thumbPath,
