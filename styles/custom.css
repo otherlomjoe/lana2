@@ -451,6 +451,18 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .description-preview { min-height:190px; padding:10px; border:1px solid #ddd; background:#fafafa; line-height:1.5 }
 .description-preview p:first-child { margin-top:0 }
 
+#front-page-heroes { margin-top: 20px; }
+.home-hero-panel { text-align: center; }
+.home-hero-panel h1, .home-hero-panel h2, .home-hero-panel h3,
+.home-hero-panel h4, .home-hero-panel h5, .home-hero-panel h6 { color: inherit; }
+.home-hero-panel img { display: block; max-width: 100%; height: auto; margin: 0 auto 14px; }
+.home-hero-panel.alert-neutral { background: #f5f5f5; border-color: #ddd; color: #333; }
+.home-hero-body p:last-child { margin-bottom: 0; }
+.home-hero-page { padding-top: 20px; padding-bottom: 40px; }
+.home-hero-page .home-hero-panel { text-align: left; }
+.home-hero-page .home-hero-panel h1 { text-align: center; }
+.text-error { color: #b94a48; }
+
 @media (max-width: 767px) {
     .description-preview-layout { grid-template-columns:1fr }
 }

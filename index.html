@@ -115,57 +115,7 @@
       <div id="divHeaderLine1"></div>
     </div>
 	  
-	    <div class="alert alert-info">
-	  <h2>
-		  <div align="center">Ku-ring-gai Art Society 59th Annual Awards Exhibition </div>
-      </h2>
-		
-	  <h3>
-		  <div align="center">Monday, 20 July to Sunday, 2 August 2026.</div>
-      </h3>
-	  <h4>
-		  <div align="center"><a href="https://www.krg.nsw.gov.au/Things-to-do/Whats-on/Ku-ring-gai-Art-Society-59th-awards-exhibition" target="_blank" rel="noopener noreferrer">The Gallery at St Ives Shopping Village, 166 Mona Vale Road, St Ives, 2075</a></div>
-      </h4>
-		
-	   <div align="center">
-		  <p></p>
-    <p align="center">
-		I have three works up:&nbsp;<a href="https://lana.lombard.id.au/gallery/all/item/rainbowsumbrellatree.html">Rainbows in The Umbrella Tree</a>,&nbsp;<a href="https://lana.lombard.id.au/gallery/all/item/wrenbug.html">Wren and Bug</a> and <a href="https://lana.lombard.id.au/gallery/all/item/cockatoocouple.html">Cockatoo Couple</a>. Pop by and have a look if you get the chance to attend the exhibition.
-		  </p>
-			  <div align="center">
-            <h3><a href="contact.html">Contact me now</a></h3>
-          </div>
-        </div>
-        <span id="jodit-selection_marker_1785054715942_2759336492496661" data-jodit-temp="true" data-jodit-selection_marker="start" style="line-height: 0; display: none;">﻿</span><hr>
-      </div>	  
-	  
-	  
-    <div class="alert alert-success">
-		<h1>
-        <div align="center"><a href="https://www.pymblelc.nsw.edu.au/the-pymble-values-art-prize/">The Pymble Values Art Prize (past)</a><br></div>
-      </h1>
-		  <h4>
-		  <div align="center">Very pleased that my Painting "A Process of Becoming" was selected as a finalist in The Pymble Values Art Prize</div>
-      </h4>
-	  <h5>
-		  <div align="center">Opening Night: Tuesday 11 November 6.00pm to 8.00pm</div>
-		  <div align="center">The Exhibition of Finalists will also be open to the public from Wednesday 12 November to Friday 14 November from 10.00am to 4.30pm. Entry is free.</div>
-      </h5>
-	  <h6>
-		  <div align="center">Main Hall, Pymble Ladies’ College</div>
-      </h6>
-      <div align="center">
-		  <p></p>
-			  <div align="center">
-            <h3><a href="contact.html">Contact me now</a></h3>
-          </div>
-        </div>
-        <hr>
-
-      </div>	 
-
-
-    </div>
+      <div id="front-page-heroes" aria-live="polite"></div>
 	</div>
 	  
   </div>
@@ -269,6 +219,39 @@
         .then(html => {
           document.getElementById("footer-placeholder").innerHTML = html;
         });
+
+        fetch("/gallery-api.php?action=list-home-heroes", { headers: { Accept: "application/json" } })
+          .then(function (response) { if (!response.ok) throw new Error("Hero request failed"); return response.json(); })
+          .then(function (payload) {
+            var target = document.getElementById("front-page-heroes");
+            if (!target || !payload.success) return;
+            payload.heroes.forEach(function (hero, index) {
+              var panel = document.createElement("article");
+              panel.className = "alert alert-" + (hero.visualStyle || "info") + " home-hero-panel";
+              var title = document.createElement("h2");
+              var link = document.createElement("a");
+              link.href = "/gallery/public-hero.php?slug=" + encodeURIComponent(hero.slug);
+              link.textContent = hero.title;
+              title.appendChild(link);
+              panel.appendChild(title);
+              if (hero.image) {
+                var image = document.createElement("img");
+                image.src = hero.image;
+                image.alt = hero.imageAlt || hero.title;
+                image.loading = index === 0 ? "eager" : "lazy";
+                panel.appendChild(image);
+              }
+              var body = document.createElement("div");
+              body.className = "home-hero-body";
+              body.innerHTML = hero.bodyHtml || "";
+              panel.appendChild(body);
+              target.appendChild(panel);
+            });
+          })
+          .catch(function () {
+            var target = document.getElementById("front-page-heroes");
+            if (target) target.hidden = true;
+          });
     });
   </script>
 </div>

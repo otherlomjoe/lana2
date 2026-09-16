@@ -46,6 +46,12 @@ if ($action === 'status') {
     exit;
 }
 
+if ($action === 'list-home-heroes') {
+    header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
+    echo json_encode(['success' => true, 'heroes' => gallery_list_home_heroes(false)], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 if ($action === 'login') {
     $password = (string) ($_POST['password'] ?? '');
     $storedHash = getenv('GALLERY_ADMIN_PASSWORD_HASH');
@@ -184,6 +190,7 @@ if ($action === 'delete') {
 
     $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
     $slug = trim((string) ($_POST['slug'] ?? $_GET['slug'] ?? ''));
+    $deleted = false;
 
     if ($id > 0) {
         $deleted = gallery_soft_delete_image($id);
