@@ -40,7 +40,7 @@ $csrf = gallery_set_csrf_token();
           <td><?= htmlspecialchars($hero['visualStyle'], ENT_QUOTES, 'UTF-8') ?></td>
           <td><?= $hero['visible'] ? 'Yes' : 'Draft' ?></td>
           <td><?= htmlspecialchars((string) ($hero['updatedAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-          <td>
+          <td class="admin-friendly-actions">
             <form method="post" action="/gallery/hero-action.php" style="display:inline"><input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="id" value="<?= (int) $hero['id'] ?>"><input type="hidden" name="action" value="shift"><input type="hidden" name="direction" value="-1"><button type="submit" class="btn-link" aria-label="Move hero up">Up</button></form>
             <form method="post" action="/gallery/hero-action.php" style="display:inline"><input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="id" value="<?= (int) $hero['id'] ?>"><input type="hidden" name="action" value="shift"><input type="hidden" name="direction" value="1"><button type="submit" class="btn-link" aria-label="Move hero down">Down</button></form>
             <form method="post" action="/gallery/hero-action.php" style="display:inline"><input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="id" value="<?= (int) $hero['id'] ?>"><input type="hidden" name="action" value="duplicate"><button type="submit" class="btn-link">Duplicate</button></form>

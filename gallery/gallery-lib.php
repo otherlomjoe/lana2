@@ -750,6 +750,56 @@ function gallery_shift_slider_image(int $id, int $direction): bool
     }
 }
 
+function gallery_clear_directory_files(string $dir): int
+{
+    if (!is_dir($dir)) return 0;
+    $files = glob($dir . '/*');
+    if ($files === false) return 0;
+    $removed = 0;
+    foreach ($files as $file) {
+        if (is_file($file) && @unlink($file)) $removed++;
+    }
+    return $removed;
+}
+
+function gallery_clear_home_sliders(): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+    $pdo->exec('DELETE FROM home_slider_images');
+    return gallery_clear_directory_files(__DIR__ . '/uploads/sliders');
+}
+
+function gallery_clear_home_heroes(): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+    $pdo->exec('DELETE FROM home_heroes');
+    return gallery_clear_directory_files(__DIR__ . '/uploads/heroes');
+}
+
+function gallery_clear_exhibitions_only(): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+    $pdo->exec('DELETE FROM image_exhibitions');
+    $pdo->exec('DELETE FROM exhibitions');
+    return gallery_clear_directory_files(__DIR__ . '/uploads/exhibitions/full')
+        + gallery_clear_directory_files(__DIR__ . '/uploads/exhibitions/thumbs');
+}
+
+function gallery_clear_images_only(): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+    $pdo->exec('DELETE FROM image_tags');
+    $pdo->exec('DELETE FROM image_exhibitions');
+    $pdo->exec('DELETE FROM images');
+    return gallery_clear_directory_files(__DIR__ . '/uploads/full')
+        + gallery_clear_directory_files(__DIR__ . '/uploads/thumbs')
+        + gallery_clear_directory_files(__DIR__ . '/uploads/deleted');
+}
+
 function gallery_ensure_tag_links(PDO $pdo, int $imageId, array $tags): void
 {
     $pdo->prepare('DELETE FROM image_tags WHERE image_id = :image_id')->execute([':image_id' => $imageId]);
