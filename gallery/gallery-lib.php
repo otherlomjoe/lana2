@@ -1138,6 +1138,7 @@ function gallery_list_exhibitions(?PDO $pdo = null): array
             'endDate' => $row['end_date'],
             'location' => $row['location'],
             'description' => $row['description'],
+            'descriptionHtml' => gallery_render_formatted_text((string) ($row['description'] ?? '')),
             'heroImage' => $row['hero_image'],
             'thumbnailImage' => $row['thumbnail_url'],
             'imageCount' => (int) ($row['image_count'] ?? 0),

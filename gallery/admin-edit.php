@@ -93,7 +93,7 @@ if ($id > 0) {
         <div class="control-group"><label>Award title</label><input type="text" name="awardTitle" value="<?= htmlspecialchars((string) ($item['award_title'] ?? '')) ?>"></div>
         <div class="control-group"><label>Award description</label><textarea name="awardDescription"><?= htmlspecialchars((string) ($item['award_description'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Dimensions</label><input type="text" name="dimensions" value="<?= htmlspecialchars((string) ($item['dimensions'] ?? '')) ?>"></div>
-        <div class="control-group description-editor"><label>Description</label><div class="description-preview-layout"><div><p class="help-block">Formatting: <strong>**bold**</strong>, <em>*italic*</em>, blank lines for paragraphs, <code>- list items</code>, and <code>[link](https://example.com)</code>.</p><textarea id="description-input" name="description" rows="8"><?= htmlspecialchars((string) ($item['description'] ?? '')) ?></textarea></div><div><strong>Preview</strong><div id="description-preview" class="description-preview"></div></div></div></div>
+        <div class="control-group description-editor"><label>Description</label><div class="description-preview-layout"><div><p class="help-block">Formatting: <code>#</code> main heading, <code>##</code> section heading, <code>###</code>-<code>######</code> smaller headings, <strong>**bold**</strong>, <em>*italic*</em>, blank lines for paragraphs, <code>- list items</code>, and <code>[link](https://example.com)</code>.</p><textarea id="description-input" name="description" rows="8"><?= htmlspecialchars((string) ($item['description'] ?? '')) ?></textarea></div><div><span class="admin-preview-label">Real-time preview (matches the work page style)</span><div class="admin-preview-frame"><div id="description-preview" class="page-content"></div></div></div></div></div>
         <div class="control-group"><label>Location</label><textarea name="location"><?= htmlspecialchars((string) ($item['location'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Tags</label><input type="text" name="tags" value="<?= htmlspecialchars((string) ($item['tag_names'] ?? '')) ?>"></div>
         <div class="control-group"><label>Exhibition</label><select name="exhibition"><option value="">Not assigned</option><?php foreach ($exhibitions as $exhibition): ?><option value="<?= (int) $exhibition['id'] ?>"<?= (string) ($item['exhibition_id'] ?? '') === (string) $exhibition['id'] ? ' selected' : '' ?>><?= htmlspecialchars((string) $exhibition['title'], ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div>
@@ -116,7 +116,12 @@ if ($id > 0) {
       <script>
         function renderDescriptionPreview(text) {
           const escaped = (text || '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
-          return escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').split(/\n\s*\n/).filter(Boolean).map(paragraph => { const lines = paragraph.split('\n').filter(Boolean); if (lines.every(line => /^-\s+/.test(line))) return '<ul>' + lines.map(line => '<li>' + line.replace(/^-\s+/, '') + '</li>').join('') + '</ul>'; return '<p>' + lines.join('<br>') + '</p>'; }).join('');
+          const withInline = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
+          return withInline.split(/\n\s*\n/).filter(Boolean).map(paragraph => {
+            const lines = paragraph.split('\n').filter(Boolean);
+            if (lines.every(line => /^-\s+/.test(line))) return '<ul>' + lines.map(line => '<li>' + line.replace(/^-\s+/, '') + '</li>').join('') + '</ul>';
+            return lines.map(line => { const match = line.match(/^(#{1,6})\s+(.+)$/); return match ? '<h' + match[1].length + '>' + match[2] + '</h' + match[1].length + '>' : '<p>' + line + '</p>'; }).join('');
+          }).join('');
         }
         const descriptionInput = document.getElementById('description-input');
         const descriptionPreview = document.getElementById('description-preview');

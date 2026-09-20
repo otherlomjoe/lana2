@@ -380,7 +380,7 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 
 .camera_wrap .camera_pag .camera_pag_ul li.cameracurrent > span {}
 
-.camera_wrap {display: block; margin-bottom: 15px; height: 391px; border: none; margin-left: 0px; border-top-left-radius: 0px; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-bottom-left-radius: 0px; margin-top: 51px; -webkit-box-shadow: rgba(0, 0, 0, 0.498039) 0px 15px 10px -10px, rgba(0, 0, 0, 0.298039) 0pt 1px 4px; box-shadow: rgba(0, 0, 0, 0.498039) 0px 15px 10px -10px, rgba(0, 0, 0, 0.298039) 0pt 1px 4px;}
+.camera_wrap {margin-bottom: 15px; border: none; margin-left: 0px; border-top-left-radius: 0px; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-bottom-left-radius: 0px; margin-top: 51px; -webkit-box-shadow: rgba(0, 0, 0, 0.498039) 0px 15px 10px -10px, rgba(0, 0, 0, 0.298039) 0pt 1px 4px; box-shadow: rgba(0, 0, 0, 0.498039) 0px 15px 10px -10px, rgba(0, 0, 0, 0.298039) 0pt 1px 4px;}
 
 .cap1 > div {opacity: 0.85;filter:alpha(opacity=85);background-color:rgb(61, 61, 61);}
 
@@ -483,11 +483,11 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .admin-friendly .table-striped tbody tr:nth-child(even) td { background-color: #fff; }
 .admin-friendly-table th, .admin-friendly-table td { padding: 10px; vertical-align: middle; }
 .admin-friendly-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.admin-friendly-actions form { display: inline-block; }
+.admin-friendly-actions form { display: inline-flex; align-items: center; margin: 0; }
 .admin-friendly-actions .btn-link,
-.admin-friendly-actions a { background: none; border: 0; padding: 0; color: #4184c9; text-decoration: none; cursor: pointer; }
+.admin-friendly-actions > a { background: none; border: 0; padding: 0; margin: 0; color: #4184c9; text-decoration: none; cursor: pointer; font: inherit; line-height: 1; vertical-align: middle; }
 .admin-friendly-actions .btn-link:hover,
-.admin-friendly-actions a:hover { text-decoration: underline; }
+.admin-friendly-actions > a:hover { text-decoration: underline; }
 
 @media (max-width: 767px) {
     .description-preview-layout { grid-template-columns:1fr }

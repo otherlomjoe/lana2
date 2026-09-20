@@ -676,8 +676,8 @@ function loadExhibitionMode(tag, filters) {
     }
 
     // Description
-    document.getElementById("ex-description").innerText =
-        ex.description || "";
+    document.getElementById("ex-description").innerHTML =
+        ex.descriptionHtml || "";
 
     // Use the database-backed exhibition image when one is configured.
     const hero = ex.heroImage || "";
