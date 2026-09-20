@@ -17,7 +17,8 @@ if (!$pdo) {
 $lookups = gallery_lookup_values($pdo);
 $exhibitions = gallery_list_exhibitions($pdo);
 $message = $_SESSION['gallery_admin_message'] ?? '';
-unset($_SESSION['gallery_admin_message']);
+$error = $_SESSION['gallery_admin_message_error'] ?? '';
+unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
 $id = (int) ($_GET['id'] ?? 0);
 $item = null;
 if ($id > 0) {
@@ -41,10 +42,20 @@ if ($id > 0) {
   <link href="../styles/custom.css" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
+  <div class="container admin-friendly">
     <?php require __DIR__ . '/admin-nav.php'; ?>
+    <?php
+      $versionFile = dirname(__DIR__) . '/version.txt';
+      if (is_readable($versionFile)) {
+        $v = trim((string) file_get_contents($versionFile));
+        if ($v !== '') {
+          echo '<div id="deploy-version" style="position:fixed;top:8px;left:8px;background:#222;color:#fff;padding:6px 10px;border-radius:4px;z-index:9999;font-size:12px;opacity:0.9">v' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+      }
+    ?>
     <h1>Edit Image</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($item): ?>
       <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= htmlspecialchars((string) $item['id']) ?>">
@@ -54,30 +65,35 @@ if ($id > 0) {
             <?php if (!empty($item['full_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['full_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['full_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No full image is currently stored.</p><?php endif; ?>
             <input id="full-image" data-media-input="full image" type="file" name="full" accept="image/*"><div data-media-preview="full-image"></div>
             <p class="help-block">Choose a replacement full image.</p>
-            <?php if (!empty($item['full_file'])): ?><form method="post" action="/gallery/asset-delete.php" style="display:inline" onsubmit="return confirm('Remove the full image from storage and the database?')"><input type="hidden" name="id" value="<?= (int) $item['id'] ?>"><input type="hidden" name="asset" value="full"><button type="submit" class="btn btn-small">Remove full image</button></form><?php endif; ?>
+            <?php if (!empty($item['full_file'])): ?>
+              <button type="button" class="btn btn-small" onclick="if(confirm('Remove the full image from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='full';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove full image</button>
+            <?php endif; ?>
           </div>
           <div class="control-group">
             <label>Thumbnail</label>
-            <?php if (!empty($item['thumbnail_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No thumbnail is currently stored.</p><?php endif; ?>
+            <?php if (!empty($item['thumbnail_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?><?php $thumbnailInfo = !empty($item['thumbnail_file']) && is_file($item['thumbnail_file']) ? @getimagesize($item['thumbnail_file']) : false; ?><?php if ($thumbnailInfo): ?> | <?= (int) $thumbnailInfo[0] ?> x <?= (int) $thumbnailInfo[1] ?> px; <?= number_format((int) filesize($item['thumbnail_file']) / 1024, 1) ?> KB<?php endif; ?></small></p><?php else: ?><p>No thumbnail is currently stored.</p><?php endif; ?>
             <input id="thumbnail-file" data-media-input="thumbnail" type="file" name="thumbnail" accept="image/*"><div data-media-preview="thumbnail-file"></div>
             <p class="help-block">Choose a replacement thumbnail. The filename should end in <strong>thumb</strong>.</p>
             <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>
-            <?php if (!empty($item['thumbnail_file'])): ?><form method="post" action="/gallery/asset-delete.php" style="display:inline" onsubmit="return confirm('Remove the thumbnail from storage and the database?')"><input type="hidden" name="id" value="<?= (int) $item['id'] ?>"><input type="hidden" name="asset" value="thumbnail"><button type="submit" class="btn btn-small">Remove thumbnail</button></form><?php endif; ?>
-            <button type="submit" name="generate_thumbnail" value="1" class="btn">Generate correctly named 200 x 165 thumbnail</button>
+            <?php if (!empty($item['thumbnail_file'])): ?>
+              <button type="button" class="btn btn-small" onclick="if(confirm('Remove the thumbnail from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='thumbnail';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove thumbnail</button>
+            <?php endif; ?>
+            <button type="button" id="generate-thumbnail-btn" class="btn">Generate correctly named 200 x 165 thumbnail</button>
           </div>
         </fieldset>
-        <div class="control-group"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"></div>
+        <div class="control-group image-title-active-row"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"><label class="active-checkbox"><input type="checkbox" name="active" value="1"<?= ($item['active'] ?? 1) ? ' checked' : '' ?>> Active</label></div>
         <fieldset><legend>Public information</legend>
         <div class="control-group"><label>Public price</label><input type="text" name="pricePublic" value="<?= htmlspecialchars((string) ($item['price_public'] ?? '')) ?>"></div>
         <div class="control-group"><label>Artwork creation date (editable)</label><input type="date" name="artworkCreatedAt" value="<?= htmlspecialchars((string) ($item['artwork_created_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><p class="help-block">This is the modifiable artwork date. New uploads default to the image EXIF date where available, otherwise the file timestamp.</p></div>
-        <div class="control-group"><label>Available</label><select name="available"><option value="1"<?= ($item['available'] ?? 1) ? ' selected' : '' ?>>Yes</option><option value="0"<?= !($item['available'] ?? 1) ? ' selected' : '' ?>>No</option></select></div>
+        <div class="control-group"><label><input type="checkbox" name="sold" value="1"<?= empty($item['available']) ? ' checked' : '' ?>> Sold</label></div>
+        <div class="control-group"><label>Prints available</label><input type="checkbox" name="printsAvailable" value="1" <?= !empty($item['prints_available']) ? 'checked' : '' ?>></div>
         <div class="control-group"><label>Medium</label><input type="text" name="medium" value="<?= htmlspecialchars((string) ($item['medium'] ?? '')) ?>" list="medium-options"><datalist id="medium-options"><?php foreach ($lookups['mediums'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
         <div class="control-group"><label>Genre</label><input type="text" name="genre" value="<?= htmlspecialchars((string) ($item['genre'] ?? '')) ?>" list="genre-options"><datalist id="genre-options"><?php foreach ($lookups['genres'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
         <div class="control-group"><label>Collection</label><input type="text" name="collection" value="<?= htmlspecialchars((string) ($item['collection'] ?? '')) ?>" list="collection-options"><datalist id="collection-options"><?php foreach ($lookups['collections'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
         <div class="control-group"><label>Award title</label><input type="text" name="awardTitle" value="<?= htmlspecialchars((string) ($item['award_title'] ?? '')) ?>"></div>
         <div class="control-group"><label>Award description</label><textarea name="awardDescription"><?= htmlspecialchars((string) ($item['award_description'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Dimensions</label><input type="text" name="dimensions" value="<?= htmlspecialchars((string) ($item['dimensions'] ?? '')) ?>"></div>
-        <div class="control-group"><label>Description</label><p class="help-block">Formatting: <strong>**bold**</strong>, <em>*italic*</em>, blank lines for paragraphs, <code>- list items</code>, and <code>[link](https://example.com)</code>.</p><textarea name="description" rows="8"><?= htmlspecialchars((string) ($item['description'] ?? '')) ?></textarea></div>
+        <div class="control-group description-editor"><label>Description</label><div class="description-preview-layout"><div><p class="help-block">Formatting: <code>#</code> main heading, <code>##</code> section heading, <code>###</code>-<code>######</code> smaller headings, <strong>**bold**</strong>, <em>*italic*</em>, blank lines for paragraphs, <code>- list items</code>, and <code>[link](https://example.com)</code>.</p><textarea id="description-input" name="description" rows="8"><?= htmlspecialchars((string) ($item['description'] ?? '')) ?></textarea></div><div><span class="admin-preview-label">Real-time preview (matches the work page style)</span><div class="admin-preview-frame"><div id="description-preview" class="page-content"></div></div></div></div></div>
         <div class="control-group"><label>Location</label><textarea name="location"><?= htmlspecialchars((string) ($item['location'] ?? '')) ?></textarea></div>
         <div class="control-group"><label>Tags</label><input type="text" name="tags" value="<?= htmlspecialchars((string) ($item['tag_names'] ?? '')) ?>"></div>
         <div class="control-group"><label>Exhibition</label><select name="exhibition"><option value="">Not assigned</option><?php foreach ($exhibitions as $exhibition): ?><option value="<?= (int) $exhibition['id'] ?>"<?= (string) ($item['exhibition_id'] ?? '') === (string) $exhibition['id'] ? ' selected' : '' ?>><?= htmlspecialchars((string) $exhibition['title'], ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div>
@@ -94,8 +110,49 @@ if ($id > 0) {
           <?php if (!empty($item['deleted_at'])): ?><a class="btn" href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a class="btn btn-danger" href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?><a class="btn" href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
           <a class="btn" href="/gallery/admin-list-images.php">Cancel</a>
           <a class="btn" href="/gallery/admin-list-images.php">Close</a>
+          <button type="button" class="btn" id="preview-work-btn">Preview</button>
         </div>
       </form>
+      <script>
+        function renderDescriptionPreview(text) {
+          const escaped = (text || '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
+          const withInline = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
+          return withInline.split(/\n\s*\n/).filter(Boolean).map(paragraph => {
+            const lines = paragraph.split('\n').filter(Boolean);
+            if (lines.every(line => /^-\s+/.test(line))) return '<ul>' + lines.map(line => '<li>' + line.replace(/^-\s+/, '') + '</li>').join('') + '</ul>';
+            return lines.map(line => { const match = line.match(/^(#{1,6})\s+(.+)$/); return match ? '<h' + match[1].length + '>' + match[2] + '</h' + match[1].length + '>' : '<p>' + line + '</p>'; }).join('');
+          }).join('');
+        }
+        const descriptionInput = document.getElementById('description-input');
+        const descriptionPreview = document.getElementById('description-preview');
+        function updateDescriptionPreview() { descriptionPreview.innerHTML = renderDescriptionPreview(descriptionInput.value); }
+        descriptionInput.addEventListener('input', updateDescriptionPreview);
+        updateDescriptionPreview();
+      </script>
+      <script>
+        document.getElementById('generate-thumbnail-btn').addEventListener('click', function () {
+          const form = this.form || document.querySelector('form');
+          if (!form) return;
+          let g = form.querySelector('input[name="generateThumbnail"]');
+          if (!g) {
+            g = document.createElement('input'); g.type = 'hidden'; g.name = 'generateThumbnail'; g.value = '1'; form.appendChild(g);
+          }
+          let s = form.querySelector('input[name="save_mode"]');
+          if (!s) {
+            s = document.createElement('input'); s.type = 'hidden'; s.name = 'save_mode'; s.value = 'stay'; s.id = 'save_mode_hidden'; form.appendChild(s);
+          } else {
+            s.value = 'stay';
+          }
+          form.submit();
+        });
+      </script>
+      <script>
+        document.getElementById('preview-work-btn').addEventListener('click', function () {
+          var slug = '<?= htmlspecialchars((string) $item['slug'], ENT_QUOTES, 'UTF-8') ?>';
+          if (!slug) return;
+          window.open('/gallery/work.html#' + encodeURIComponent(slug), '_blank');
+        });
+      </script>
       <script>
         document.getElementById('full-image').addEventListener('change', function () {
           const title = document.getElementById('image-title');

@@ -21,15 +21,19 @@ try {
     $result = gallery_save_exhibition($payload, $_FILES ?? []);
     if ($isFormSubmission) {
         $_SESSION['gallery_admin_message'] = 'Exhibition saved successfully.';
-        header('Location: /gallery/admin-list-exhibitions.php', true, 303);
+        $saveMode = ($_POST['save_mode'] ?? 'list');
+        $destination = $saveMode === 'stay' ? ('/gallery/admin-exhibition-edit.php?id=' . (int) $result['id']) : '/gallery/admin-list-exhibitions.php';
+        header('Location: ' . $destination, true, 303);
         exit;
     }
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => true, 'result' => $result]);
 } catch (Throwable $e) {
     if ($isFormSubmission) {
-        http_response_code(400);
-        echo '<h1>Save failed</h1><p>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>';
+        $_SESSION['gallery_admin_message_error'] = $e->getMessage();
+        $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+        $target = $id > 0 ? '/gallery/admin-exhibition-edit.php?id=' . $id : '/gallery/admin-exhibition-edit.php';
+        header('Location: ' . $target, true, 303);
         exit;
     }
     http_response_code(400);

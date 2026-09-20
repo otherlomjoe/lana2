@@ -21,11 +21,11 @@ unset($_SESSION['gallery_admin_message']);
   <link href="../styles/custom.css" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
+  <div class="container admin-friendly">
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Exhibitions</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-    <p><a href="/gallery/admin-exhibition-edit.php">Create exhibition</a> | <a href="/gallery/admin-exhibition-preview.php">Preview</a></p>
+    <p><a href="/gallery/admin-exhibition-edit.php">Add exhibition</a></p>
     <table class="table table-striped">
       <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th><th>Images</th><th>Actions</th></tr></thead>
       <tbody>

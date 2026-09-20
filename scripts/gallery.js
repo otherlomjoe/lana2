@@ -4,10 +4,16 @@
 --------------------------------------------------------- */
 let items = [];
 let exhibitions = [];
+let isAdmin = false;
 let currentFilters = {
     medium: null,
     sold: null,
-    search: ""
+    genre: null,
+    collection: null,
+    award: null,
+    prints: null,
+    search: "",
+    order: "created-desc"
 };
 
 /* ---------------------------------------------------------
@@ -59,12 +65,15 @@ function normalizeUploadedItem(item) {
         title: item.title || "",
         medium: item.medium || "",
         genre: item.genre || "",
+        awardTitle: item.awardTitle || item.award_title || item.award || "",
+        printsAvailable: Boolean(item.printsAvailable || item.prints_available || item.prints),
         description: item.description || "",
         thumbnail: item.thumbnail || item.thumbnail_path || "",
         full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
         dateAdded: item.dateAdded || item.date_added || "",
         disabled: Boolean(item.disabled),
-        sold: Boolean(item.sold),
+        available: item.available !== false && item.available !== 0 && item.available !== "0",
+        sold: item.sold === true || item.sold === 1 || item.sold === "1" || item.available === false || item.available === 0 || item.available === "0",
         source: item.source || "server"
     };
 }
@@ -98,12 +107,137 @@ async function loadData() {
     }).then(r => r.ok ? r.json() : []);
 
     exhibitions = Array.isArray(exhibitionData) ? exhibitionData : [];
+    try {
+        const statusResponse = await fetch('/gallery-api.php?action=status', { credentials: 'same-origin' });
+        const status = statusResponse.ok ? await statusResponse.json() : {};
+        isAdmin = Boolean(status.authenticated);
+    } catch (error) {
+        isAdmin = false;
+    }
     exhibitions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     items = uploadedItems.sort((a, b) => {
         const dateA = a.artworkCreatedAt || a.dateAdded || a.createdAt || 0;
         const dateB = b.artworkCreatedAt || b.dateAdded || b.createdAt || 0;
         return new Date(dateB) - new Date(dateA);
     });
+}
+
+function renderAppliedFiltersAndBreadcrumb() {
+    const container = document.getElementById('applied-filters');
+    const breadcrumb = document.getElementById('filter-breadcrumb');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const parts = [];
+
+    // hide the textual breadcrumb — we use interactive badges instead
+    if (breadcrumb) breadcrumb.style.display = 'none';
+
+    const addBadge = (label, key, value) => {
+        const badge = document.createElement('span');
+        badge.className = 'filter-badge';
+        badge.textContent = label;
+
+        const rem = document.createElement('span');
+        rem.className = 'remove';
+        rem.setAttribute('role', 'button');
+        rem.setAttribute('tabindex', '0');
+        rem.setAttribute('aria-label', `Remove filter ${label}`);
+        rem.dataset.filter = key;
+        rem.dataset.value = value || '';
+        rem.textContent = '×';
+
+        rem.addEventListener('click', () => removeFilter(key));
+        rem.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                removeFilter(key);
+            }
+        });
+
+        badge.appendChild(rem);
+        container.appendChild(badge);
+    };
+
+    if (currentFilters.medium) {
+        const label = `Medium: ${currentFilters.medium}`;
+        parts.push(label);
+        addBadge(label, 'medium', currentFilters.medium);
+    }
+    if (currentFilters.collection) {
+        const label = `Collection: ${currentFilters.collection}`;
+        parts.push(label);
+        addBadge(label, 'collection', currentFilters.collection);
+    }
+    if (currentFilters.award) {
+        const label = `Award: ${currentFilters.award}`;
+        parts.push(label);
+        addBadge(label, 'award', currentFilters.award);
+    }
+    if (currentFilters.genre) {
+        const label = `Genre: ${currentFilters.genre}`;
+        parts.push(label);
+        addBadge(label, 'genre', currentFilters.genre);
+    }
+    if (currentFilters.sold) {
+        const label = currentFilters.sold === 'sold' ? 'Original: Sold' : 'Original: Available';
+        parts.push(label);
+        addBadge(label, 'sold', currentFilters.sold);
+    }
+    if (currentFilters.prints) {
+        const label = currentFilters.prints === 'available' ? 'Limited Prints: Available' : 'Limited Prints: No';
+        parts.push(label);
+        addBadge(label, 'prints', String(currentFilters.prints));
+    }
+    if (currentFilters.search && currentFilters.search.trim() !== '') {
+        const label = `Search: ${currentFilters.search}`;
+        parts.push(label);
+        addBadge(label, 'search', currentFilters.search);
+    }
+
+    // Keep textual breadcrumb in sync with badges
+    breadcrumb.innerText = parts.join(' | ');
+}
+
+function removeFilter(key) {
+    if (!key) return;
+
+    try {
+        if (key === 'medium') {
+            currentFilters.medium = null;
+            const el = document.getElementById('filter-medium'); if (el) el.value = '';
+        } else if (key === 'genre') {
+            currentFilters.genre = null;
+            const el = document.getElementById('filter-genre'); if (el) el.value = '';
+        } else if (key === 'sold') {
+            currentFilters.sold = null;
+            const el = document.getElementById('filter-sold'); if (el) el.value = '';
+        } else if (key === 'prints') {
+            currentFilters.prints = null;
+            const el = document.getElementById('filter-prints'); if (el) el.value = '';
+        } else if (key === 'search') {
+            currentFilters.search = '';
+            const el = document.getElementById('filter-search'); if (el) el.value = '';
+        } else if (key === 'collection') {
+            currentFilters.collection = null;
+            const el = document.getElementById('filter-collection'); if (el) el.value = '';
+        } else if (key === 'award') {
+            currentFilters.award = null;
+            const el = document.getElementById('filter-award'); if (el) el.value = '';
+        }
+    } catch (e) { /* ignore missing elements */ }
+
+    updateURLWithFilters();
+    // If legacy hash mode was used (e.g., #genre-..., #collection-...), clear it when removing the corresponding filter
+    try {
+        const h = (window.location.hash || '').replace('#','');
+        if ((key === 'genre' && h.startsWith('genre-')) || (key === 'medium' && h.startsWith('medium-')) || (key === 'collection' && h.startsWith('collection-')) || (key === 'sold' && (h.startsWith('available-') || h.startsWith('sold-')))) {
+            try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
+            try { window.location.hash = ''; } catch (e) {}
+        }
+    } catch (e) {}
+
+    loadGallery();
 }
 
 /* ---------------------------------------------------------
@@ -139,6 +273,30 @@ function populateGenreFilter() {
         select.appendChild(opt);
     });
 }
+
+function populateCollectionFilter() {
+    const select = document.getElementById('filter-collection');
+    if (!select) return;
+    select.querySelectorAll('option:not(:first-child)').forEach(option => option.remove());
+    [...new Set(items.map(item => item.collection).filter(Boolean))].sort().forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+}
+
+function populateAwardFilter() {
+    const select = document.getElementById('filter-award');
+    if (!select) return;
+    select.querySelectorAll('option:not(:first-child)').forEach(option => option.remove());
+    [...new Set(items.map(item => item.awardTitle).filter(Boolean))].sort().forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+}
 	
 
 /* ---------------------------------------------------------
@@ -154,12 +312,28 @@ function applyFilters(list, filters) {
     if (filters.genre) {
         filtered = filtered.filter(i => i.genre === filters.genre);
     }
+
+    if (filters.collection) {
+        filtered = filtered.filter(i => (i.collection || '').toLowerCase() === (String(filters.collection) || '').toLowerCase());
+    }
+
+    if (filters.award) {
+        filtered = filtered.filter(i => (i.awardTitle || '').toLowerCase() === String(filters.award).toLowerCase());
+    }
+
+    if (filters.prints) {
+        if (filters.prints === true || filters.prints === "true" || filters.prints === "yes" || filters.prints === "available") {
+            filtered = filtered.filter(i => i.printsAvailable === true);
+        } else if (filters.prints === "false" || filters.prints === "no") {
+            filtered = filtered.filter(i => !i.printsAvailable);
+        }
+    }
 	
     if (filters.sold) {
         if (filters.sold === "sold") {
-            filtered = filtered.filter(i => i.sold === true);
+            filtered = filtered.filter(i => i.available === false || i.sold === true);
         } else if (filters.sold === "available") {
-            filtered = filtered.filter(i => i.sold !== true);
+            filtered = filtered.filter(i => i.available !== false && i.sold !== true);
         }
     }
 
@@ -167,11 +341,20 @@ function applyFilters(list, filters) {
         const q = filters.search.toLowerCase();
         filtered = filtered.filter(i =>
             getTitle(i).toLowerCase().includes(q) ||
-            (i.medium || "").toLowerCase().includes(q)
+            (i.description || "").toLowerCase().includes(q)
         );
     }
 
     return filtered;
+}
+
+function sortGalleryItems(list, order) {
+    return [...list].sort((a, b) => {
+        if (order === 'title-asc') return getTitle(a).localeCompare(getTitle(b), undefined, { sensitivity: 'base' });
+        const dateA = new Date(a.artworkCreatedAt || a.dateAdded || a.createdAt || 0).getTime();
+        const dateB = new Date(b.artworkCreatedAt || b.dateAdded || b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
 }
 
 /* ---------------------------------------------------------
@@ -179,8 +362,60 @@ function applyFilters(list, filters) {
 --------------------------------------------------------- */
 async function loadGallery() {
     await loadData();
-	populateMediumFilter();
-	populateGenreFilter();
+
+    // read filters from URL (query/hash) and merge into currentFilters
+    readFiltersFromURL();
+
+    populateMediumFilter();
+    populateGenreFilter();
+    populateCollectionFilter();
+    populateAwardFilter();
+
+    // Sync dropdowns/selected UI based on currentFilters
+    try {
+        const selectFilterValue = (id, value) => {
+            const select = document.getElementById(id);
+            if (!select) return;
+            select.value = '';
+            if (!value) return;
+            const option = Array.from(select.options).find(item => item.value.toLowerCase() === String(value).toLowerCase());
+            if (option) select.value = option.value;
+        };
+        selectFilterValue('filter-medium', currentFilters.medium);
+        selectFilterValue('filter-genre', currentFilters.genre);
+        selectFilterValue('filter-collection', currentFilters.collection);
+        selectFilterValue('filter-award', currentFilters.award);
+        selectFilterValue('filter-sold', currentFilters.sold);
+        const search = document.getElementById('filter-search');
+        if (search) search.value = currentFilters.search || '';
+        const prints = document.getElementById('filter-prints');
+        if (prints) {
+            prints.value = currentFilters.prints || '';
+            prints.classList.toggle('filter-selected', Boolean(currentFilters.prints));
+        }
+        const order = document.getElementById('filter-order');
+        if (order) {
+            order.value = currentFilters.order || 'created-desc';
+            order.classList.toggle('filter-selected', currentFilters.order && currentFilters.order !== 'created-desc');
+        }
+    } catch (e) { /* ignore if elements missing */ }
+
+    // Toggle selected visual class
+    try {
+        const m = document.getElementById('filter-medium'); if (m) { if (currentFilters.medium) m.classList.add('filter-selected'); else m.classList.remove('filter-selected'); }
+        const g = document.getElementById('filter-genre'); if (g) { if (currentFilters.genre) g.classList.add('filter-selected'); else g.classList.remove('filter-selected'); }
+        const s = document.getElementById('filter-sold'); if (s) { if (currentFilters.sold) s.classList.add('filter-selected'); else s.classList.remove('filter-selected'); }
+        const c = document.getElementById('filter-collection'); if (c) { if (currentFilters.collection) c.classList.add('filter-selected'); else c.classList.remove('filter-selected'); }
+        const a = document.getElementById('filter-award'); if (a) { if (currentFilters.award) a.classList.add('filter-selected'); else a.classList.remove('filter-selected'); }
+    } catch (e) {}
+
+    renderAppliedFiltersAndBreadcrumb();
+
+    // Expand panel if any filters are active
+    try {
+        const anyActive = Boolean(currentFilters.medium || currentFilters.genre || currentFilters.sold || currentFilters.collection || currentFilters.award || (currentFilters.search && currentFilters.search.trim() !== '') || currentFilters.prints);
+        setFiltersPanelCollapsed(!anyActive);
+    } catch (e) {}
 
 	const hash = window.location.hash.replace("#", "");
 
@@ -196,8 +431,14 @@ async function loadGallery() {
 	} else if (hash.startsWith("date-")) {
 		loadDateMode(hash.replace("date-", ""), currentFilters);
 
-	} else if (hash.startsWith("disabled-")) {
+    } else if (hash.startsWith("collection-")) {
+        loadCollectionMode(hash.replace("collection-", ""), currentFilters);
+
+    } else if (hash.startsWith("disabled-")) {
 		loadDisabledMode(currentFilters);
+
+    } else if (hash.startsWith("available-") || hash.startsWith("sold-") || hash.startsWith("prints-")) {
+        loadGalleryMode(currentFilters);
 
 	} else if (hash) {
 		loadExhibitionMode(hash, currentFilters);
@@ -205,6 +446,82 @@ async function loadGallery() {
 	} else {
 		loadGalleryMode(currentFilters);
 	}
+}
+
+/* ---------------------------------------------------------
+   URL serialization helpers
+--------------------------------------------------------- */
+function serializeFilters() {
+    const parts = [];
+    if (currentFilters.medium) parts.push('m=' + encodeURIComponent(currentFilters.medium));
+    if (currentFilters.genre) parts.push('g=' + encodeURIComponent(currentFilters.genre));
+    if (currentFilters.collection) parts.push('c=' + encodeURIComponent(currentFilters.collection));
+    if (currentFilters.award) parts.push('a=' + encodeURIComponent(currentFilters.award));
+    if (currentFilters.sold) parts.push('s=' + encodeURIComponent(currentFilters.sold));
+    if (currentFilters.prints) parts.push('p=' + encodeURIComponent(currentFilters.prints));
+    if (currentFilters.search) parts.push('q=' + encodeURIComponent(currentFilters.search));
+    if (currentFilters.order && currentFilters.order !== 'created-desc') parts.push('o=' + encodeURIComponent(currentFilters.order));
+    return parts.join('&');
+}
+
+function deserializeFiltersFromQuery(query) {
+    const q = new URLSearchParams(query);
+    const filters = { medium: null, genre: null, collection: null, award: null, sold: null, prints: null, search: '', order: 'created-desc' };
+    if (q.has('m')) filters.medium = q.get('m');
+    if (q.has('g')) filters.genre = q.get('g');
+    if (q.has('c')) filters.collection = q.get('c');
+    if (q.has('a')) filters.award = q.get('a');
+    if (q.has('s')) filters.sold = q.get('s');
+    if (q.has('p')) filters.prints = q.get('p') === '1' ? 'yes' : q.get('p');
+    if (q.has('q')) filters.search = q.get('q');
+    if (q.has('o')) filters.order = q.get('o') || 'created-desc';
+    return filters;
+}
+
+function updateURLWithFilters() {
+    const serialized = serializeFilters();
+    const url = new URL(window.location.href);
+    if (serialized) {
+        url.search = serialized;
+    } else {
+        url.search = '';
+    }
+    history.replaceState(null, '', url.toString());
+}
+
+function readFiltersFromURL() {
+    // Priority: query string, then hash 'filters:', then legacy hash modes
+    if (window.location.search && window.location.search.length > 1) {
+        const f = deserializeFiltersFromQuery(window.location.search);
+        Object.assign(currentFilters, f);
+        return;
+    }
+    const h = (window.location.hash || '').replace('#','');
+    if (h.startsWith('filters:')) {
+        const q = h.replace('filters:','');
+        const parsed = new URLSearchParams(q);
+        const f = deserializeFiltersFromQuery(parsed.toString());
+        Object.assign(currentFilters, f);
+        return;
+    }
+    // Legacy hash modes. Keep these working for existing links, but map them
+    // to the same filter state used by the gallery query-string controls.
+    const hash = h;
+    if (hash.startsWith('genre-')) {
+        currentFilters.genre = decodeURIComponent(hash.replace('genre-','')) || null;
+    } else if (hash.startsWith('medium-')) {
+        currentFilters.medium = decodeURIComponent(hash.replace('medium-','')) || null;
+    } else if (hash.startsWith('prints-')) {
+        currentFilters.prints = hash.indexOf('true') !== -1 ? 'yes' : 'no';
+    } else if (hash.startsWith('collection-')) {
+        currentFilters.collection = decodeURIComponent(hash.replace('collection-','')) || null;
+    } else if (hash.startsWith('available-')) {
+        const val = hash.replace('available-','');
+        if (val.indexOf('true') !== -1) currentFilters.sold = 'available';
+        else currentFilters.sold = 'sold';
+    } else if (hash.startsWith('sold-')) {
+        currentFilters.sold = hash.endsWith('true') ? 'sold' : 'available';
+    }
 }
 
 /* ---------------------------------------------------------
@@ -226,6 +543,7 @@ function loadGalleryMode(filters) {
     worksList.innerHTML = "";
 
     const exData = exhibitions.map(ex => ({
+        id: ex.id,
         link: `gallery.html#${ex.slug}`,
         thumb: ex.thumbnailImage || ex.heroImage || "",
         text: `${ex.title || ex.name}<br>${ex.startDate || ""}`
@@ -276,7 +594,8 @@ function loadGalleryMode(filters) {
 
     renderExPage();
 
-    let worksData = applyFilters(items, filters).map(item => ({
+    let worksData = sortGalleryItems(applyFilters(items, filters), filters.order).map(item => ({
+        id: item.id,
         link: getPage(item),
         thumb: getThumb(item),
         text: `${getTitle(item)}<br>${item.medium || ""}${item.price ? `<br>${item.price}` : ""}`
@@ -357,8 +676,8 @@ function loadExhibitionMode(tag, filters) {
     }
 
     // Description
-    document.getElementById("ex-description").innerText =
-        ex.description || "";
+    document.getElementById("ex-description").innerHTML =
+        ex.descriptionHtml || "";
 
     // Use the database-backed exhibition image when one is configured.
     const hero = ex.heroImage || "";
@@ -391,7 +710,7 @@ function loadExhibitionMode(tag, filters) {
     //
     // --- Apply shared filters (medium, sold, search, genre, etc.) ---
     //
-    filtered = applyFilters(filtered, filters);
+    filtered = sortGalleryItems(applyFilters(filtered, filters), filters.order);
 	
 	// ⭐ NOW filtered exists — safe to update heading
 	document.getElementById("works-heading").innerText =
@@ -465,6 +784,14 @@ function loadExhibitionMode(tag, filters) {
 		);
 		renderFilteredList(`Medium: ${medium}`, filtered, filters);
 	}
+
+    function loadCollectionMode(collection, filters) {
+        const filtered = items.filter(i =>
+            i.collection &&
+            i.collection.toLowerCase() === collection.toLowerCase()
+        );
+        renderFilteredList(`Collection: ${collection}`, filtered, filters);
+    }
 
 	function loadDateMode(date, filters) {
 		const filtered = items.filter(i =>
@@ -545,31 +872,95 @@ function loadExhibitionMode(tag, filters) {
 --------------------------------------------------------- */
 document.getElementById("filter-medium").addEventListener("change", e => {
     currentFilters.medium = e.target.value || null;
+    updateURLWithFilters();
     loadGallery();
 });
 
 document.getElementById("filter-genre").addEventListener("change", () => {
-    filters.genre = document.getElementById("filter-genre").value;
-    loadGalleryMode(filters);
+    currentFilters.genre = document.getElementById("filter-genre").value || null;
+    updateURLWithFilters();
+    loadGallery();
+});
+
+document.getElementById("filter-collection").addEventListener("change", e => {
+    currentFilters.collection = e.target.value || null;
+    updateURLWithFilters();
+    loadGallery();
+});
+
+document.getElementById("filter-award").addEventListener("change", e => {
+    currentFilters.award = e.target.value || null;
+    updateURLWithFilters();
+    loadGallery();
 });
 
 
 document.getElementById("filter-sold").addEventListener("change", e => {
     currentFilters.sold = e.target.value || null;
+    updateURLWithFilters();
     loadGallery();
 });
 
 document.getElementById("filter-search").addEventListener("input", e => {
     currentFilters.search = e.target.value;
+    updateURLWithFilters();
+    loadGallery();
+});
+
+// Filter panel toggle (collapsible/expandable box)
+function setFiltersPanelCollapsed(collapsed) {
+    const panel = document.getElementById('filters');
+    if (!panel) return;
+    if (collapsed) panel.classList.add('collapsed'); else panel.classList.remove('collapsed');
+    const toggle = document.getElementById('filter-panel-toggle');
+    if (toggle) {
+        const ind = toggle.querySelector('.toggle-indicator');
+        if (ind) ind.textContent = panel.classList.contains('collapsed') ? '▼' : '▲';
+    }
+}
+
+const panelToggle = document.getElementById('filter-panel-toggle');
+if (panelToggle) {
+    panelToggle.addEventListener('click', () => {
+        const panel = document.getElementById('filters');
+        if (!panel) return;
+        setFiltersPanelCollapsed(!panel.classList.contains('collapsed'));
+    });
+    panelToggle.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); panelToggle.click(); }
+    });
+}
+
+document.getElementById("filter-prints").addEventListener("change", e => {
+    currentFilters.prints = e.target.value || null;
+    updateURLWithFilters();
+    loadGallery();
+});
+
+document.getElementById("filter-order").addEventListener("change", e => {
+    currentFilters.order = e.target.value || 'created-desc';
+    updateURLWithFilters();
     loadGallery();
 });
 
 document.getElementById("filter-reset").addEventListener("click", () => {
-    currentFilters = { medium: null, sold: null, search: "" };
+    currentFilters = { medium: null, sold: null, genre: null, collection: null, award: null, prints: null, search: "", order: "created-desc" };
 
-    document.getElementById("filter-medium").value = "";
-    document.getElementById("filter-sold").value = "";
-    document.getElementById("filter-search").value = "";
+    try {
+        const fm = document.getElementById("filter-medium"); if (fm) fm.value = "";
+        const fg = document.getElementById("filter-genre"); if (fg) fg.value = "";
+        const fc = document.getElementById("filter-collection"); if (fc) fc.value = "";
+        const fa = document.getElementById("filter-award"); if (fa) fa.value = "";
+        const fs = document.getElementById("filter-sold"); if (fs) fs.value = "";
+        const fp = document.getElementById("filter-prints"); if (fp) fp.value = "";
+        const fq = document.getElementById("filter-search"); if (fq) fq.value = "";
+        const fo = document.getElementById("filter-order"); if (fo) fo.value = "created-desc";
+    } catch (e) { /* ignore */ }
+
+    // Clear query string and hash so legacy hash filters (e.g. #collection-...) are removed
+    updateURLWithFilters();
+    try { history.replaceState(null, '', window.location.pathname + (window.location.search || '')); } catch (e) {}
+    try { window.location.hash = ''; } catch (e) {}
 
     loadGallery();
 });

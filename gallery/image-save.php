@@ -48,5 +48,6 @@ try {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => true, 'result' => $result]);
 } catch (Throwable $e) {
+    file_put_contents(__DIR__ . '/image-save-error.log', date('c') . ' ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n", FILE_APPEND);
     imageSaveError($e->getMessage(), 400);
 }

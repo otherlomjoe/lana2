@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="../styles/custom.css" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
+  <div class="container admin-friendly">
     <h1>Gallery Admin</h1>
     <?php if ($error !== ''): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
     <form method="post">
