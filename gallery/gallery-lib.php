@@ -36,6 +36,7 @@ function gallery_ensure_upload_directories(): void
         __DIR__ . '/uploads/exhibitions/full',
         __DIR__ . '/uploads/exhibitions/thumbs',
         __DIR__ . '/uploads/heroes',
+        __DIR__ . '/uploads/sliders',
         __DIR__ . '/all/imported',
     ];
 
@@ -181,8 +182,21 @@ function gallery_init_db(): ?PDO
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_medium ON images(medium)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_genre ON images(genre)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_collection ON images(collection)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS home_slider_images (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL DEFAULT '',
+        link_url VARCHAR(1024),
+        active TINYINT(1) NOT NULL DEFAULT 0,
+        display_order INT NOT NULL DEFAULT 0,
+        image_file VARCHAR(1024) NOT NULL,
+        image_url VARCHAR(1024) NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_available ON images(available)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_home_heroes_visible_order ON home_heroes(visible, display_order, id)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_home_sliders_active_order ON home_slider_images(active, display_order, id)");
 
     $heroCount = (int) $pdo->query('SELECT COUNT(*) FROM home_heroes')->fetchColumn();
     if ($heroCount === 0) {
@@ -203,6 +217,33 @@ function gallery_init_db(): ?PDO
             ':body' => "#### [The Pymble Values Art Prize](https://www.pymblelc.nsw.edu.au/the-pymble-values-art-prize/)\n\nVery pleased that my Painting \"A Process of Becoming\" was selected as a finalist in The Pymble Values Art Prize.\n\n##### Opening Night: Tuesday 11 November 6.00pm to 8.00pm\n\n##### The Exhibition of Finalists will also be open to the public from Wednesday 12 November to Friday 14 November from 10.00am to 4.30pm. Entry is free.\n\n###### Main Hall, Pymble Ladies' College\n\n### [Contact me now](https://lana.lombard.id.au/contact.html)",
             ':image_alt' => 'The Pymble Values Art Prize',
         ]);
+    }
+
+    $sliderCount = (int) $pdo->query('SELECT COUNT(*) FROM home_slider_images')->fetchColumn();
+    if ($sliderCount === 0) {
+        $seedSlide = $pdo->prepare('INSERT INTO home_slider_images (title, link_url, active, display_order, image_file, image_url) VALUES (:title, NULL, 1, :display_order, :image_file, :image_url)');
+        foreach ([
+            ['Rainbows in Umbrella Tree', 'rainbowumbrellatreebanner.jpg'],
+            ['Resting Mermaid', 'restingmermaidbanner.jpg'],
+            ['Halfling', 'halflingbanner.jpg'],
+            ['Fire Horse', 'firehorsebanner.jpg'],
+            ['Rainbow Tea Time', 'rainbowteatimebanner.jpg'],
+            ['Starry Feathers', 'starryfeathersbanner.jpg'],
+            ['Snake in Studio', 'SnakeInStudiobanner.jpg'],
+            ['Woodland Dream', 'WoodlandDreamBanner.jpg'],
+            ['Sir Walter', 'Sirwalter.jpg'],
+            ['Meremaid', 'meremaid.jpg'],
+            ['Pet Portraits', 'catbanner1.jpg'],
+            ['Boababe ink drawing', 'boababe.jpg'],
+            ['Jewelled Dragon Watercolour', 'JewelledDragon.jpg'],
+        ] as $index => [$slideTitle, $slideFilename]) {
+            $seedSlide->execute([
+                ':title' => $slideTitle,
+                ':display_order' => ($index + 1) * 10,
+                ':image_file' => dirname(__DIR__) . '/slider-images/' . $slideFilename,
+                ':image_url' => '/slider-images/' . $slideFilename,
+            ]);
+        }
     }
 
     return $pdo;
@@ -575,6 +616,138 @@ function gallery_duplicate_home_hero(int $id): int
         ':exhibition_id' => $hero['exhibition_id'] ?: null,
     ]);
     return (int) $pdo->lastInsertId();
+}
+
+function gallery_normalize_slider_row(array $row): array
+{
+    return [
+        'id' => (int) ($row['id'] ?? 0),
+        'title' => (string) ($row['title'] ?? ''),
+        'linkUrl' => (string) ($row['link_url'] ?? ''),
+        'active' => (bool) ($row['active'] ?? 0),
+        'displayOrder' => (int) ($row['display_order'] ?? 0),
+        'image' => (string) ($row['image_url'] ?? ''),
+        'updatedAt' => $row['updated_at'] ?? null,
+    ];
+}
+
+function gallery_list_slider_images(bool $includeHidden = false): array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        return [];
+    }
+    $where = $includeHidden ? '' : 'WHERE active = 1';
+    $stmt = $pdo->query("SELECT * FROM home_slider_images {$where} ORDER BY display_order ASC, id ASC");
+    return array_map('gallery_normalize_slider_row', $stmt->fetchAll());
+}
+
+function gallery_get_slider_image(int $id): ?array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        return null;
+    }
+    $stmt = $pdo->prepare('SELECT * FROM home_slider_images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    return $row ? gallery_normalize_slider_row($row) + ['imageFile' => (string) ($row['image_file'] ?? '')] : null;
+}
+
+function gallery_save_slider_image(array $data, array $files = []): array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        throw new RuntimeException('Gallery database is unavailable.');
+    }
+
+    $id = (int) ($data['id'] ?? 0);
+    $existing = $id > 0 ? gallery_get_slider_image($id) : null;
+    if ($id > 0 && !$existing) {
+        throw new InvalidArgumentException('Slider image not found.');
+    }
+
+    $imageFile = (string) ($existing['imageFile'] ?? '');
+    $imageUrl = (string) ($existing['image'] ?? '');
+    $imageInput = $files['image'] ?? null;
+    if ($imageInput && !empty($imageInput['tmp_name'])) {
+        $stored = gallery_store_uploaded_named_asset($imageInput, __DIR__ . '/uploads/sliders', 'slide');
+        $imageFile = $stored['path'];
+        $imageUrl = '/gallery/uploads/sliders/' . $stored['filename'];
+    }
+    if ($imageUrl === '') {
+        throw new InvalidArgumentException('A slide image is required.');
+    }
+
+    $linkUrl = trim((string) ($data['linkUrl'] ?? ''));
+    if ($linkUrl !== '' && !preg_match('#^https://#i', $linkUrl) && !str_starts_with($linkUrl, '/')) {
+        throw new InvalidArgumentException('The link must be an https:// URL or a site-relative path.');
+    }
+
+    $params = [
+        ':title' => trim((string) ($data['title'] ?? '')),
+        ':link_url' => $linkUrl ?: null,
+        ':active' => !empty($data['active']) ? 1 : 0,
+        ':display_order' => max(0, (int) ($data['displayOrder'] ?? 0)),
+        ':image_file' => $imageFile,
+        ':image_url' => $imageUrl,
+    ];
+    if ($id > 0) {
+        $params[':id'] = $id;
+        $stmt = $pdo->prepare('UPDATE home_slider_images SET title = :title, link_url = :link_url, active = :active, display_order = :display_order, image_file = :image_file, image_url = :image_url, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+    } else {
+        $stmt = $pdo->prepare('INSERT INTO home_slider_images (title, link_url, active, display_order, image_file, image_url) VALUES (:title, :link_url, :active, :display_order, :image_file, :image_url)');
+    }
+    $stmt->execute($params);
+    $id = $id > 0 ? $id : (int) $pdo->lastInsertId();
+    return ['id' => $id];
+}
+
+function gallery_set_slider_image_active(int $id, bool $active): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    return $pdo->prepare('UPDATE home_slider_images SET active = :active, updated_at = CURRENT_TIMESTAMP WHERE id = :id')->execute([':active' => $active ? 1 : 0, ':id' => $id]);
+}
+
+function gallery_hard_delete_slider_image(int $id): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    $stmt = $pdo->prepare('SELECT image_file FROM home_slider_images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) return false;
+    $deleted = $pdo->prepare('DELETE FROM home_slider_images WHERE id = :id')->execute([':id' => $id]);
+    if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) @unlink($row['image_file']);
+    return $deleted;
+}
+
+function gallery_shift_slider_image(int $id, int $direction): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || !in_array($direction, [-1, 1], true)) return false;
+    $stmt = $pdo->prepare('SELECT id, display_order FROM home_slider_images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $current = $stmt->fetch();
+    if (!$current) return false;
+    $operator = $direction < 0 ? '<' : '>';
+    $sort = $direction < 0 ? 'DESC' : 'ASC';
+    $neighborStmt = $pdo->prepare("SELECT id, display_order FROM home_slider_images WHERE display_order {$operator} :display_order ORDER BY display_order {$sort}, id {$sort} LIMIT 1");
+    $neighborStmt->execute([':display_order' => (int) $current['display_order']]);
+    $neighbor = $neighborStmt->fetch();
+    if (!$neighbor) return false;
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => -1, ':id' => $id]);
+        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
+        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
 }
 
 function gallery_ensure_tag_links(PDO $pdo, int $imageId, array $tags): void

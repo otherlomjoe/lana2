@@ -463,6 +463,19 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 .home-hero-page .home-hero-panel h1 { text-align: center; }
 .text-error { color: #b94a48; }
 
+/* Friendlier admin UI: larger, calmer, laptop-oriented */
+.admin-friendly h1 { font-size: 26px; margin: 18px 0 14px; }
+.admin-friendly .control-group { margin-bottom: 16px; }
+.admin-friendly .control-group label { font-weight: 600; margin-bottom: 6px; display: inline-block; }
+.admin-friendly .help-block { color: #666; font-size: 13px; }
+.admin-friendly .admin-help-card { background: #eef6ff; border: 1px solid #c8def8; border-radius: 6px; padding: 14px 18px; margin: 14px 0; }
+.admin-friendly .btn-large { padding: 10px 18px; font-size: 15px; }
+.admin-friendly .form-actions { margin-top: 22px; padding-top: 16px; border-top: 1px solid #eee; display: flex; gap: 10px; flex-wrap: wrap; }
+.admin-friendly-table th, .admin-friendly-table td { padding: 12px 10px; vertical-align: middle; }
+.admin-friendly-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-friendly-actions form { display: inline-block; }
+.admin-friendly-actions .btn { padding: 6px 12px; }
+
 @media (max-width: 767px) {
     .description-preview-layout { grid-template-columns:1fr }
 }

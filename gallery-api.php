@@ -52,6 +52,12 @@ if ($action === 'list-home-heroes') {
     exit;
 }
 
+if ($action === 'list-slider-images') {
+    header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
+    echo json_encode(['success' => true, 'slides' => gallery_list_slider_images(false)], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 if ($action === 'login') {
     $password = (string) ($_POST['password'] ?? '');
     $storedHash = getenv('GALLERY_ADMIN_PASSWORD_HASH');

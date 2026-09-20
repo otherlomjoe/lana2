@@ -31,7 +31,7 @@ unset($_SESSION['gallery_admin_message']);
   <link href="../styles/custom.css" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
+  <div class="container admin-friendly">
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Images</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>

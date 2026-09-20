@@ -42,7 +42,7 @@ if ($id > 0) {
   <link href="../styles/custom.css" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
+  <div class="container admin-friendly">
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <?php
       $versionFile = dirname(__DIR__) . '/version.txt';
