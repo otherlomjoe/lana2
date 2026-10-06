@@ -324,6 +324,73 @@ function gallery_detect_creation_date(string $imagePath): ?string
     return $timestamp !== false ? date('Y-m-d', $timestamp) : null;
 }
 
+/**
+ * Derive an artwork date and report where it came from.
+ * Returns ['date' => 'YYYY-MM-DD'|null, 'source' => 'exif'|'iptc'|'filectime'|'filemtime'|null]
+ */
+function gallery_derive_artwork_date(string $imagePath): array
+{
+    if (!is_file($imagePath)) {
+        return ['date' => null, 'source' => null];
+    }
+
+    // 1) Try EXIF (DateTimeOriginal, DateTimeDigitized, DateTime)
+    if (function_exists('exif_read_data')) {
+        $size = @getimagesize($imagePath);
+        if ($size && isset($size[2]) && $size[2] === IMAGETYPE_JPEG) {
+            $exif = @exif_read_data($imagePath, 'EXIF', true);
+            $candidates = [];
+            if (!empty($exif)) {
+                if (!empty($exif['EXIF']['DateTimeOriginal'])) $candidates[] = $exif['EXIF']['DateTimeOriginal'];
+                if (!empty($exif['EXIF']['DateTimeDigitized'])) $candidates[] = $exif['EXIF']['DateTimeDigitized'];
+                if (!empty($exif['EXIF']['DateTime'])) $candidates[] = $exif['EXIF']['DateTime'];
+                // also check flattened keys
+                if (!empty($exif['IFD0']['DateTime'])) $candidates[] = $exif['IFD0']['DateTime'];
+            }
+            foreach ($candidates as $exifDate) {
+                if (!is_string($exifDate)) continue;
+                if (preg_match('/^(\d{4}):(\d{2}):(\d{2})/', $exifDate, $m)) {
+                    return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'exif'];
+                }
+            }
+        }
+    }
+
+    // 2) Try IPTC (APP13)
+    $imageInfo = null;
+    @getimagesize($imagePath, $imageInfo);
+    if (!empty($imageInfo['APP13'])) {
+        $iptc = @iptcparse($imageInfo['APP13']);
+        if (!empty($iptc['2#055'][0])) { // DateCreated YYYYMMDD
+            $d = $iptc['2#055'][0];
+            if (preg_match('/^(\d{4})(\d{2})(\d{2})/', $d, $m)) {
+                return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'iptc'];
+            }
+        }
+        // Sometimes TimeCreated is available in 2#060; we prefer combined DateCreated above
+        if (!empty($iptc['2#060'][0]) && !empty($iptc['2#055'][0])) {
+            $d = $iptc['2#055'][0];
+            if (preg_match('/^(\d{4})(\d{2})(\d{2})/', $d, $m)) {
+                return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'iptc'];
+            }
+        }
+    }
+
+    // 3) Filesystem creation time (filectime) — on Windows this is the real creation time.
+    $ctime = @filectime($imagePath);
+    if ($ctime !== false) {
+        return ['date' => date('Y-m-d', $ctime), 'source' => 'filectime'];
+    }
+
+    // 4) Filesystem modification time
+    $mtime = @filemtime($imagePath);
+    if ($mtime !== false) {
+        return ['date' => date('Y-m-d', $mtime), 'source' => 'filemtime'];
+    }
+
+    return ['date' => null, 'source' => null];
+}
+
 function gallery_string_or_empty($value): string
 {
     return is_string($value) ? trim($value) : '';

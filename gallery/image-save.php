@@ -38,9 +38,32 @@ try {
 
     if ($isFormSubmission) {
         $_SESSION['gallery_admin_message'] = 'Image saved successfully.';
-        $destination = ($_POST['save_mode'] ?? 'list') === 'stay'
+        $saveMode = ($_POST['save_mode'] ?? 'list');
+        $destination = $saveMode === 'stay'
             ? '/gallery/admin-edit.php?id=' . (int) $result['id']
             : '/gallery/admin-list-images.php?saved=1';
+
+        // support goto next/prev after saving when requested
+        if ($saveMode === 'stay' && !empty($_POST['goto'])) {
+            $goto = $_POST['goto'] === 'next' ? 'next' : ($_POST['goto'] === 'prev' ? 'prev' : null);
+            if ($goto) {
+                $pdo = gallery_init_db();
+                if ($pdo) {
+                    if ($goto === 'next') {
+                        $stmt = $pdo->prepare('SELECT id FROM images WHERE id > :id ORDER BY id ASC LIMIT 1');
+                        $stmt->execute([':id' => (int) $result['id']]);
+                        $nextId = $stmt->fetchColumn();
+                        if ($nextId) $destination = '/gallery/admin-edit.php?id=' . (int) $nextId;
+                    } elseif ($goto === 'prev') {
+                        $stmt = $pdo->prepare('SELECT id FROM images WHERE id < :id ORDER BY id DESC LIMIT 1');
+                        $stmt->execute([':id' => (int) $result['id']]);
+                        $prevId = $stmt->fetchColumn();
+                        if ($prevId) $destination = '/gallery/admin-edit.php?id=' . (int) $prevId;
+                    }
+                }
+            }
+        }
+
         header('Location: ' . $destination, true, 303);
         exit;
     }

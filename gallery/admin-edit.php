@@ -21,15 +21,24 @@ $error = $_SESSION['gallery_admin_message_error'] ?? '';
 unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
 $id = (int) ($_GET['id'] ?? 0);
 $item = null;
+$prevId = null; $nextId = null;
 if ($id > 0) {
-    $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(t.name) AS tag_names FROM images i LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id WHERE i.id = :id GROUP BY i.id LIMIT 1');
-    $stmt->execute([':id' => $id]);
-    $item = $stmt->fetch();
-    if ($item) {
-      $exhibitionStmt = $pdo->prepare('SELECT exhibition_id FROM image_exhibitions WHERE image_id = :id ORDER BY sort_order LIMIT 1');
-      $exhibitionStmt->execute([':id' => $id]);
-      $item['exhibition_id'] = $exhibitionStmt->fetchColumn() ?: '';
-    }
+$stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(t.name) AS tag_names FROM images i LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id WHERE i.id = :id GROUP BY i.id LIMIT 1');
+$stmt->execute([':id' => $id]);
+$item = $stmt->fetch();
+if ($item) {
+  $exhibitionStmt = $pdo->prepare('SELECT exhibition_id FROM image_exhibitions WHERE image_id = :id ORDER BY sort_order LIMIT 1');
+  $exhibitionStmt->execute([':id' => $id]);
+  $item['exhibition_id'] = $exhibitionStmt->fetchColumn() ?: '';
+
+  // compute previous and next image ids (simple id-based navigation)
+  $prevStmt = $pdo->prepare('SELECT id FROM images WHERE id < :id ORDER BY id DESC LIMIT 1');
+  $prevStmt->execute([':id' => $id]);
+  $prevId = $prevStmt->fetchColumn() ?: null;
+  $nextStmt = $pdo->prepare('SELECT id FROM images WHERE id > :id ORDER BY id ASC LIMIT 1');
+  $nextStmt->execute([':id' => $id]);
+  $nextId = $nextStmt->fetchColumn() ?: null;
+}
 }
 ?>
 <!DOCTYPE html>
@@ -105,8 +114,17 @@ if ($id > 0) {
         <div class="control-group"><label>Copies sold</label><input type="number" min="0" name="copiesSold" value="<?= (int) ($item['copies_sold'] ?? 0) ?>"></div>
         </fieldset>
         <div class="form-actions">
+          <?php if (!empty($prevId)): ?>
+            <a class="btn nav-anchor" href="/gallery/admin-edit.php?id=<?= (int)$prevId ?>" data-direction="prev">&larr; Prev</a>
+          <?php endif; ?>
           <button type="submit" name="save_mode" value="stay" class="btn btn-primary">Save and stay</button>
+          <?php if (!empty($nextId)): ?>
+            <button type="submit" name="save_mode" value="stay" class="btn btn-primary" onclick="ensureGoto('next')">Save and go to Next &rarr;</button>
+          <?php endif; ?>
           <button type="submit" name="save_mode" value="list" class="btn btn-primary">Save and return to list</button>
+          <?php if (!empty($prevId)): ?>
+            <button type="submit" name="save_mode" value="stay" class="btn" onclick="ensureGoto('prev')">Save and go to Prev</button>
+          <?php endif; ?>
           <?php if (!empty($item['deleted_at'])): ?><a class="btn" href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a class="btn btn-danger" href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?><a class="btn" href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
           <a class="btn" href="/gallery/admin-list-images.php">Cancel</a>
           <a class="btn" href="/gallery/admin-list-images.php">Close</a>
@@ -152,6 +170,45 @@ if ($id > 0) {
           if (!slug) return;
           window.open('/gallery/work.html#' + encodeURIComponent(slug), '_blank');
         });
+        function ensureGoto(dir) {
+          var form = document.querySelector('form');
+          if (!form) return true;
+          var g = form.querySelector('input[name="goto"]');
+          if (!g) { g = document.createElement('input'); g.type = 'hidden'; g.name = 'goto'; form.appendChild(g); }
+          g.value = dir;
+          return true;
+        }
+
+        // warn when navigating away via Prev/Next anchors if the form has unsaved changes
+        (function () {
+          var form = document.querySelector('form');
+          if (!form) return;
+          var isDirty = false;
+          var markDirty = function () { isDirty = true; };
+          form.addEventListener('change', markDirty);
+          form.addEventListener('input', markDirty);
+          form.addEventListener('submit', function () { isDirty = false; });
+
+          // intercept anchor navigation
+          var anchors = document.querySelectorAll('a.nav-anchor');
+          anchors.forEach(function (a) {
+            a.addEventListener('click', function (e) {
+              if (!isDirty) return;
+              if (!confirm('You have unsaved changes. Leave without saving?')) {
+                e.preventDefault();
+              }
+            });
+          });
+
+          // browser-level unload warning
+          window.addEventListener('beforeunload', function (e) {
+            if (!isDirty) return;
+            e.preventDefault();
+            // Chrome requires returnValue to be set
+            e.returnValue = '';
+            return '';
+          });
+        })();
       </script>
       <script>
         document.getElementById('full-image').addEventListener('change', function () {
