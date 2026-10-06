@@ -309,8 +309,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $imported++;
-                $details[] = ['slug'=>$slug,'status'=>'imported','id'=>$res['id'] ?? 0];mgData, []);
-                $imported++;
                 $details[] = ['slug'=>$slug,'status'=>'imported','id'=>$res['id'] ?? 0];
             } catch (Throwable $e) {
                 $failed++;
