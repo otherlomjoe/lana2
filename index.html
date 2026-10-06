@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="">
 <meta name="author" content="">
-<link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet"></p>
-<p><link href="scripts/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet"></p>
+<link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+<link href="scripts/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
 
 <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements --><!-- Icons -->
-<p><link href="scripts/icons/general/stylesheets/general_foundicons.css" media="screen" rel="stylesheet" type="text/css"></p>
-<p><link href="scripts/icons/social/stylesheets/social_foundicons.css" media="screen" rel="stylesheet" type="text/css"></p>
-<p><link rel="stylesheet" href="scripts/fontawesome/css/font-awesome.min.css"></p>
-<p><link href="scripts/carousel/style.css" rel="stylesheet" type="text/css">
+<link href="scripts/icons/general/stylesheets/general_foundicons.css" media="screen" rel="stylesheet" type="text/css">
+<link href="scripts/icons/social/stylesheets/social_foundicons.css" media="screen" rel="stylesheet" type="text/css">
+<link rel="stylesheet" href="scripts/fontawesome/css/font-awesome.min.css">
+<link href="scripts/carousel/style.css" rel="stylesheet" type="text/css">
 <link href="scripts/camera/css/camera.css" rel="stylesheet" type="text/css">
 <link href="scripts/wookmark/css/style.css" rel="stylesheet" type="text/css">
 <link href="scripts/yoxview/yoxview.css" rel="stylesheet" type="text/css">
@@ -172,7 +172,7 @@
       fetch("/footer.html")
         .then(res => res.text())
         .then(html => {
-          document.getElementById("footer-placeholder").innerHTML = html;
+          document.body.insertAdjacentHTML('beforeend', html);
         });
 
         fetch("/gallery-api.php?action=list-home-heroes", { headers: { Accept: "application/json" } })
