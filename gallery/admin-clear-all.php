@@ -145,6 +145,9 @@ unset($_SESSION['gallery_admin_message']);
     <div class="alert alert-danger">
       Each option below permanently deletes data and uploaded files for that area only, except "Delete everything" which clears the whole gallery. Back up your database and uploads first. None of this can be undone.
     </div>
+    <div class="alert alert-warning">
+      Note: "Delete images only" will also remove image relationships and related lookup data (tags, mediums, genres, collections). Use with caution.
+    </div>
     <form method="post" id="clear-all-form">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($token, ENT_QUOTES, 'UTF-8') ?>">
       <input type="hidden" name="target" id="clear-target" value="">

@@ -859,9 +859,33 @@ function gallery_clear_images_only(): int
 {
     $pdo = gallery_init_db();
     if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+
+    // remove image-specific relations and the images themselves
     $pdo->exec('DELETE FROM image_tags');
     $pdo->exec('DELETE FROM image_exhibitions');
     $pdo->exec('DELETE FROM images');
+
+    // also clear lookup tables and collections/genres/mediums that are related to images
+    // this ensures a clean state with no leftover lookup rows referencing removed images
+    $lookupTables = ['tags', 'mediums', 'genres', 'collections'];
+    foreach ($lookupTables as $lt) {
+        $pdo->exec("DELETE FROM {$lt}");
+    }
+
+    // reset AUTO_INCREMENT / sqlite sequences for the affected lookup tables so new inserts start at 1
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'mysql') {
+        foreach ($lookupTables as $lt) {
+            $pdo->exec("ALTER TABLE {$lt} AUTO_INCREMENT = 1");
+        }
+    } elseif ($driver === 'sqlite') {
+        foreach ($lookupTables as $lt) {
+            $pdo->exec('DELETE FROM sqlite_sequence WHERE name = ' . $pdo->quote($lt));
+        }
+        // recommended to free space / reset internal counters
+        $pdo->exec('VACUUM');
+    }
+
     return gallery_clear_directory_files(__DIR__ . '/uploads/full')
         + gallery_clear_directory_files(__DIR__ . '/uploads/thumbs')
         + gallery_clear_directory_files(__DIR__ . '/uploads/deleted');
