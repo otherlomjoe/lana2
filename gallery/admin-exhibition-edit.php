@@ -65,57 +65,52 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
         </div>
       </div>
       <div class="control-group"><label>Images in exhibition</label>
-        <div class="ex-images-controls">
+        <div class="ex-images-controls" style="margin-bottom:8px;">
           <button type="button" id="select-all-images" class="btn btn-sm">Select all</button>
           <button type="button" id="clear-all-images" class="btn btn-sm">Clear all</button>
         </div>
-        <div class="ex-images-grid" style="display:flex;flex-wrap:wrap;gap:8px;">
+        <p class="help-block">Use the checkboxes to pick images. The top-to-bottom order in this list determines the exhibition order.</p>
+        <?php
+          // Ensure images are ordered alphabetically ascending by title for the list
+          usort($images, function(array $a, array $b){
+            return strcasecmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
+          });
+        ?>
+        <ul class="ex-images-list" role="listbox" aria-multiselectable="true">
           <?php foreach ($images as $image): ?>
-            <label class="ex-image-tile">
-              <input type="checkbox" name="imageIds[]" value="<?= (int) $image['id'] ?>" <?= in_array((int) $image['id'], $selectedImageIds, true) ? 'checked' : '' ?> style="vertical-align:middle;margin-right:6px;">
-              <div style="margin-top:6px;font-size:0.9em;line-height:1.1;">
-                <?php if (!empty($image['thumbnail'])): ?><img src="<?= htmlspecialchars((string) $image['thumbnail'], ENT_QUOTES, 'UTF-8') ?>" alt="" ><?php endif; ?>
-                <div class="tile-title"><?= htmlspecialchars((string) $image['title'], ENT_QUOTES, 'UTF-8') ?></div>
-              </div>
-            </label>
+            <li>
+              <label>
+                <input type="checkbox" name="imageIds[]" value="<?= (int) $image['id'] ?>" <?= in_array((int) $image['id'], $selectedImageIds, true) ? 'checked' : '' ?>>
+                <span class="item-title"><?= htmlspecialchars((string) ($image['title'] ?? 'Untitled'), ENT_QUOTES, 'UTF-8') ?></span>
+              </label>
+            </li>
           <?php endforeach; ?>
-        </div>
+        </ul>
         <script>
           (function(){
+            const list = document.querySelector('.ex-images-list');
+            if (!list) return;
+            function updateLabelForCheckbox(ch) {
+              const label = ch.closest('label');
+              if (!label) return;
+              if (ch.checked) label.classList.add('checked'); else label.classList.remove('checked');
+            }
+            // Initialize labels based on initial state
+            list.querySelectorAll('input[type="checkbox"][name="imageIds[]"]').forEach(ch => updateLabelForCheckbox(ch));
+            // Handle changes
+            list.addEventListener('change', (e) => {
+              const t = e.target;
+              if (t && t.matches('input[type="checkbox"][name="imageIds[]"]')) updateLabelForCheckbox(t);
+            });
+            // Select all / Clear all controls
             const selectAllBtn = document.getElementById('select-all-images');
             const clearAllBtn = document.getElementById('clear-all-images');
-            const container = document.querySelector('.ex-images-grid');
-
-            function updateTileClasses() {
-              if (!container) return;
-              container.querySelectorAll('label.ex-image-tile').forEach(label => {
-                const ch = label.querySelector('input[type="checkbox"][name="imageIds[]"]');
-                if (ch && ch.checked) label.classList.add('checked'); else label.classList.remove('checked');
-              });
-            }
-
-            function setAll(checked) {
-              if (!container) return;
-              container.querySelectorAll('input[type="checkbox"][name="imageIds[]"]').forEach(ch => ch.checked = checked);
-              updateTileClasses();
-            }
-
-            if (selectAllBtn) selectAllBtn.addEventListener('click', () => setAll(true));
-            if (clearAllBtn) clearAllBtn.addEventListener('click', () => setAll(false));
-
-            if (container) {
-              container.addEventListener('change', (e) => {
-                const target = e.target;
-                if (target && target.matches('input[type="checkbox"][name="imageIds[]"]')) {
-                  const label = target.closest('label.ex-image-tile');
-                  if (label) {
-                    if (target.checked) label.classList.add('checked'); else label.classList.remove('checked');
-                  }
-                }
-              });
-              // initialize classes based on initial checked state
-              updateTileClasses();
-            }
+            if (selectAllBtn) selectAllBtn.addEventListener('click', () => {
+              list.querySelectorAll('input[type="checkbox"][name="imageIds[]"]').forEach(ch => { ch.checked = true; updateLabelForCheckbox(ch); });
+            });
+            if (clearAllBtn) clearAllBtn.addEventListener('click', () => {
+              list.querySelectorAll('input[type="checkbox"][name="imageIds[]"]').forEach(ch => { ch.checked = false; updateLabelForCheckbox(ch); });
+            });
           })();
         </script>
       </div>

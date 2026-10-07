@@ -54,3 +54,17 @@
 @media (prefers-contrast: more) {
   .ex-image-tile.checked { outline: 3px solid #007bff; }
 }
+
+/* Ordered checkbox list for admin exhibition images (no thumbnails) */
+.ex-images-list { list-style: none; padding: 0; margin: 0; max-height: 480px; overflow: auto; border: 1px solid #eee; border-radius: 6px; }
+.ex-images-list li { border-bottom: 1px solid #f5f5f5; }
+.ex-images-list li:last-child { border-bottom: none; }
+.ex-images-list label { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; }
+.ex-images-list input[type="checkbox"] { margin-right: 12px; }
+.ex-images-list .item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-images-list input[type="checkbox"]:checked + .item-title { font-weight: 600; color: #007bff; }
+.ex-images-list label:focus-within { background: #fbfdff; }
+
+/* Stronger visual highlight when an item is checked */
+.ex-images-list label.checked { background: #e9f7ff; border-left: 4px solid #007bff; }
+.ex-images-list label.checked .item-title { color: #0056b3; }
