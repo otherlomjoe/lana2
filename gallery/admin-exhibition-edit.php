@@ -22,6 +22,10 @@ if ($id > 0) {
   }
 }
 $images = gallery_list_images($pdo, true);
+// Sort images alphabetically by title (A-Z) for the exhibition multi-select
+usort($images, function(array $a, array $b) {
+    return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
+});
 $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
 unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
