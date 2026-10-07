@@ -380,7 +380,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <hr />
-    <p>After importing you can assign a specific image as an exhibition hero on the <a href="/gallery/admin-exhibition-hero.php">Assign Exhibition Heroes</a> page.</p>
+    <p>After importing you can assign a specific image as an exhibition hero via the exhibition edit page (open an exhibition and choose a hero image).</p>
 </div>
 </body>
 </html>

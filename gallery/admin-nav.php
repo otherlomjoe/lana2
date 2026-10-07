@@ -12,7 +12,6 @@
         <li><a href="/gallery/admin-list-exhibitions.php">Exhibitions</a></li>
         <li><a href="/gallery/admin-list-images.php">Images</a></li>
         <li><a href="/gallery/admin-import-json.php">Import JSON</a></li>
-        <li><a href="/gallery/admin-exhibition-hero.php">Assign Exhibition Heroes</a></li>
         <li><a href="/gallery/admin-clear-all.php" onclick="return confirm('Open Clear All page? You will still have to confirm on that page.')">Clear All</a></li>
         <li><a href="/gallery/admin-logout.php">Logout</a></li>
       </ul>
