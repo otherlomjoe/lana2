@@ -114,7 +114,7 @@ async function loadData() {
     } catch (error) {
         isAdmin = false;
     }
-    exhibitions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    // Server provides exhibition ordering (display_order). Do not re-sort here so manual admin ordering is respected.
     items = uploadedItems.sort((a, b) => {
         const dateA = a.artworkCreatedAt || a.dateAdded || a.createdAt || 0;
         const dateB = b.artworkCreatedAt || b.dateAdded || b.createdAt || 0;

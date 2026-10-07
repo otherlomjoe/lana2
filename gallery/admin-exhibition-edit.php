@@ -38,6 +38,7 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
+  <link href="../styles/admin.css" rel="stylesheet">
 </head>
 <body>
   <div class="container admin-friendly">
@@ -63,7 +64,61 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
           <div class="admin-preview-frame"><div id="exhibition-description-preview" class="page-content" aria-live="polite"></div></div>
         </div>
       </div>
-      <div class="control-group"><label>Images in exhibition</label><select name="imageIds[]" multiple><?php foreach ($images as $image): ?><option value="<?= (int) $image['id'] ?>"<?= in_array((int) $image['id'], $selectedImageIds, true) ? ' selected' : '' ?>><?= htmlspecialchars((string) $image['title'], ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div>
+      <div class="control-group"><label>Images in exhibition</label>
+        <div class="ex-images-controls">
+          <button type="button" id="select-all-images" class="btn btn-sm">Select all</button>
+          <button type="button" id="clear-all-images" class="btn btn-sm">Clear all</button>
+        </div>
+        <div class="ex-images-grid" style="display:flex;flex-wrap:wrap;gap:8px;">
+          <?php foreach ($images as $image): ?>
+            <label class="ex-image-tile">
+              <input type="checkbox" name="imageIds[]" value="<?= (int) $image['id'] ?>" <?= in_array((int) $image['id'], $selectedImageIds, true) ? 'checked' : '' ?> style="vertical-align:middle;margin-right:6px;">
+              <div style="margin-top:6px;font-size:0.9em;line-height:1.1;">
+                <?php if (!empty($image['thumbnail'])): ?><img src="<?= htmlspecialchars((string) $image['thumbnail'], ENT_QUOTES, 'UTF-8') ?>" alt="" ><?php endif; ?>
+                <div class="tile-title"><?= htmlspecialchars((string) $image['title'], ENT_QUOTES, 'UTF-8') ?></div>
+              </div>
+            </label>
+          <?php endforeach; ?>
+        </div>
+        <script>
+          (function(){
+            const selectAllBtn = document.getElementById('select-all-images');
+            const clearAllBtn = document.getElementById('clear-all-images');
+            const container = document.querySelector('.ex-images-grid');
+
+            function updateTileClasses() {
+              if (!container) return;
+              container.querySelectorAll('label.ex-image-tile').forEach(label => {
+                const ch = label.querySelector('input[type="checkbox"][name="imageIds[]"]');
+                if (ch && ch.checked) label.classList.add('checked'); else label.classList.remove('checked');
+              });
+            }
+
+            function setAll(checked) {
+              if (!container) return;
+              container.querySelectorAll('input[type="checkbox"][name="imageIds[]"]').forEach(ch => ch.checked = checked);
+              updateTileClasses();
+            }
+
+            if (selectAllBtn) selectAllBtn.addEventListener('click', () => setAll(true));
+            if (clearAllBtn) clearAllBtn.addEventListener('click', () => setAll(false));
+
+            if (container) {
+              container.addEventListener('change', (e) => {
+                const target = e.target;
+                if (target && target.matches('input[type="checkbox"][name="imageIds[]"]')) {
+                  const label = target.closest('label.ex-image-tile');
+                  if (label) {
+                    if (target.checked) label.classList.add('checked'); else label.classList.remove('checked');
+                  }
+                }
+              });
+              // initialize classes based on initial checked state
+              updateTileClasses();
+            }
+          })();
+        </script>
+      </div>
       <button type="submit" name="save_mode" value="stay" class="btn btn-primary">Save and stay</button>
       <button type="submit" name="save_mode" value="list" class="btn btn-primary">Save and return to list</button>
       <a class="btn" href="/gallery/admin-list-exhibitions.php">Cancel</a>

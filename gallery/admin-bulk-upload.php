@@ -16,6 +16,7 @@ if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
+  <link href="../styles/admin.css" rel="stylesheet">
 </head>
 <body>
   <div class="container admin-friendly">

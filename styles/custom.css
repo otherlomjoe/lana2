@@ -198,6 +198,8 @@ table.table tbody tr { transition: transform .32s cubic-bezier(.2,.8,.2,1), back
     max-width: 700px;
 }
 
+
+
 .gallery-admin-form .control-group {
     margin-bottom: 14px;
 }

@@ -1,0 +1,56 @@
+/* Admin-specific styles (loaded only on admin pages) */
+
+/* Exhibition image checkbox tiles */
+.ex-images-grid label.ex-image-tile {
+  display: inline-block;
+  width: 160px;
+  vertical-align: top;
+  border: 1px solid #eee;
+  padding: 8px;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  cursor: pointer;
+}
+.ex-images-grid label.ex-image-tile:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border-color: #ddd;
+}
+.ex-images-grid label.ex-image-tile img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  display: block;
+  border-radius: 4px;
+}
+.ex-images-grid label.ex-image-tile .tile-title {
+  margin-top: 6px;
+  font-size: 0.95em;
+  line-height: 1.2;
+  height: 2.4em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ex-images-controls { margin-bottom: 8px; }
+
+/* Visual indicator when selected */
+.ex-image-tile.checked {
+  border-color: #007bff;
+  box-shadow: 0 8px 20px rgba(0,123,255,0.12);
+}
+.ex-image-tile input[type="checkbox"] { /* hide default checkbox but keep accessible */
+  position: absolute; /* keep in DOM flow but visually hidden */
+  margin-left: -9999px;
+  clip: rect(1px, 1px, 1px, 1px);
+}
+
+/* Make the label position relative so absolute checkbox can be focused */
+.ex-image-tile { position: relative; }
+
+/* Focus outline for keyboard users */
+.ex-image-tile:focus-within { outline: 3px solid rgba(0,123,255,0.08); }
+
+/* Make sure checked tiles have a visible border for printing and high-contrast */
+@media (prefers-contrast: more) {
+  .ex-image-tile.checked { outline: 3px solid #007bff; }
+}

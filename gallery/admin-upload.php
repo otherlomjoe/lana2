@@ -38,6 +38,7 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
+  <link href="../styles/admin.css" rel="stylesheet">
   <style>
 #deploy-version {
   position: fixed;

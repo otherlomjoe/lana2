@@ -21,6 +21,7 @@ $csrf = gallery_set_csrf_token();
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
+  <link href="../styles/admin.css" rel="stylesheet">
 </head>
 <body>
   <div class="container admin-friendly">
@@ -74,16 +75,42 @@ $csrf = gallery_set_csrf_token();
         'X-Requested-With': 'XMLHttpRequest'
       },
       body: params.toString()
-    }).then(r => r.json());
+    }).then(async r => {
+      const text = await r.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error('Invalid JSON response (status ' + r.status + '):\n' + text.slice(0,2000));
+      }
+    });
   }
 
   function showTempMessage(msg, ok = true){
-    const div = document.createElement('div');
-    div.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
-    div.textContent = msg;
     const container = document.querySelector('.container');
-    container.insertBefore(div, container.firstChild);
-    setTimeout(() => { div.remove(); }, 2500);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
+    try {
+      if (typeof msg === 'string' && (msg.length > 200 || msg.indexOf('\n') !== -1 || msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.toLowerCase().includes('<html'))) {
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+        const firstLine = msg.split('\n')[0].slice(0,200);
+        summary.textContent = firstLine + (msg.length > 200 ? ' … (click to expand)' : ' (click to expand)');
+        const pre = document.createElement('pre');
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.style.maxHeight = '300px';
+        pre.style.overflow = 'auto';
+        pre.textContent = msg;
+        details.appendChild(summary);
+        details.appendChild(pre);
+        wrapper.appendChild(details);
+      } else {
+        wrapper.textContent = msg;
+      }
+    } catch (e) {
+      wrapper.textContent = String(msg);
+    }
+    container.insertBefore(wrapper, container.firstChild);
+    setTimeout(() => { wrapper.remove(); }, 7000);
   }
 
   function animateSwapPair(row, other) {

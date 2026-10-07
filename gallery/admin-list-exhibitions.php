@@ -21,6 +21,7 @@ unset($_SESSION['gallery_admin_message']);
   <title>Exhibitions</title>
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
+  <link href="../styles/admin.css" rel="stylesheet">
 </head>
 <body>
   <div class="container admin-friendly">
@@ -28,6 +29,7 @@ unset($_SESSION['gallery_admin_message']);
     <h1>Exhibitions</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <p><a href="/gallery/admin-exhibition-edit.php">Add exhibition</a></p>
+    <p><small>Tip: When selecting images for an exhibition, hold Ctrl (Windows/Linux) or ⌘ Command (Mac) and click to select multiple images. If you prefer a checkbox-style multi-select in the images list, say so and it can be changed.</small></p>
     <table class="table table-striped">
       <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th><th>Images</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
@@ -42,20 +44,8 @@ unset($_SESSION['gallery_admin_message']);
             <td class="ex-actions">
               <a class="btn btn-link" href="/gallery/admin-exhibition-edit.php?id=<?= (int) $exhibition['id'] ?>">Edit</a>
               | <a class="btn btn-link text-error" href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
-              | <form method="post" action="/gallery/exhibition-action.php" style="display:inline">
-                <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-                <input type="hidden" name="id" value="<?= (int) $exhibition['id'] ?>">
-                <input type="hidden" name="action" value="shift">
-                <input type="hidden" name="direction" value="-1">
-                <button type="submit" class="btn btn-link" title="Move up" aria-label="Move up">▲</button>
-              </form>
-              <form method="post" action="/gallery/exhibition-action.php" style="display:inline">
-                <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-                <input type="hidden" name="id" value="<?= (int) $exhibition['id'] ?>">
-                <input type="hidden" name="action" value="shift">
-                <input type="hidden" name="direction" value="1">
-                <button type="submit" class="btn btn-link" title="Move down" aria-label="Move down">▼</button>
-              </form>
+              | <button type="button" class="btn btn-link ex-shift" data-direction="-1" title="Move up" aria-label="Move up">Up</button>
+              <button type="button" class="btn btn-link ex-shift" data-direction="1" title="Move down" aria-label="Move down">Down</button>
               | <button type="button" class="btn btn-link ex-toggle" title="Toggle visibility" aria-label="Toggle visibility">Toggle</button>
             </td>
           </tr>
@@ -79,16 +69,42 @@ unset($_SESSION['gallery_admin_message']);
         'X-Requested-With': 'XMLHttpRequest'
       },
       body: params.toString()
-    }).then(r => r.json());
-  }
+      }).then(async r => {
+        const text = await r.text();
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error('Invalid JSON response (status ' + r.status + '):\n' + text.slice(0,2000));
+        }
+      });
+    }
 
   function showTempMessage(msg, ok = true){
-    const div = document.createElement('div');
-    div.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
-    div.textContent = msg;
     const container = document.querySelector('.container');
-    container.insertBefore(div, container.firstChild);
-    setTimeout(() => { div.remove(); }, 2500);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
+    try {
+      if (typeof msg === 'string' && (msg.length > 200 || msg.indexOf('\n') !== -1 || msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.toLowerCase().includes('<html'))) {
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+        const firstLine = msg.split('\n')[0].slice(0,200);
+        summary.textContent = firstLine + (msg.length > 200 ? ' … (click to expand)' : ' (click to expand)');
+        const pre = document.createElement('pre');
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.style.maxHeight = '300px';
+        pre.style.overflow = 'auto';
+        pre.textContent = msg;
+        details.appendChild(summary);
+        details.appendChild(pre);
+        wrapper.appendChild(details);
+      } else {
+        wrapper.textContent = msg;
+      }
+    } catch (e) {
+      wrapper.textContent = String(msg);
+    }
+    container.insertBefore(wrapper, container.firstChild);
+    setTimeout(() => { wrapper.remove(); }, 7000);
   }
 
   document.querySelectorAll('.ex-toggle').forEach(btn => {

@@ -136,6 +136,7 @@ unset($_SESSION['gallery_admin_message']);
   <title>Admin — Clear All</title>
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
+  <link href="../styles/admin.css" rel="stylesheet">
 </head>
 <body>
   <div class="container admin-friendly">
