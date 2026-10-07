@@ -191,6 +191,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'artworkCreatedAt' => $artworkCreatedAt,
                     'altText' => $altText,
                     'tags' => $tags,
+                    // respect explicit availability flag from JSON when provided
+                    'available' => isset($item['available']) ? $item['available'] : (isset($item['sold']) ? (!empty($item['sold']) ? 0 : 1) : null),
                     'privateNotes' => 'Imported from ' . ($item['page'] ?? ''),
                 ];
 
@@ -328,11 +330,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="utf-8">
     <title>Import images from JSON</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="/scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/styles/custom.css" rel="stylesheet">
 </head>
 <body>
 <?php include __DIR__ . '/admin-nav.php'; ?>
-<div class="container">
+<div class="container admin-friendly">
     <h1>Import images from JSON</h1>
     <?php if ($error): ?>
         <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
