@@ -13,6 +13,7 @@ if (!$pdo) {
   http_response_code(500);
   exit('Gallery database is unavailable.');
 }
+$csrf = gallery_set_csrf_token();
 $filterExhibition = isset($_GET['exhibition']) ? (int) $_GET['exhibition'] : 0;
 if ($filterExhibition > 0) {
   $items = gallery_list_exhibition_images($filterExhibition, $pdo);
@@ -40,7 +41,7 @@ unset($_SESSION['gallery_admin_message']);
       <thead><tr><th>ID</th><th>Thumbnail</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Active</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($items as $item): ?>
-          <tr>
+          <tr <?php if ($filterExhibition > 0): ?>data-image-id="<?= (int) $item['id'] ?>" data-ex-id="<?= $filterExhibition ?>"<?php endif; ?>>
             <td><?= (int) $item['id'] ?></td>
             <td>
               <?php
@@ -60,11 +61,112 @@ unset($_SESSION['gallery_admin_message']);
             <td>
               <a href="/gallery/work.html#<?= urlencode((string) $item['slug']) ?>" target="_blank">Preview</a> | <a href="/gallery/admin-edit.php?id=<?= (int) $item['id'] ?>">Edit</a>
               <?php if ($item['status'] === 'Deleted'): ?> | <a href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> | <a href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?> | <a href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
+              <?php if ($filterExhibition > 0): ?>
+                | <button type="button" class="btn btn-link img-ex-shift" data-direction="-1" title="Move up" aria-label="Move up">▲</button>
+                <button type="button" class="btn btn-link img-ex-shift" data-direction="1" title="Move down" aria-label="Move down">▼</button>
+              <?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
   </div>
-</body>
-</html>
+  <script>
+  (function(){
+    const csrf = <?= json_encode($csrf) ?>;
+    function postForm(url, data){
+      const params = new URLSearchParams();
+      for (const k in data) params.append(k, data[k]);
+      params.append('csrf_token', csrf);
+      params.append('ajax', '1');
+      return fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: params.toString()
+      }).then(r => r.json());
+    }
+    function showTempMessage(msg, ok = true){
+      const div = document.createElement('div');
+      div.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
+      div.textContent = msg;
+      const container = document.querySelector('.container');
+      container.insertBefore(div, container.firstChild);
+      setTimeout(() => { div.remove(); }, 2500);
+    }
+    function animateSwapPair(row, other) {
+      if (!row || !other || row.parentNode !== other.parentNode) return;
+      const parent = row.parentNode;
+      const rectRow = row.getBoundingClientRect();
+      const rectOther = other.getBoundingClientRect();
+
+      if (other === row.previousElementSibling) {
+        parent.insertBefore(row, other);
+      } else if (other === row.nextElementSibling) {
+        parent.insertBefore(other, row);
+      } else {
+        parent.insertBefore(row, other);
+      }
+
+      const newRectRow = row.getBoundingClientRect();
+      const newRectOther = other.getBoundingClientRect();
+
+      const deltaRowY = rectRow.top - newRectRow.top;
+      const deltaOtherY = rectOther.top - newRectOther.top;
+
+      row.style.transition = 'none';
+      other.style.transition = 'none';
+      row.style.transform = `translateY(${deltaRowY}px)`;
+      other.style.transform = `translateY(${deltaOtherY}px)`;
+
+      row.getBoundingClientRect();
+
+      row.style.transition = 'transform .32s cubic-bezier(.2,.8,.2,1)';
+      other.style.transition = 'transform .32s cubic-bezier(.2,.8,.2,1)';
+      row.style.transform = '';
+      other.style.transform = '';
+
+      const cleanup = (e) => {
+        row.style.transition = '';
+        row.style.transform = '';
+        other.style.transition = '';
+        other.style.transform = '';
+        row.removeEventListener('transitionend', cleanup);
+        other.removeEventListener('transitionend', cleanup);
+      };
+      row.addEventListener('transitionend', cleanup);
+      other.addEventListener('transitionend', cleanup);
+    }
+
+    document.querySelectorAll('.img-ex-shift').forEach(btn => {
+      btn.addEventListener('click', function (ev) {
+        const row = ev.target.closest('tr');
+        const id = row.getAttribute('data-image-id');
+        const ex = row.getAttribute('data-ex-id');
+        const direction = ev.target.getAttribute('data-direction') || '-1';
+        if (!id || !ex) return;
+        postForm('/gallery/image-exhibition-action.php', { id: id, exhibition_id: ex, direction: direction }).then(json => {
+          if (json && json.success) {
+            if (direction === '-1') {
+              const prev = row.previousElementSibling;
+              if (prev) animateSwapPair(row, prev);
+            } else {
+              const next = row.nextElementSibling;
+              if (next) animateSwapPair(row, next);
+            }
+            row.classList.add('ex-row-highlight');
+            setTimeout(() => row.classList.remove('ex-row-highlight'), 900);
+            showTempMessage(json.message || 'Moved');
+          } else {
+            showTempMessage(json.error || 'Could not move', false);
+          }
+        }).catch(err => { showTempMessage('Error: ' + err, false); });
+      });
+    });
+  })();
+  </script>
+  </body>
+  </html>

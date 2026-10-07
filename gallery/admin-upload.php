@@ -25,7 +25,7 @@ if (!$pdo) {
   exit('Gallery database is unavailable.');
 }
 $lookups = gallery_lookup_values($pdo);
-$exhibitions = gallery_list_exhibitions($pdo);
+$exhibitions = gallery_list_exhibitions($pdo, true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
 unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
@@ -77,7 +77,7 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
       <div class="control-group"><label>Dimensions</label><input type="text" name="dimensions"></div>
       <div class="control-group"><label>Description</label><p class="help-block">Formatting: <strong>**bold**</strong>, <em>*italic*</em>, blank lines for paragraphs, <code>- list items</code>, and <code>[link](https://example.com)</code>.</p><textarea name="description" rows="8"></textarea></div>
       <div class="control-group"><label>Location</label><textarea name="location"></textarea></div>
-      <div class="control-group"><label>Tags</label><input type="text" name="tags"></div>
+      <div class="control-group"><label>Tags <span class="searchable-badge">Searchable</span></label><input type="text" name="tags" placeholder="comma-separated tags (used for search)"></div>
       <div class="control-group"><label>Exhibition</label><select name="exhibition"><option value="">Not assigned</option><?php foreach ($exhibitions as $exhibition): ?><option value="<?= (int) $exhibition['id'] ?>"><?= htmlspecialchars((string) $exhibition['title'], ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div>
       <div class="control-group"><label>Alt text</label><input type="text" name="altText"></div>
       </fieldset>

@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$exhibitions = gallery_list_exhibitions($pdo);
+$exhibitions = gallery_list_exhibitions($pdo, true);
 ?>
 <!doctype html>
 <html>

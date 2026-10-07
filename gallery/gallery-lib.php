@@ -139,6 +139,7 @@ function gallery_init_db(): ?PDO
         'hero_file' => 'VARCHAR(1024) NULL',
         'thumbnail_file' => 'VARCHAR(1024) NULL',
         'thumbnail_url' => 'VARCHAR(1024) NULL',
+        'active' => 'TINYINT(1) NOT NULL DEFAULT 1',
     ] as $column => $definition) {
         try {
             $pdo->exec("ALTER TABLE exhibitions ADD COLUMN {$column} {$definition}");
@@ -146,6 +147,16 @@ function gallery_init_db(): ?PDO
             if ((int) $e->errorInfo[1] !== 1060) {
                 throw $e;
             }
+        }
+    }
+
+    // ensure exhibitions have an optional display_order column so admin can control ordering
+    try {
+        $pdo->exec("ALTER TABLE exhibitions ADD COLUMN display_order INT NULL DEFAULT NULL");
+    } catch (PDOException $e) {
+        if ((int) ($e->errorInfo[1] ?? 0) !== 1060) {
+            // 1060 = column already exists
+            throw $e;
         }
     }
 
@@ -817,6 +828,98 @@ function gallery_shift_slider_image(int $id, int $direction): bool
     }
 }
 
+/**
+ * Shift an exhibition up or down by swapping its display_order with a neighbor.
+ * Direction: -1 = up/earlier, 1 = down/later.
+ */
+function gallery_shift_exhibition(int $id, int $direction): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || !in_array($direction, [-1, 1], true)) return false;
+    $stmt = $pdo->prepare('SELECT id, display_order FROM exhibitions WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $current = $stmt->fetch();
+    if (!$current) return false;
+
+    // ensure a numeric display_order exists for current row
+    if ($current['display_order'] === null) {
+        // set to a large value so it appears at end, then normalize
+        $max = (int) $pdo->query('SELECT COALESCE(MAX(display_order), 0) FROM exhibitions')->fetchColumn();
+        $pdo->prepare('UPDATE exhibitions SET display_order = :do WHERE id = :id')->execute([':do' => $max + 1, ':id' => $id]);
+        $current['display_order'] = $max + 1;
+    }
+
+    $operator = $direction < 0 ? '<' : '>';
+    $sort = $direction < 0 ? 'DESC' : 'ASC';
+    $neighborStmt = $pdo->prepare("SELECT id, display_order FROM exhibitions WHERE display_order {$operator} :display_order ORDER BY display_order {$sort}, id {$sort} LIMIT 1");
+    $neighborStmt->execute([':display_order' => (int) $current['display_order']]);
+    $neighbor = $neighborStmt->fetch();
+    if (!$neighbor) return false;
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => -1, ':id' => $id]);
+        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
+        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * Shift an image within an exhibition by swapping its sort_order with a neighbour.
+ * direction: -1 = move earlier (up), 1 = move later (down)
+ */
+function gallery_shift_image_in_exhibition(int $imageId, int $exhibitionId, int $direction): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || $imageId <= 0 || $exhibitionId <= 0 || !in_array($direction, [-1, 1], true)) return false;
+
+    $stmt = $pdo->prepare('SELECT image_id, sort_order FROM image_exhibitions WHERE image_id = :image_id AND exhibition_id = :exhibition_id LIMIT 1');
+    $stmt->execute([':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+    $current = $stmt->fetch();
+    if (!$current) return false;
+
+    // ensure a numeric sort_order exists
+    if ($current['sort_order'] === null) {
+        $max = (int) $pdo->prepare('SELECT COALESCE(MAX(sort_order), 0) FROM image_exhibitions WHERE exhibition_id = :exhibition_id')->execute([':exhibition_id' => $exhibitionId]) ?: 0;
+        // re-query to get value properly
+        $max = (int) $pdo->query('SELECT COALESCE(MAX(sort_order), 0) FROM image_exhibitions WHERE exhibition_id = ' . (int) $exhibitionId)->fetchColumn();
+        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :so WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':so' => $max + 1, ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $current['sort_order'] = $max + 1;
+    }
+
+    $operator = $direction < 0 ? '<' : '>';
+    $sort = $direction < 0 ? 'DESC' : 'ASC';
+    $neighborStmt = $pdo->prepare("SELECT image_id, sort_order FROM image_exhibitions WHERE exhibition_id = :exhibition_id AND sort_order {$operator} :sort_order ORDER BY sort_order {$sort} LIMIT 1");
+    $neighborStmt->execute([':exhibition_id' => $exhibitionId, ':sort_order' => (int) $current['sort_order']]);
+    $neighbor = $neighborStmt->fetch();
+    if (!$neighbor) return false;
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => -1, ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => (int) $current['sort_order'], ':image_id' => $neighbor['image_id'], ':exhibition_id' => $exhibitionId]);
+        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => (int) $neighbor['sort_order'], ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+function gallery_set_exhibition_active(int $id, bool $active): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    $stmt = $pdo->prepare('UPDATE exhibitions SET active = :active WHERE id = :id');
+    return (bool) $stmt->execute([':active' => $active ? 1 : 0, ':id' => $id]);
+}
+
 function gallery_clear_directory_files(string $dir): int
 {
     if (!is_dir($dir)) return 0;
@@ -1211,14 +1314,27 @@ function gallery_list_images(?PDO $pdo = null, bool $includeDeleted = false): ar
     return $items;
 }
 
-function gallery_list_exhibitions(?PDO $pdo = null): array
+function gallery_list_exhibitions(?PDO $pdo = null, bool $includeHidden = false): array
 {
     $pdo = $pdo ?: gallery_init_db();
     if (!$pdo) {
         return [];
     }
 
-    $stmt = $pdo->query("SELECT e.*, COUNT(ie.image_id) AS image_count FROM exhibitions e LEFT JOIN image_exhibitions ie ON ie.exhibition_id = e.id GROUP BY e.id ORDER BY e.start_date DESC, e.title ASC");
+    // choose where clause based on whether hidden exhibitions should be included
+    $where = $includeHidden ? '' : 'WHERE e.active = 1';
+
+    // decide ordering: if any exhibition has a non-null display_order, use display_order ASC
+    $hasManualOrder = (int) $pdo->query('SELECT COUNT(*) FROM exhibitions WHERE display_order IS NOT NULL')->fetchColumn() ?: 0;
+    if ($hasManualOrder > 0) {
+        $orderSql = 'ORDER BY COALESCE(e.display_order, 0) ASC, e.title ASC';
+    } else {
+        // default public order is by start date ascending, then title
+        $orderSql = 'ORDER BY COALESCE(e.start_date, e.created_at) ASC, e.title ASC';
+    }
+
+    $sql = "SELECT e.*, COUNT(ie.image_id) AS image_count FROM exhibitions e LEFT JOIN image_exhibitions ie ON ie.exhibition_id = e.id {$where} GROUP BY e.id {$orderSql}";
+    $stmt = $pdo->query($sql);
     $exhibitions = [];
     foreach ($stmt as $row) {
         $exhibitions[] = [
@@ -1234,6 +1350,8 @@ function gallery_list_exhibitions(?PDO $pdo = null): array
             'thumbnailImage' => $row['thumbnail_url'],
             'imageCount' => (int) ($row['image_count'] ?? 0),
             'createdAt' => $row['created_at'] ?? null,
+            'active' => !empty($row['active']) ? 1 : 0,
+            'displayOrder' => isset($row['display_order']) ? $row['display_order'] : null,
         ];
     }
 
@@ -1296,23 +1414,26 @@ function gallery_save_exhibition(array $data, array $files = []): array
     }
 
     if ($id > 0) {
-        $stmt = $pdo->prepare('UPDATE exhibitions SET slug = :slug, title = :title, start_date = :start_date, end_date = :end_date, location = :location, description = :description, hero_image = :hero_image, hero_file = :hero_file, thumbnail_file = :thumbnail_file, thumbnail_url = :thumbnail_url WHERE id = :id');
-        $stmt->execute([
-            ':slug' => $slug,
-            ':title' => $title,
-            ':start_date' => trim((string) ($data['startDate'] ?? $data['start_date'] ?? '')),
-            ':end_date' => trim((string) ($data['endDate'] ?? $data['end_date'] ?? '')),
-            ':location' => trim((string) ($data['location'] ?? '')),
-            ':description' => trim((string) ($data['description'] ?? '')),
-            ':hero_image' => $heroImage,
-            ':hero_file' => $heroFile ?: null,
-            ':thumbnail_file' => $thumbnailFile ?: null,
-            ':thumbnail_url' => $thumbnailImage ?: null,
-            ':id' => $id,
-        ]);
+        $activeVal = !empty($data['active']) ? 1 : 0;
+            $stmt = $pdo->prepare('UPDATE exhibitions SET slug = :slug, title = :title, start_date = :start_date, end_date = :end_date, location = :location, description = :description, hero_image = :hero_image, hero_file = :hero_file, thumbnail_file = :thumbnail_file, thumbnail_url = :thumbnail_url, active = :active WHERE id = :id');
+            $stmt->execute([
+                ':slug' => $slug,
+                ':title' => $title,
+                ':start_date' => trim((string) ($data['startDate'] ?? $data['start_date'] ?? '')),
+                ':end_date' => trim((string) ($data['endDate'] ?? $data['end_date'] ?? '')),
+                ':location' => trim((string) ($data['location'] ?? '')),
+                ':description' => trim((string) ($data['description'] ?? '')),
+                ':hero_image' => $heroImage,
+                ':hero_file' => $heroFile ?: null,
+                ':thumbnail_file' => $thumbnailFile ?: null,
+                ':thumbnail_url' => $thumbnailImage ?: null,
+                ':active' => $activeVal,
+                ':id' => $id,
+            ]);
         $exhibitionId = $id;
     } else {
-        $stmt = $pdo->prepare('INSERT INTO exhibitions (slug, title, start_date, end_date, location, description, hero_image, hero_file, thumbnail_file, thumbnail_url) VALUES (:slug, :title, :start_date, :end_date, :location, :description, :hero_image, :hero_file, :thumbnail_file, :thumbnail_url)');
+        $activeVal = !empty($data['active']) ? 1 : 0;
+        $stmt = $pdo->prepare('INSERT INTO exhibitions (slug, title, start_date, end_date, location, description, hero_image, hero_file, thumbnail_file, thumbnail_url, active) VALUES (:slug, :title, :start_date, :end_date, :location, :description, :hero_image, :hero_file, :thumbnail_file, :thumbnail_url, :active)');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -1324,6 +1445,7 @@ function gallery_save_exhibition(array $data, array $files = []): array
             ':hero_file' => $heroFile ?: null,
             ':thumbnail_file' => $thumbnailFile ?: null,
             ':thumbnail_url' => $thumbnailImage ?: null,
+            ':active' => $activeVal,
         ]);
         $exhibitionId = (int) $pdo->lastInsertId();
     }
@@ -1441,7 +1563,7 @@ function gallery_list_exhibition_images(int $exhibitionId, ?PDO $pdo = null): ar
         return [];
     }
 
-    $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names FROM images i INNER JOIN image_exhibitions ie ON ie.image_id = i.id LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id WHERE ie.exhibition_id = :exhibition_id AND i.deleted_at IS NULL GROUP BY i.id ORDER BY ie.sort_order ASC, i.artwork_created_at DESC, i.created_at DESC');
+    $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names FROM images i INNER JOIN image_exhibitions ie ON ie.image_id = i.id LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id WHERE ie.exhibition_id = :exhibition_id AND i.deleted_at IS NULL GROUP BY i.id ORDER BY i.title ASC');
     $stmt->execute([':exhibition_id' => $exhibitionId]);
     $items = [];
     foreach ($stmt as $row) {

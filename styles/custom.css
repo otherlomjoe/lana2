@@ -139,6 +139,30 @@ img {max-width:100%;height:auto;width:auto;-moz-box-sizing:border-box;-webkit-bo
 
     
 /* Additional */
+
+/* Admin UX enhancements */
+.badge-success { background-color: #28a745; color: #fff; }
+.badge-secondary { background-color: #6c757d; color: #fff; }
+
+.ex-row-highlight { animation: highlightFlash 1s ease; }
+@keyframes highlightFlash {
+  0% { background-color: #fffbe6; }
+  50% { background-color: #fff3cd; }
+  100% { background-color: transparent; }
+}
+
+/* table row transform transition for swap animation */
+table.table tbody tr { transition: transform .32s cubic-bezier(.2,.8,.2,1), background-color .3s ease; }
+
+/* improve admin form readability for non-technical users */
+.gallery-admin-form label { font-size: 15px; color: #333; }
+.gallery-admin-form input, .gallery-admin-form textarea, .gallery-admin-form select { padding: 8px 10px; border-radius: 6px; border: 1px solid #dcdcdc; }
+.gallery-admin-form .help-block { color: #666; font-size: 13px; }
+
+/* searchable tag badge */
+.searchable-badge { display: inline-block; margin-left: 8px; font-size: 12px; padding: 3px 8px; border-radius: 12px; background: #17a2b8; color: #fff; }
+
+
     
 #divBoxed {position:relative}
   

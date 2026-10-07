@@ -13,7 +13,7 @@ if ($id > 0 && !$hero) {
     http_response_code(404);
     exit('Hero not found.');
 }
-$exhibitions = gallery_list_exhibitions();
+$exhibitions = gallery_list_exhibitions(gallery_init_db(), true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
 unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);

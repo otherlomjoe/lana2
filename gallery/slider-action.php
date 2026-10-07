@@ -30,5 +30,12 @@ try {
 } catch (Throwable $e) {
     $_SESSION['gallery_admin_message_error'] = $e->getMessage();
 }
+if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' || ($_POST['ajax'] ?? '') === '1') {
+    $error = $_SESSION['gallery_admin_message_error'] ?? null;
+    $message = $_SESSION['gallery_admin_message'] ?? ($error ? $error : '');
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => $error ? false : true, 'message' => $message]);
+    exit;
+}
 header('Location: /gallery/admin-list-sliders.php', true, 303);
 exit;

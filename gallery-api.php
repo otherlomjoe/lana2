@@ -141,6 +141,44 @@ if ($action === 'list-exhibitions') {
     exit;
 }
 
+if ($action === 'exhibition-shift') {
+    galleryApiRequireAuth();
+    galleryApiEnsureCsrf();
+    $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    $direction = (int) ($_POST['direction'] ?? $_GET['direction'] ?? 0);
+    if ($id <= 0 || !in_array($direction, [-1, 1], true)) {
+        galleryApiError('Invalid parameters for shift.', 400);
+    }
+    $moved = false;
+    try {
+        $moved = gallery_shift_exhibition($id, $direction);
+    } catch (Throwable $e) {
+        galleryApiError('Error shifting exhibition: ' . $e->getMessage(), 500);
+    }
+    echo json_encode(['success' => (bool) $moved, 'message' => $moved ? 'Exhibition order updated.' : 'Could not move exhibition.']);
+    exit;
+}
+
+if ($action === 'exhibition-toggle') {
+    galleryApiRequireAuth();
+    galleryApiEnsureCsrf();
+    $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    if ($id <= 0) galleryApiError('No exhibition id supplied.', 400);
+    $pdo = gallery_init_db();
+    if (!$pdo) galleryApiError('Database unavailable.', 500);
+    $stmt = $pdo->prepare('SELECT active FROM exhibitions WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) galleryApiError('Exhibition not found.', 404);
+    $current = !empty($row['active']);
+    // allow explicit active value, otherwise toggle
+    $explicit = isset($_POST['active']) ? (int) $_POST['active'] : (isset($_GET['active']) ? (int) $_GET['active'] : null);
+    $new = $explicit !== null ? (bool) $explicit : !$current;
+    $updated = gallery_set_exhibition_active($id, $new);
+    echo json_encode(['success' => (bool) $updated, 'active' => $new ? 1 : 0, 'message' => $updated ? 'Exhibition visibility updated.' : 'Could not update visibility.']);
+    exit;
+}
+
 if ($action === 'dropdowns') {
     $pdo = gallery_init_db();
     if (!$pdo) {
