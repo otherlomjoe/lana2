@@ -42,8 +42,20 @@ unset($_SESSION['gallery_admin_message']);
             <td class="ex-actions">
               <a class="btn btn-link" href="/gallery/admin-exhibition-edit.php?id=<?= (int) $exhibition['id'] ?>">Edit</a>
               | <a class="btn btn-link text-error" href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
-              | <button type="button" class="btn btn-link ex-shift" data-direction="-1" title="Move up" aria-label="Move up">▲</button>
-              <button type="button" class="btn btn-link ex-shift" data-direction="1" title="Move down" aria-label="Move down">▼</button>
+              | <form method="post" action="/gallery/exhibition-action.php" style="display:inline">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="hidden" name="id" value="<?= (int) $exhibition['id'] ?>">
+                <input type="hidden" name="action" value="shift">
+                <input type="hidden" name="direction" value="-1">
+                <button type="submit" class="btn btn-link" title="Move up" aria-label="Move up">▲</button>
+              </form>
+              <form method="post" action="/gallery/exhibition-action.php" style="display:inline">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="hidden" name="id" value="<?= (int) $exhibition['id'] ?>">
+                <input type="hidden" name="action" value="shift">
+                <input type="hidden" name="direction" value="1">
+                <button type="submit" class="btn btn-link" title="Move down" aria-label="Move down">▼</button>
+              </form>
               | <button type="button" class="btn btn-link ex-toggle" title="Toggle visibility" aria-label="Toggle visibility">Toggle</button>
             </td>
           </tr>
