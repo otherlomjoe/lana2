@@ -35,12 +35,11 @@ $csrf = gallery_set_csrf_token();
     </div>
     <p><a class="btn btn-primary btn-large" href="/gallery/admin-slider-edit.php">Add slide</a></p>
     <table class="table table-striped admin-friendly-table">
-      <thead><tr><th>Image</th><th>Order</th><th>Title</th><th>Link</th><th>Active</th><th>Updated</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Image</th><th>Title</th><th>Link</th><th>Active</th><th>Updated</th><th>Actions</th></tr></thead>
       <tbody>
       <?php foreach ($slides as $slide): ?>
         <tr data-slide-id="<?= (int) $slide['id'] ?>" data-slide-active="<?= $slide['active'] ? '1' : '0' ?>">
           <td><?php if ($slide['image']): ?><img src="<?= htmlspecialchars($slide['image'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="admin-list-thumbnail"><?php endif; ?></td>
-          <td><?= (int) $slide['displayOrder'] ?></td>
           <td><?= htmlspecialchars($slide['title'], ENT_QUOTES, 'UTF-8') ?></td>
           <td><?= $slide['linkUrl'] !== '' ? htmlspecialchars($slide['linkUrl'], ENT_QUOTES, 'UTF-8') : '&mdash;' ?></td>
           <td class="slide-active-label"><?= $slide['active'] ? 'Yes' : 'Off' ?></td>
@@ -54,7 +53,7 @@ $csrf = gallery_set_csrf_token();
           </td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$slides): ?><tr><td colspan="7">No slider images have been added.</td></tr><?php endif; ?>
+      <?php if (!$slides): ?><tr><td colspan="6">No slider images have been added.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

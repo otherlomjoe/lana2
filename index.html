@@ -99,7 +99,7 @@
                 container.innerHTML = '';
                 payload.heroes.forEach(function(hero){
           if(!hero.visible) return;
-          var style = hero.visual_style || 'info';
+          var style = hero.visualStyle || hero.visual_style || 'info';
           var wrap = document.createElement('div');
           wrap.className = 'home-hero alert alert-' + style + ' home-hero-panel';
 

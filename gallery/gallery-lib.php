@@ -596,11 +596,23 @@ function gallery_save_home_hero(array $data, array $files = []): array
 
     $style = (string) ($data['visualStyle'] ?? 'info');
     if (!in_array($style, ['info', 'success', 'neutral'], true)) $style = 'info';
+    // determine display_order: if provided use it, otherwise for new heroes default to first position (before current minimum)
+    if (isset($data['displayOrder'])) {
+        $displayOrder = max(0, (int) $data['displayOrder']);
+    } else {
+        if ($id === 0) {
+            $min = $pdo->query('SELECT MIN(display_order) FROM home_heroes')->fetchColumn();
+            $displayOrder = ($min === false || $min === null) ? 0 : ((int) $min) - 1;
+        } else {
+            $displayOrder = (int) ($existing['displayOrder'] ?? 0);
+        }
+    }
+
     $params = [
         ':slug' => $slug,
         ':title' => $title,
         ':visible' => !empty($data['visible']) ? 1 : 0,
-        ':display_order' => max(0, (int) ($data['displayOrder'] ?? 0)),
+        ':display_order' => $displayOrder,
         ':visual_style' => $style,
         ':body' => $body,
         ':image_file' => $imageFile ?: null,
@@ -762,11 +774,23 @@ function gallery_save_slider_image(array $data, array $files = []): array
         throw new InvalidArgumentException('The link must be an https:// URL or a site-relative path.');
     }
 
+    // determine display_order: if provided use it, otherwise for new slides default to first position (before current minimum)
+    if (isset($data['displayOrder'])) {
+        $displayOrder = max(0, (int) $data['displayOrder']);
+    } else {
+        if ($id === 0) {
+            $min = $pdo->query('SELECT MIN(display_order) FROM home_slider_images')->fetchColumn();
+            $displayOrder = ($min === false || $min === null) ? 0 : ((int) $min) - 1;
+        } else {
+            $displayOrder = (int) ($existing['displayOrder'] ?? 0);
+        }
+    }
+
     $params = [
         ':title' => trim((string) ($data['title'] ?? '')),
         ':link_url' => $linkUrl ?: null,
         ':active' => !empty($data['active']) ? 1 : 0,
-        ':display_order' => max(0, (int) ($data['displayOrder'] ?? 0)),
+        ':display_order' => $displayOrder,
         ':image_file' => $imageFile,
         ':image_url' => $imageUrl,
     ];

@@ -32,11 +32,10 @@ $csrf = gallery_set_csrf_token();
     <p><a class="btn btn-primary" href="/gallery/admin-hero-edit.php">Add home hero</a></p>
     <p>Visible heroes appear on the homepage in the order shown below. Uncheck visibility to keep a hero as a draft.</p>
     <table class="table table-striped">
-      <thead><tr><th>Order</th><th>Title</th><th>Style</th><th>Visible</th><th>Updated</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Title</th><th>Style</th><th>Visible</th><th>Updated</th><th>Actions</th></tr></thead>
       <tbody>
       <?php foreach ($heroes as $hero): ?>
         <tr data-hero-id="<?= (int) $hero['id'] ?>" data-hero-visible="<?= $hero['visible'] ? '1' : '0' ?>">
-          <td><?= (int) $hero['displayOrder'] ?></td>
           <td><?= htmlspecialchars($hero['title'], ENT_QUOTES, 'UTF-8') ?></td>
           <td><?= htmlspecialchars($hero['visualStyle'], ENT_QUOTES, 'UTF-8') ?></td>
           <td class="hero-visible-label"><?= $hero['visible'] ? 'Yes' : 'Draft' ?></td>
@@ -55,7 +54,7 @@ $csrf = gallery_set_csrf_token();
           </td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$heroes): ?><tr><td colspan="6">No home heroes have been created.</td></tr><?php endif; ?>
+      <?php if (!$heroes): ?><tr><td colspan="5">No home heroes have been created.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>
