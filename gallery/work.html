@@ -31,6 +31,9 @@
   .nav-buttons a {
       margin-right: 10px;
   }
+  .tags-container .tag { display:inline-block;margin-right:6px;padding:4px 8px;background:#f1f1f1;border-radius:3px;color:#333;text-decoration:none }
+  .award-badge { display:inline-block;margin-left:8px;padding:4px 8px;background:gold;color:#000;border-radius:4px;font-weight:700 }
+  .private-info { margin-top:18px;padding:10px;border:1px dashed #ccc;background:#fafafa }
 </style>
 </head>
 
@@ -38,11 +41,11 @@
 <div id="divBoxed" class="container">
 
   <!-- Transparent background overlay (CRITICAL) -->
-  <div class="transparent-bg" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;zoom:1;"></div>
+  <div class="transparent-bg"></div>
 
   <!-- Header -->
   <div class="divPanel notop nobottom">
-    <div class="row-fluid">
+          <div class="row-fluid">
       <div class="span12">
         <div id="divLogo">
           <a href="../../../index.html" id="divSiteTitle">Lana-Leigh Lombard</a><br />
@@ -94,9 +97,10 @@
       <div class="row-fluid">
 
         <!-- IMAGE + TITLE -->
-        <div class="span8" id="divMain">
+          <div class="span8" id="divMain">
           <h3 id="art-title"></h3>
-			<div id="item-meta" class="tags-container"></div>
+            <span id="art-award"></span>
+            <div id="item-meta" class="tags-container"></div>
 
           <div id="art-image-wrapper">
             <a id="art-image-link">
@@ -113,8 +117,15 @@
         <!-- DESCRIPTION -->
         <div class="span4">
           <h3>Description</h3>
+            <div id="art-price-value" class="art-price"></div>
           <h5 id="art-medium"></h5>
-          <p id="art-description"></p>
+            <p id="art-description"></p>
+            <div id="art-dimensions" class="art-dimensions"></div>
+            <div id="art-date" class="art-date"></div>
+            <div id="private-info" class="private-info" hidden></div>
+            <div class="work-admin-edit-wrap">
+              <a id="work-admin-edit" class="work-admin-edit" hidden>Edit</a>
+            </div>
         </div>
 
       </div>
@@ -195,12 +206,16 @@ function normalizeUploadedItem(item) {
         medium: item.medium || "",
         genre: item.genre || "",
         description: item.description || "",
+        awardDescription: item.awardDescription || item.award_description || item.awardDesc || '',
         price: item.price || "",
+        dimensions: item.dimensions || "",
+        printsAvailable: Boolean(item.printsAvailable || item.prints_available || item.prints),
         thumbnail: item.thumbnail || item.thumbnail_path || "",
         full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
         dateAdded: item.dateAdded || item.date_added || "",
         disabled: Boolean(item.disabled),
-        sold: Boolean(item.sold),
+        available: item.available !== false && item.available !== 0 && item.available !== "0",
+        sold: item.sold === true || item.sold === 1 || item.sold === "1" || item.available === false || item.available === 0 || item.available === "0",
         source: item.source || "server"
     };
 }
@@ -275,25 +290,67 @@ async function loadArtwork() {
 
 	// Genre
 	if (item.genre) {
-		const safe = item.genre.toLowerCase().replace(/\s+/g, '-');
-		metaTags.push(`<a class="tag" href="/gallery.html#genre-${safe}">Genre: ${item.genre}</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?g=${encodeURIComponent(item.genre)}">Genre: ${item.genre}</a>`);
 	}
 
 	// Medium
 	if (item.medium) {
-		const safe = item.medium.toLowerCase().replace(/\s+/g, '-');
-		metaTags.push(`<a class="tag" href="/gallery.html#medium-${safe}">Medium: ${item.medium}</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?m=${encodeURIComponent(item.medium)}">Medium: ${item.medium}</a>`);
 	}
 
-	// Date Added
-	if (item.dateAdded) {
-		metaTags.push(`<a class="tag" href="/gallery.html#date-${item.dateAdded}">Added: ${item.dateAdded}</a>`);
-	}
+  // Collection
+  if (item.collection) {
+    metaTags.push(`<a class="tag" href="/gallery.html?c=${encodeURIComponent(item.collection)}">Collection: ${item.collection}</a>`);
+  }
+
+  // Date Added (moved to under description on work page)
 
 	// Disabled (optional)
 	if (item.disabled) {
-		metaTags.push(`<a class="tag" href="/gallery.html#disabled-true">Disabled</a>`);
+    metaTags.push(`<a class="tag" href="/gallery.html?d=1">Disabled</a>`);
 	}
+
+  // Available
+  if (typeof item.available !== 'undefined') {
+    if (item.available) metaTags.push(`<a class="tag" href="/gallery.html?s=available">Original: Available</a>`);
+    else metaTags.push(`<a class="tag" href="/gallery.html?s=sold">Original: Sold</a>`);
+  }
+
+  // Sold (copiesSold > 0)
+  // Original status is shown above, so do not add a second sold badge.
+
+  // Only show a print badge when limited prints are available.
+  if (item.printsAvailable === true) {
+    metaTags.push(`<a class="tag" href="/gallery.html?p=available">Limited Prints: Available</a>`);
+  }
+
+  // Award (show badge and optional award description)
+  if (item.awardTitle) {
+    const desc = item.awardDescription || item.award_description || item.awardDesc || '';
+    const escapedDesc = (desc || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    const safeDesc = escapedDesc ? `<span class="award-desc">${escapedDesc}</span>` : '';
+    document.getElementById('art-award').innerHTML = `<span class="award-badge">★ ${item.awardTitle}</span>` + safeDesc;
+  }
+
+  // Public price / value under description
+  try {
+    const pv = document.getElementById('art-price-value');
+    if (pv) {
+        if (item.price && item.price !== '') {
+          pv.innerText = `Price: ${item.price}`;
+            pv.style.display = '';
+        } else {
+            pv.innerText = '';
+            pv.style.display = 'none';
+        }
+    }
+  } catch (e) { /* ignore */ }
+
+  const dimensions = document.getElementById('art-dimensions');
+  if (dimensions) {
+    dimensions.innerText = item.dimensions ? `Dimensions: ${item.dimensions}` : '';
+    dimensions.style.display = item.dimensions ? '' : 'none';
+  }
 
 	metaContainer.innerHTML = metaTags.join("");
 	
@@ -320,6 +377,33 @@ async function loadArtwork() {
     } else {
         document.getElementById("next-link").style.display = "none";
     }
+
+    // If the viewer is an authenticated admin, fetch full item to show private info
+    try {
+      const statusRes = await fetch('/gallery-api.php?action=status', { credentials: 'same-origin' });
+      if (statusRes.ok) {
+        const statusJson = await statusRes.json();
+        if (statusJson.authenticated) {
+          const editLink = document.getElementById('work-admin-edit');
+          if (editLink) {
+            editLink.href = '/gallery/admin-edit.php?id=' + encodeURIComponent(item.id || '');
+            editLink.hidden = !item.id;
+          }
+          const itemRes = await fetch('/gallery-api.php?action=item&slug=' + encodeURIComponent(slug), { credentials: 'same-origin' });
+          if (itemRes.ok) {
+            const body = await itemRes.json();
+            if (body && body.success && body.item) {
+              const full = body.item;
+              const priv = document.getElementById('private-info');
+              priv.hidden = false;
+              priv.innerHTML = `<strong>Private administration</strong><br>Private price: ${full.pricePrivate || '(none)'}<br>Copies sold: ${full.copiesSold || 0}<br><div class="private-notes">${full.privateNotes ? full.privateNotes : ''}</div>`;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // ignore silently
+    }
 }
 
 //
@@ -343,6 +427,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+
+<br />
+<br />
+<br />
 
 <script src="../../../scripts/jquery.min.js"></script>
 <script src="../../../scripts/bootstrap/js/bootstrap.min.js"></script>

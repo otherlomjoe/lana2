@@ -2,23 +2,23 @@
 require __DIR__ . '/gallery-lib.php';
 
 session_start();
-header('Content-Type: text/html; charset=utf-8');
 if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
     header('Location: /gallery/admin-login.php');
     exit;
 }
 
-$pdo = gallery_init_db();
-$csrf = gallery_set_csrf_token();
-$exhibitions = gallery_list_exhibitions($pdo, true);
+$slides = gallery_list_slider_images(true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
-unset($_SESSION['gallery_admin_message']);
+$error = $_SESSION['gallery_admin_message_error'] ?? '';
+unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
+$csrf = gallery_set_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Exhibitions</title>
+  <title>Home Slider</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
   <link href="../styles/admin.css" rel="stylesheet">
@@ -26,30 +26,34 @@ unset($_SESSION['gallery_admin_message']);
 <body>
   <div class="container admin-friendly">
     <?php require __DIR__ . '/admin-nav.php'; ?>
-    <h1>Exhibitions</h1>
+    <h1>Home slider</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-    <p><a href="/gallery/admin-exhibition-edit.php">Add exhibition</a></p>
-    <p><small>Tip: When selecting images for an exhibition, hold Ctrl (Windows/Linux) or ⌘ Command (Mac) and click to select multiple images. If you prefer a checkbox-style multi-select in the images list, say so and it can be changed.</small></p>
-    <table class="table table-striped">
-      <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th><th>Images</th><th>Status</th><th>Actions</th></tr></thead>
+    <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <div class="admin-help-card">
+      <p><strong>Recommended image size:</strong> 1600 &times; 600px, landscape, JPG/PNG/WEBP, under 10 MB.</p>
+      <p>Active slides appear on the homepage in the order shown below. Turn a slide off to keep it without showing it.</p>
+    </div>
+    <p><a class="btn btn-primary btn-large" href="/gallery/admin-slider-edit.php">Add slide</a></p>
+    <table class="table table-striped admin-friendly-table">
+      <thead><tr><th>Image</th><th>Title</th><th>Link</th><th>Active</th><th>Updated</th><th>Actions</th></tr></thead>
       <tbody>
-        <?php foreach ($exhibitions as $exhibition): ?>
-          <tr data-ex-id="<?= (int) $exhibition['id'] ?>" data-ex-active="<?= !empty($exhibition['active']) ? '1' : '0' ?>">
-            <td class="ex-id"><?= (int) $exhibition['id'] ?></td>
-            <td class="ex-title"><?= htmlspecialchars((string) $exhibition['title']) ?></td>
-            <td class="ex-location"><?= htmlspecialchars((string) $exhibition['location']) ?></td>
-            <td class="ex-dates"><?= htmlspecialchars((string) ($exhibition['startDate'] ?? '')) ?> - <?= htmlspecialchars((string) ($exhibition['endDate'] ?? '')) ?></td>
-            <td class="ex-count"><?= (int) ($exhibition['imageCount'] ?? 0) ?></td>
-            <td class="ex-status"><span class="badge <?= !empty($exhibition['active']) ? 'badge-success' : 'badge-secondary' ?>"><?= !empty($exhibition['active']) ? 'Visible' : 'Hidden' ?></span></td>
-            <td class="ex-actions">
-              <a class="btn btn-link" href="/gallery/admin-exhibition-edit.php?id=<?= (int) $exhibition['id'] ?>">Edit</a>
-              | <a class="btn btn-link text-error" href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
-              | <button type="button" class="btn btn-link ex-shift" data-direction="-1" title="Move up" aria-label="Move up">Up</button>
-              <button type="button" class="btn btn-link ex-shift" data-direction="1" title="Move down" aria-label="Move down">Down</button>
-              | <button type="button" class="btn btn-link ex-toggle" title="Toggle visibility" aria-label="Toggle visibility">Toggle</button>
-            </td>
-          </tr>
-        <?php endforeach; ?>
+      <?php foreach ($slides as $slide): ?>
+        <tr data-slide-id="<?= (int) $slide['id'] ?>" data-slide-active="<?= $slide['active'] ? '1' : '0' ?>">
+          <td><?php if ($slide['image']): ?><img src="<?= htmlspecialchars($slide['image'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="admin-list-thumbnail"><?php endif; ?></td>
+          <td><?= htmlspecialchars($slide['title'], ENT_QUOTES, 'UTF-8') ?></td>
+          <td><?= $slide['linkUrl'] !== '' ? htmlspecialchars($slide['linkUrl'], ENT_QUOTES, 'UTF-8') : '&mdash;' ?></td>
+          <td class="slide-active-label"><?= $slide['active'] ? 'Yes' : 'Off' ?></td>
+          <td><?= htmlspecialchars((string) ($slide['updatedAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+          <td class="admin-friendly-actions">
+            <button type="button" class="btn btn-link slide-shift" data-direction="-1" aria-label="Move slide up">Up</button>
+            <button type="button" class="btn btn-link slide-shift" data-direction="1" aria-label="Move slide down">Down</button>
+            <a href="/gallery/admin-slider-edit.php?id=<?= (int) $slide['id'] ?>">Edit</a>
+            <button type="button" class="btn btn-link slide-toggle"><?= $slide['active'] ? 'Turn off' : 'Turn on' ?></button>
+            <form method="post" action="/gallery/slider-action.php" style="display:inline" onsubmit="return confirm('Permanently delete this slide and its image? This cannot be undone.')"><input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="id" value="<?= (int) $slide['id'] ?>"><input type="hidden" name="action" value="hard-delete"><button type="submit" class="btn-link text-error">Delete</button></form>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      <?php if (!$slides): ?><tr><td colspan="6">No slider images have been added.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>
@@ -59,7 +63,7 @@ unset($_SESSION['gallery_admin_message']);
   function postForm(url, data){
     const params = new URLSearchParams();
     for (const k in data) params.append(k, data[k]);
-    params.append('csrf_token', csrf);
+    params.append('csrf', csrf);
     params.append('ajax', '1');
     return fetch(url, {
       method: 'POST',
@@ -69,16 +73,15 @@ unset($_SESSION['gallery_admin_message']);
         'X-Requested-With': 'XMLHttpRequest'
       },
       body: params.toString()
-      }).then(async r => {
-        const text = await r.text();
-        try {
-          return JSON.parse(text);
-        } catch (e) {
-          throw new Error('Invalid JSON response (status ' + r.status + '):\n' + text.slice(0,2000));
-        }
-      });
-    }
-
+    }).then(async r => {
+      const text = await r.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error('Invalid JSON response (status ' + r.status + '):\n' + text.slice(0,2000));
+      }
+    });
+  }
   function showTempMessage(msg, ok = true){
     const container = document.querySelector('.container');
     const wrapper = document.createElement('div');
@@ -106,67 +109,33 @@ unset($_SESSION['gallery_admin_message']);
     container.insertBefore(wrapper, container.firstChild);
     setTimeout(() => { wrapper.remove(); }, 7000);
   }
-
-  document.querySelectorAll('.ex-toggle').forEach(btn => {
-    btn.addEventListener('click', function (ev) {
-      const row = ev.target.closest('tr');
-      const id = row.getAttribute('data-ex-id');
-      if (!id) return;
-      if (!confirm('Change visibility for this exhibition?')) return;
-      postForm('/gallery/gallery-api.php?action=exhibition-toggle', { id: id }).then(json => {
-        if (json && json.success) {
-          const active = json.active ? '1' : '0';
-          row.setAttribute('data-ex-active', active);
-          const badge = row.querySelector('.ex-status .badge');
-          if (badge) {
-            badge.textContent = json.active ? 'Visible' : 'Hidden';
-            badge.className = 'badge ' + (json.active ? 'badge-success' : 'badge-secondary');
-          }
-          // brief highlight
-          row.classList.add('ex-row-highlight');
-          setTimeout(() => row.classList.remove('ex-row-highlight'), 1200);
-          showTempMessage(json.message || 'Updated');
-        } else {
-          showTempMessage(json.error || 'Could not update', false);
-        }
-      }).catch(err => { showTempMessage('Error: ' + err, false); });
-    });
-  });
-
   function animateSwapPair(row, other) {
     if (!row || !other || row.parentNode !== other.parentNode) return;
     const parent = row.parentNode;
     const rectRow = row.getBoundingClientRect();
     const rectOther = other.getBoundingClientRect();
 
-    // perform DOM swap
     if (other === row.previousElementSibling) {
-      parent.insertBefore(row, other); // move row before other (up)
+      parent.insertBefore(row, other);
     } else if (other === row.nextElementSibling) {
-      parent.insertBefore(other, row); // move other before row (so row moves down)
+      parent.insertBefore(other, row);
     } else {
-      // non-adjacent or unexpected - do straight swap without animation fallback
       parent.insertBefore(row, other);
     }
 
-    // after swap, compute new positions
     const newRectRow = row.getBoundingClientRect();
     const newRectOther = other.getBoundingClientRect();
 
-    // compute deltas
     const deltaRowY = rectRow.top - newRectRow.top;
     const deltaOtherY = rectOther.top - newRectOther.top;
 
-    // apply inverse transforms
     row.style.transition = 'none';
     other.style.transition = 'none';
     row.style.transform = `translateY(${deltaRowY}px)`;
     other.style.transform = `translateY(${deltaOtherY}px)`;
 
-    // force reflow
     row.getBoundingClientRect();
 
-    // animate to natural position
     row.style.transition = 'transform .32s cubic-bezier(.2,.8,.2,1)';
     other.style.transition = 'transform .32s cubic-bezier(.2,.8,.2,1)';
     row.style.transform = '';
@@ -184,13 +153,13 @@ unset($_SESSION['gallery_admin_message']);
     other.addEventListener('transitionend', cleanup);
   }
 
-  document.querySelectorAll('.ex-shift').forEach(btn => {
+  document.querySelectorAll('.slide-shift').forEach(btn => {
     btn.addEventListener('click', function (ev) {
       const row = ev.target.closest('tr');
-      const id = row.getAttribute('data-ex-id');
+      const id = row.getAttribute('data-slide-id');
       const direction = ev.target.getAttribute('data-direction') || '-1';
       if (!id) return;
-      postForm('/gallery/gallery-api.php?action=exhibition-shift', { id: id, direction: direction }).then(json => {
+      postForm('/gallery/slider-action.php', { id: id, action: 'shift', direction: direction }).then(json => {
         if (json && json.success) {
           if (direction === '-1') {
             const prev = row.previousElementSibling;
@@ -199,14 +168,35 @@ unset($_SESSION['gallery_admin_message']);
             const next = row.nextElementSibling;
             if (next) animateSwapPair(row, next);
           }
-          // flash highlight
           row.classList.add('ex-row-highlight');
           setTimeout(() => row.classList.remove('ex-row-highlight'), 900);
           showTempMessage(json.message || 'Moved');
         } else {
-          showTempMessage(json.error || 'Could not move', false);
+          showTempMessage(json.message || 'Could not move', false);
         }
-      }).catch(err => { showTempMessage('Error: ' + err, false); });
+      }).catch(err => showTempMessage('Error: ' + err, false));
+    });
+  });
+
+  document.querySelectorAll('.slide-toggle').forEach(btn => {
+    btn.addEventListener('click', function (ev) {
+      const row = ev.target.closest('tr');
+      const id = row.getAttribute('data-slide-id');
+      if (!id) return;
+      postForm('/gallery/slider-action.php', { id: id, action: 'active', active: row.getAttribute('data-slide-active') === '1' ? '0' : '1' }).then(json => {
+        if (json && json.success) {
+          const active = row.getAttribute('data-slide-active') === '1' ? '0' : '1';
+          row.setAttribute('data-slide-active', active);
+          const label = row.querySelector('.slide-active-label');
+          if (label) label.textContent = active === '1' ? 'Yes' : 'Off';
+          row.classList.add('ex-row-highlight');
+          setTimeout(() => row.classList.remove('ex-row-highlight'), 900);
+          btn.textContent = active === '1' ? 'Turn off' : 'Turn on';
+          showTempMessage(json.message || 'Updated');
+        } else {
+          showTempMessage(json.message || 'Could not update', false);
+        }
+      }).catch(err => showTempMessage('Error: ' + err, false));
     });
   });
 })();

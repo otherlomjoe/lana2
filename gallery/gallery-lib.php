@@ -35,6 +35,8 @@ function gallery_ensure_upload_directories(): void
         __DIR__ . '/uploads/deleted',
         __DIR__ . '/uploads/exhibitions/full',
         __DIR__ . '/uploads/exhibitions/thumbs',
+        __DIR__ . '/uploads/heroes',
+        __DIR__ . '/uploads/sliders',
         __DIR__ . '/all/imported',
     ];
 
@@ -94,6 +96,7 @@ function gallery_init_db(): ?PDO
         thumbnail_url VARCHAR(1024),
         price_public VARCHAR(255),
         price_private VARCHAR(255),
+        active TINYINT(1) NOT NULL DEFAULT 1,
         available TINYINT(1) NOT NULL DEFAULT 1,
         medium VARCHAR(255),
         medium_id INT UNSIGNED,
@@ -120,6 +123,8 @@ function gallery_init_db(): ?PDO
         'deleted_full_file' => 'VARCHAR(1024) NULL',
         'deleted_thumbnail_file' => 'VARCHAR(1024) NULL',
         'artwork_created_at' => 'DATE NULL',
+        'prints_available' => 'TINYINT(1) NOT NULL DEFAULT 0',
+        'active' => 'TINYINT(1) NOT NULL DEFAULT 1',
     ] as $column => $definition) {
         try {
             $pdo->exec("ALTER TABLE images ADD COLUMN {$column} {$definition}");
@@ -134,6 +139,7 @@ function gallery_init_db(): ?PDO
         'hero_file' => 'VARCHAR(1024) NULL',
         'thumbnail_file' => 'VARCHAR(1024) NULL',
         'thumbnail_url' => 'VARCHAR(1024) NULL',
+        'active' => 'TINYINT(1) NOT NULL DEFAULT 1',
     ] as $column => $definition) {
         try {
             $pdo->exec("ALTER TABLE exhibitions ADD COLUMN {$column} {$definition}");
@@ -141,6 +147,16 @@ function gallery_init_db(): ?PDO
             if ((int) $e->errorInfo[1] !== 1060) {
                 throw $e;
             }
+        }
+    }
+
+    // ensure exhibitions have an optional display_order column so admin can control ordering
+    try {
+        $pdo->exec("ALTER TABLE exhibitions ADD COLUMN display_order INT NULL DEFAULT NULL");
+    } catch (PDOException $e) {
+        if ((int) ($e->errorInfo[1] ?? 0) !== 1060) {
+            // 1060 = column already exists
+            throw $e;
         }
     }
 
@@ -157,11 +173,89 @@ function gallery_init_db(): ?PDO
         PRIMARY KEY (image_id, exhibition_id)
     )");
 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS home_heroes (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        slug VARCHAR(255) NOT NULL UNIQUE,
+        title VARCHAR(255) NOT NULL,
+        visible TINYINT(1) NOT NULL DEFAULT 0,
+        display_order INT NOT NULL DEFAULT 0,
+        visual_style VARCHAR(32) NOT NULL DEFAULT 'info',
+        body TEXT NOT NULL,
+        image_file VARCHAR(1024),
+        image_url VARCHAR(1024),
+        image_alt VARCHAR(255),
+        exhibition_id INT UNSIGNED NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_title ON images(title)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_medium ON images(medium)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_genre ON images(genre)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_collection ON images(collection)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS home_slider_images (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL DEFAULT '',
+        link_url VARCHAR(1024),
+        active TINYINT(1) NOT NULL DEFAULT 0,
+        display_order INT NOT NULL DEFAULT 0,
+        image_file VARCHAR(1024) NOT NULL,
+        image_url VARCHAR(1024) NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_images_available ON images(available)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_home_heroes_visible_order ON home_heroes(visible, display_order, id)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_home_sliders_active_order ON home_slider_images(active, display_order, id)");
+
+    $heroCount = (int) $pdo->query('SELECT COUNT(*) FROM home_heroes')->fetchColumn();
+    if ($heroCount === 0) {
+        $seed = $pdo->prepare('INSERT INTO home_heroes (slug, title, visible, display_order, visual_style, body, image_alt) VALUES (:slug, :title, 1, :display_order, :visual_style, :body, :image_alt)');
+        $seed->execute([
+            ':slug' => 'ku-ring-gai-art-society-59th-annual-awards-exhibition',
+            ':title' => 'Ku-ring-gai Art Society 59th Annual Awards Exhibition',
+            ':display_order' => 10,
+            ':visual_style' => 'info',
+            ':body' => "### Monday, 20 July to Sunday, 2 August 2026.\n\n#### [The Gallery at St Ives Shopping Village, 166 Mona Vale Road, St Ives, 2075](https://www.krg.nsw.gov.au/Things-to-do/Whats-on/Ku-ring-gai-Art-Society-59th-awards-exhibition)\n\nI have three works up: [Rainbows in The Umbrella Tree](https://lana.lombard.id.au/gallery/all/item/rainbowsumbrellatree.html), [Wren and Bug](https://lana.lombard.id.au/gallery/all/item/wrenbug.html) and [Cockatoo Couple](https://lana.lombard.id.au/gallery/all/item/cockatoocouple.html). Pop by and have a look if you get the chance to attend the exhibition.\n\n### [Contact me now](https://lana.lombard.id.au/contact.html)",
+            ':image_alt' => 'Ku-ring-gai Art Society 59th Annual Awards Exhibition',
+        ]);
+        $seed->execute([
+            ':slug' => 'pymble-values-art-prize-past',
+            ':title' => 'The Pymble Values Art Prize (past)',
+            ':display_order' => 20,
+            ':visual_style' => 'success',
+            ':body' => "#### [The Pymble Values Art Prize](https://www.pymblelc.nsw.edu.au/the-pymble-values-art-prize/)\n\nVery pleased that my Painting \"A Process of Becoming\" was selected as a finalist in The Pymble Values Art Prize.\n\n##### Opening Night: Tuesday 11 November 6.00pm to 8.00pm\n\n##### The Exhibition of Finalists will also be open to the public from Wednesday 12 November to Friday 14 November from 10.00am to 4.30pm. Entry is free.\n\n###### Main Hall, Pymble Ladies' College\n\n### [Contact me now](https://lana.lombard.id.au/contact.html)",
+            ':image_alt' => 'The Pymble Values Art Prize',
+        ]);
+    }
+
+    $sliderCount = (int) $pdo->query('SELECT COUNT(*) FROM home_slider_images')->fetchColumn();
+    if ($sliderCount === 0) {
+        $seedSlide = $pdo->prepare('INSERT INTO home_slider_images (title, link_url, active, display_order, image_file, image_url) VALUES (:title, NULL, 1, :display_order, :image_file, :image_url)');
+        foreach ([
+            ['Rainbows in Umbrella Tree', 'rainbowumbrellatreebanner.jpg'],
+            ['Resting Mermaid', 'restingmermaidbanner.jpg'],
+            ['Halfling', 'halflingbanner.jpg'],
+            ['Fire Horse', 'firehorsebanner.jpg'],
+            ['Rainbow Tea Time', 'rainbowteatimebanner.jpg'],
+            ['Starry Feathers', 'starryfeathersbanner.jpg'],
+            ['Snake in Studio', 'SnakeInStudiobanner.jpg'],
+            ['Woodland Dream', 'WoodlandDreamBanner.jpg'],
+            ['Sir Walter', 'Sirwalter.jpg'],
+            ['Meremaid', 'meremaid.jpg'],
+            ['Pet Portraits', 'catbanner1.jpg'],
+            ['Boababe ink drawing', 'boababe.jpg'],
+            ['Jewelled Dragon Watercolour', 'JewelledDragon.jpg'],
+        ] as $index => [$slideTitle, $slideFilename]) {
+            $seedSlide->execute([
+                ':title' => $slideTitle,
+                ':display_order' => ($index + 1) * 10,
+                ':image_file' => dirname(__DIR__) . '/slider-images/' . $slideFilename,
+                ':image_url' => '/slider-images/' . $slideFilename,
+            ]);
+        }
+    }
 
     return $pdo;
 }
@@ -241,6 +335,73 @@ function gallery_detect_creation_date(string $imagePath): ?string
     return $timestamp !== false ? date('Y-m-d', $timestamp) : null;
 }
 
+/**
+ * Derive an artwork date and report where it came from.
+ * Returns ['date' => 'YYYY-MM-DD'|null, 'source' => 'exif'|'iptc'|'filectime'|'filemtime'|null]
+ */
+function gallery_derive_artwork_date(string $imagePath): array
+{
+    if (!is_file($imagePath)) {
+        return ['date' => null, 'source' => null];
+    }
+
+    // 1) Try EXIF (DateTimeOriginal, DateTimeDigitized, DateTime)
+    if (function_exists('exif_read_data')) {
+        $size = @getimagesize($imagePath);
+        if ($size && isset($size[2]) && $size[2] === IMAGETYPE_JPEG) {
+            $exif = @exif_read_data($imagePath, 'EXIF', true);
+            $candidates = [];
+            if (!empty($exif)) {
+                if (!empty($exif['EXIF']['DateTimeOriginal'])) $candidates[] = $exif['EXIF']['DateTimeOriginal'];
+                if (!empty($exif['EXIF']['DateTimeDigitized'])) $candidates[] = $exif['EXIF']['DateTimeDigitized'];
+                if (!empty($exif['EXIF']['DateTime'])) $candidates[] = $exif['EXIF']['DateTime'];
+                // also check flattened keys
+                if (!empty($exif['IFD0']['DateTime'])) $candidates[] = $exif['IFD0']['DateTime'];
+            }
+            foreach ($candidates as $exifDate) {
+                if (!is_string($exifDate)) continue;
+                if (preg_match('/^(\d{4}):(\d{2}):(\d{2})/', $exifDate, $m)) {
+                    return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'exif'];
+                }
+            }
+        }
+    }
+
+    // 2) Try IPTC (APP13)
+    $imageInfo = null;
+    @getimagesize($imagePath, $imageInfo);
+    if (!empty($imageInfo['APP13'])) {
+        $iptc = @iptcparse($imageInfo['APP13']);
+        if (!empty($iptc['2#055'][0])) { // DateCreated YYYYMMDD
+            $d = $iptc['2#055'][0];
+            if (preg_match('/^(\d{4})(\d{2})(\d{2})/', $d, $m)) {
+                return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'iptc'];
+            }
+        }
+        // Sometimes TimeCreated is available in 2#060; we prefer combined DateCreated above
+        if (!empty($iptc['2#060'][0]) && !empty($iptc['2#055'][0])) {
+            $d = $iptc['2#055'][0];
+            if (preg_match('/^(\d{4})(\d{2})(\d{2})/', $d, $m)) {
+                return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'iptc'];
+            }
+        }
+    }
+
+    // 3) Filesystem creation time (filectime) — on Windows this is the real creation time.
+    $ctime = @filectime($imagePath);
+    if ($ctime !== false) {
+        return ['date' => date('Y-m-d', $ctime), 'source' => 'filectime'];
+    }
+
+    // 4) Filesystem modification time
+    $mtime = @filemtime($imagePath);
+    if ($mtime !== false) {
+        return ['date' => date('Y-m-d', $mtime), 'source' => 'filemtime'];
+    }
+
+    return ['date' => null, 'source' => null];
+}
+
 function gallery_string_or_empty($value): string
 {
     return is_string($value) ? trim($value) : '';
@@ -298,6 +459,8 @@ function gallery_format_rich_text(string $text): string
         $lines = preg_split('/\n/', $paragraph);
         $items = [];
         $isList = true;
+        $hasHeading = false;
+        $contentLines = [];
         foreach ($lines as $line) {
             $line = trim($line);
             if ($line === '') {
@@ -305,8 +468,13 @@ function gallery_format_rich_text(string $text): string
             }
             if (preg_match('/^-\s+/', $line)) {
                 $items[] = '<li>' . preg_replace('/^-\s+/', '', $line) . '</li>';
+            } elseif (preg_match('/^(#{1,6})\s+(.+)$/', $line, $heading)) {
+                $hasHeading = true;
+                $level = strlen($heading[1]);
+                $htmlParts[] = '<h' . $level . '>' . $heading[2] . '</h' . $level . '>';
             } else {
                 $isList = false;
+                $contentLines[] = $line;
             }
         }
 
@@ -315,7 +483,11 @@ function gallery_format_rich_text(string $text): string
             continue;
         }
 
-        $htmlParts[] = '<p>' . str_replace("\n", '<br>', $paragraph) . '</p>';
+        if ($hasHeading && $contentLines) {
+            $htmlParts[] = '<p>' . implode('<br>', $contentLines) . '</p>';
+        } elseif (!$hasHeading) {
+            $htmlParts[] = '<p>' . str_replace("\n", '<br>', $paragraph) . '</p>';
+        }
     }
 
     return implode('', $htmlParts);
@@ -329,6 +501,521 @@ function gallery_render_formatted_text(string $text): string
     }
 
     return $rendered;
+}
+
+function gallery_normalize_hero_row(array $row, bool $includeBody = true): array
+{
+    $hero = [
+        'id' => (int) ($row['id'] ?? 0),
+        'slug' => (string) ($row['slug'] ?? ''),
+        'title' => (string) ($row['title'] ?? ''),
+        'visible' => (bool) ($row['visible'] ?? 0),
+        'displayOrder' => (int) ($row['display_order'] ?? 0),
+        'visualStyle' => in_array(($row['visual_style'] ?? 'info'), ['info', 'success', 'neutral'], true) ? (string) $row['visual_style'] : 'info',
+        'image' => (string) ($row['image_url'] ?? ''),
+        'imageAlt' => (string) ($row['image_alt'] ?? ''),
+        'exhibitionId' => !empty($row['exhibition_id']) ? (int) $row['exhibition_id'] : null,
+        'createdAt' => $row['created_at'] ?? null,
+        'updatedAt' => $row['updated_at'] ?? null,
+    ];
+    if ($includeBody) {
+        $hero['body'] = (string) ($row['body'] ?? '');
+        $hero['bodyHtml'] = gallery_render_formatted_text($hero['body']);
+    }
+    return $hero;
+}
+
+function gallery_list_home_heroes(bool $includeHidden = false): array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        return [];
+    }
+
+    $where = $includeHidden ? '' : 'WHERE visible = 1';
+    $stmt = $pdo->query("SELECT id, slug, title, visible, display_order, visual_style, body, image_url, image_alt, exhibition_id, created_at, updated_at FROM home_heroes {$where} ORDER BY display_order ASC, id ASC");
+    return array_map(static function (array $row) use ($includeHidden): array {
+        $hero = gallery_normalize_hero_row($row, true);
+        if (!$includeHidden) unset($hero['body']);
+        return $hero;
+    }, $stmt->fetchAll());
+}
+
+function gallery_get_home_hero(int $id = 0, string $slug = ''): ?array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        return null;
+    }
+    if ($id > 0) {
+        $stmt = $pdo->prepare('SELECT * FROM home_heroes WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $id]);
+    } else {
+        $stmt = $pdo->prepare('SELECT * FROM home_heroes WHERE slug = :slug LIMIT 1');
+        $stmt->execute([':slug' => $slug]);
+    }
+    $row = $stmt->fetch();
+    return $row ? gallery_normalize_hero_row($row, true) + ['imageFile' => (string) ($row['image_file'] ?? '')] : null;
+}
+
+function gallery_save_home_hero(array $data, array $files = []): array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        throw new RuntimeException('Gallery database is unavailable.');
+    }
+
+    $id = (int) ($data['id'] ?? 0);
+    $title = trim((string) ($data['title'] ?? ''));
+    $body = trim((string) ($data['body'] ?? ''));
+    if ($title === '') {
+        throw new InvalidArgumentException('Hero title is required.');
+    }
+    $slug = gallery_slugify((string) ($data['slug'] ?? $title));
+    $slugBase = $slug;
+    $counter = 1;
+    while (true) {
+        $check = $pdo->prepare('SELECT id FROM home_heroes WHERE slug = :slug AND id != :id LIMIT 1');
+        $check->execute([':slug' => $slug, ':id' => $id]);
+        if (!$check->fetch()) break;
+        $slug = $slugBase . '-' . $counter++;
+    }
+
+    $existing = $id > 0 ? gallery_get_home_hero($id) : null;
+    if ($id > 0 && !$existing) {
+        throw new InvalidArgumentException('Hero not found.');
+    }
+    $imageFile = (string) ($existing['imageFile'] ?? '');
+    $imageUrl = (string) ($existing['image'] ?? '');
+    $imageInput = $files['image'] ?? null;
+    if ($imageInput && !empty($imageInput['tmp_name'])) {
+        $stored = gallery_store_uploaded_named_asset($imageInput, __DIR__ . '/uploads/heroes', 'hero');
+        $imageFile = $stored['path'];
+        $imageUrl = '/gallery/uploads/heroes/' . $stored['filename'];
+    }
+
+    $style = (string) ($data['visualStyle'] ?? 'info');
+    if (!in_array($style, ['info', 'success', 'neutral'], true)) $style = 'info';
+    // determine display_order: if provided use it, otherwise for new heroes default to first position (before current minimum)
+    if (isset($data['displayOrder'])) {
+        $displayOrder = max(0, (int) $data['displayOrder']);
+    } else {
+        if ($id === 0) {
+            $min = $pdo->query('SELECT MIN(display_order) FROM home_heroes')->fetchColumn();
+            $displayOrder = ($min === false || $min === null) ? 0 : ((int) $min) - 1;
+        } else {
+            $displayOrder = (int) ($existing['displayOrder'] ?? 0);
+        }
+    }
+
+    $params = [
+        ':slug' => $slug,
+        ':title' => $title,
+        ':visible' => !empty($data['visible']) ? 1 : 0,
+        ':display_order' => $displayOrder,
+        ':visual_style' => $style,
+        ':body' => $body,
+        ':image_file' => $imageFile ?: null,
+        ':image_url' => $imageUrl ?: null,
+        ':image_alt' => trim((string) ($data['imageAlt'] ?? $title)),
+        ':exhibition_id' => !empty($data['exhibitionId']) ? (int) $data['exhibitionId'] : null,
+    ];
+    if ($id > 0) {
+        $params[':id'] = $id;
+        $stmt = $pdo->prepare('UPDATE home_heroes SET slug = :slug, title = :title, visible = :visible, display_order = :display_order, visual_style = :visual_style, body = :body, image_file = :image_file, image_url = :image_url, image_alt = :image_alt, exhibition_id = :exhibition_id, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+    } else {
+        $stmt = $pdo->prepare('INSERT INTO home_heroes (slug, title, visible, display_order, visual_style, body, image_file, image_url, image_alt, exhibition_id) VALUES (:slug, :title, :visible, :display_order, :visual_style, :body, :image_file, :image_url, :image_alt, :exhibition_id)');
+    }
+    $stmt->execute($params);
+    $id = $id > 0 ? $id : (int) $pdo->lastInsertId();
+    return ['id' => $id, 'slug' => $slug];
+}
+
+function gallery_set_home_hero_visibility(int $id, bool $visible): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    return $pdo->prepare('UPDATE home_heroes SET visible = :visible, updated_at = CURRENT_TIMESTAMP WHERE id = :id')->execute([':visible' => $visible ? 1 : 0, ':id' => $id]);
+}
+
+function gallery_hard_delete_home_hero(int $id): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    $stmt = $pdo->prepare('SELECT image_file FROM home_heroes WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) return false;
+    $deleted = $pdo->prepare('DELETE FROM home_heroes WHERE id = :id')->execute([':id' => $id]);
+    if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) @unlink($row['image_file']);
+    return $deleted;
+}
+
+function gallery_shift_home_hero(int $id, int $direction): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || !in_array($direction, [-1, 1], true)) return false;
+    $stmt = $pdo->prepare('SELECT id, display_order FROM home_heroes WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $current = $stmt->fetch();
+    if (!$current) return false;
+    $operator = $direction < 0 ? '<' : '>';
+    $sort = $direction < 0 ? 'DESC' : 'ASC';
+    $neighborStmt = $pdo->prepare("SELECT id, display_order FROM home_heroes WHERE display_order {$operator} :display_order ORDER BY display_order {$sort}, id {$sort} LIMIT 1");
+    $neighborStmt->execute([':display_order' => (int) $current['display_order']]);
+    $neighbor = $neighborStmt->fetch();
+    if (!$neighbor) return false;
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id')->execute([':display_order' => -1, ':id' => $id]);
+        $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
+        $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+function gallery_duplicate_home_hero(int $id): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+    $stmt = $pdo->prepare('SELECT * FROM home_heroes WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $hero = $stmt->fetch();
+    if (!$hero) throw new InvalidArgumentException('Hero not found.');
+    $slug = gallery_slugify((string) $hero['title']) . '-copy';
+    $base = $slug;
+    $counter = 2;
+    while (true) {
+        $check = $pdo->prepare('SELECT id FROM home_heroes WHERE slug = :slug LIMIT 1');
+        $check->execute([':slug' => $slug]);
+        if (!$check->fetch()) break;
+        $slug = $base . '-' . $counter++;
+    }
+    $insert = $pdo->prepare('INSERT INTO home_heroes (slug, title, visible, display_order, visual_style, body, image_alt, exhibition_id) VALUES (:slug, :title, 0, :display_order, :visual_style, :body, :image_alt, :exhibition_id)');
+    $insert->execute([
+        ':slug' => $slug,
+        ':title' => (string) $hero['title'] . ' (copy)',
+        ':display_order' => (int) $hero['display_order'] + 1,
+        ':visual_style' => (string) $hero['visual_style'],
+        ':body' => (string) $hero['body'],
+        ':image_alt' => (string) $hero['image_alt'],
+        ':exhibition_id' => $hero['exhibition_id'] ?: null,
+    ]);
+    return (int) $pdo->lastInsertId();
+}
+
+function gallery_normalize_slider_row(array $row): array
+{
+    return [
+        'id' => (int) ($row['id'] ?? 0),
+        'title' => (string) ($row['title'] ?? ''),
+        'linkUrl' => (string) ($row['link_url'] ?? ''),
+        'active' => (bool) ($row['active'] ?? 0),
+        'displayOrder' => (int) ($row['display_order'] ?? 0),
+        'image' => (string) ($row['image_url'] ?? ''),
+        'updatedAt' => $row['updated_at'] ?? null,
+    ];
+}
+
+function gallery_list_slider_images(bool $includeHidden = false): array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        return [];
+    }
+    $where = $includeHidden ? '' : 'WHERE active = 1';
+    $stmt = $pdo->query("SELECT * FROM home_slider_images {$where} ORDER BY display_order ASC, id ASC");
+    return array_map('gallery_normalize_slider_row', $stmt->fetchAll());
+}
+
+function gallery_get_slider_image(int $id): ?array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        return null;
+    }
+    $stmt = $pdo->prepare('SELECT * FROM home_slider_images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    return $row ? gallery_normalize_slider_row($row) + ['imageFile' => (string) ($row['image_file'] ?? '')] : null;
+}
+
+function gallery_save_slider_image(array $data, array $files = []): array
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        throw new RuntimeException('Gallery database is unavailable.');
+    }
+
+    $id = (int) ($data['id'] ?? 0);
+    $existing = $id > 0 ? gallery_get_slider_image($id) : null;
+    if ($id > 0 && !$existing) {
+        throw new InvalidArgumentException('Slider image not found.');
+    }
+
+    $imageFile = (string) ($existing['imageFile'] ?? '');
+    $imageUrl = (string) ($existing['image'] ?? '');
+    $imageInput = $files['image'] ?? null;
+    if ($imageInput && !empty($imageInput['tmp_name'])) {
+        $stored = gallery_store_uploaded_named_asset($imageInput, __DIR__ . '/uploads/sliders', 'slide');
+        $imageFile = $stored['path'];
+        $imageUrl = '/gallery/uploads/sliders/' . $stored['filename'];
+    }
+    if ($imageUrl === '') {
+        throw new InvalidArgumentException('A slide image is required.');
+    }
+
+    $linkUrl = trim((string) ($data['linkUrl'] ?? ''));
+    if ($linkUrl !== '' && !preg_match('#^https://#i', $linkUrl) && !str_starts_with($linkUrl, '/')) {
+        throw new InvalidArgumentException('The link must be an https:// URL or a site-relative path.');
+    }
+
+    // determine display_order: if provided use it, otherwise for new slides default to first position (before current minimum)
+    if (isset($data['displayOrder'])) {
+        $displayOrder = max(0, (int) $data['displayOrder']);
+    } else {
+        if ($id === 0) {
+            $min = $pdo->query('SELECT MIN(display_order) FROM home_slider_images')->fetchColumn();
+            $displayOrder = ($min === false || $min === null) ? 0 : ((int) $min) - 1;
+        } else {
+            $displayOrder = (int) ($existing['displayOrder'] ?? 0);
+        }
+    }
+
+    $params = [
+        ':title' => trim((string) ($data['title'] ?? '')),
+        ':link_url' => $linkUrl ?: null,
+        ':active' => !empty($data['active']) ? 1 : 0,
+        ':display_order' => $displayOrder,
+        ':image_file' => $imageFile,
+        ':image_url' => $imageUrl,
+    ];
+    if ($id > 0) {
+        $params[':id'] = $id;
+        $stmt = $pdo->prepare('UPDATE home_slider_images SET title = :title, link_url = :link_url, active = :active, display_order = :display_order, image_file = :image_file, image_url = :image_url, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+    } else {
+        $stmt = $pdo->prepare('INSERT INTO home_slider_images (title, link_url, active, display_order, image_file, image_url) VALUES (:title, :link_url, :active, :display_order, :image_file, :image_url)');
+    }
+    $stmt->execute($params);
+    $id = $id > 0 ? $id : (int) $pdo->lastInsertId();
+    return ['id' => $id];
+}
+
+function gallery_set_slider_image_active(int $id, bool $active): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    return $pdo->prepare('UPDATE home_slider_images SET active = :active, updated_at = CURRENT_TIMESTAMP WHERE id = :id')->execute([':active' => $active ? 1 : 0, ':id' => $id]);
+}
+
+function gallery_hard_delete_slider_image(int $id): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    $stmt = $pdo->prepare('SELECT image_file FROM home_slider_images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) return false;
+    $deleted = $pdo->prepare('DELETE FROM home_slider_images WHERE id = :id')->execute([':id' => $id]);
+    if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) @unlink($row['image_file']);
+    return $deleted;
+}
+
+function gallery_shift_slider_image(int $id, int $direction): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || !in_array($direction, [-1, 1], true)) return false;
+    $stmt = $pdo->prepare('SELECT id, display_order FROM home_slider_images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $current = $stmt->fetch();
+    if (!$current) return false;
+    $operator = $direction < 0 ? '<' : '>';
+    $sort = $direction < 0 ? 'DESC' : 'ASC';
+    $neighborStmt = $pdo->prepare("SELECT id, display_order FROM home_slider_images WHERE display_order {$operator} :display_order ORDER BY display_order {$sort}, id {$sort} LIMIT 1");
+    $neighborStmt->execute([':display_order' => (int) $current['display_order']]);
+    $neighbor = $neighborStmt->fetch();
+    if (!$neighbor) return false;
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => -1, ':id' => $id]);
+        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
+        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * Shift an exhibition up or down by swapping its display_order with a neighbor.
+ * Direction: -1 = up/earlier, 1 = down/later.
+ */
+function gallery_shift_exhibition(int $id, int $direction): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || !in_array($direction, [-1, 1], true)) return false;
+    $stmt = $pdo->prepare('SELECT id, display_order FROM exhibitions WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $current = $stmt->fetch();
+    if (!$current) return false;
+
+    // ensure a numeric display_order exists for current row
+    if ($current['display_order'] === null) {
+        // set to a large value so it appears at end, then normalize
+        $max = (int) $pdo->query('SELECT COALESCE(MAX(display_order), 0) FROM exhibitions')->fetchColumn();
+        $pdo->prepare('UPDATE exhibitions SET display_order = :do WHERE id = :id')->execute([':do' => $max + 1, ':id' => $id]);
+        $current['display_order'] = $max + 1;
+    }
+
+    $operator = $direction < 0 ? '<' : '>';
+    $sort = $direction < 0 ? 'DESC' : 'ASC';
+    $neighborStmt = $pdo->prepare("SELECT id, display_order FROM exhibitions WHERE display_order {$operator} :display_order ORDER BY display_order {$sort}, id {$sort} LIMIT 1");
+    $neighborStmt->execute([':display_order' => (int) $current['display_order']]);
+    $neighbor = $neighborStmt->fetch();
+    if (!$neighbor) return false;
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => -1, ':id' => $id]);
+        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
+        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * Shift an image within an exhibition by swapping its sort_order with a neighbour.
+ * direction: -1 = move earlier (up), 1 = move later (down)
+ */
+function gallery_shift_image_in_exhibition(int $imageId, int $exhibitionId, int $direction): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo || $imageId <= 0 || $exhibitionId <= 0 || !in_array($direction, [-1, 1], true)) return false;
+
+    $stmt = $pdo->prepare('SELECT image_id, sort_order FROM image_exhibitions WHERE image_id = :image_id AND exhibition_id = :exhibition_id LIMIT 1');
+    $stmt->execute([':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+    $current = $stmt->fetch();
+    if (!$current) return false;
+
+    // ensure a numeric sort_order exists
+    if ($current['sort_order'] === null) {
+        $max = (int) $pdo->prepare('SELECT COALESCE(MAX(sort_order), 0) FROM image_exhibitions WHERE exhibition_id = :exhibition_id')->execute([':exhibition_id' => $exhibitionId]) ?: 0;
+        // re-query to get value properly
+        $max = (int) $pdo->query('SELECT COALESCE(MAX(sort_order), 0) FROM image_exhibitions WHERE exhibition_id = ' . (int) $exhibitionId)->fetchColumn();
+        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :so WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':so' => $max + 1, ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $current['sort_order'] = $max + 1;
+    }
+
+    $operator = $direction < 0 ? '<' : '>';
+    $sort = $direction < 0 ? 'DESC' : 'ASC';
+    $neighborStmt = $pdo->prepare("SELECT image_id, sort_order FROM image_exhibitions WHERE exhibition_id = :exhibition_id AND sort_order {$operator} :sort_order ORDER BY sort_order {$sort} LIMIT 1");
+    $neighborStmt->execute([':exhibition_id' => $exhibitionId, ':sort_order' => (int) $current['sort_order']]);
+    $neighbor = $neighborStmt->fetch();
+    if (!$neighbor) return false;
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => -1, ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => (int) $current['sort_order'], ':image_id' => $neighbor['image_id'], ':exhibition_id' => $exhibitionId]);
+        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => (int) $neighbor['sort_order'], ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+function gallery_set_exhibition_active(int $id, bool $active): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    $stmt = $pdo->prepare('UPDATE exhibitions SET active = :active WHERE id = :id');
+    return (bool) $stmt->execute([':active' => $active ? 1 : 0, ':id' => $id]);
+}
+
+function gallery_clear_directory_files(string $dir): int
+{
+    if (!is_dir($dir)) return 0;
+    $files = glob($dir . '/*');
+    if ($files === false) return 0;
+    $removed = 0;
+    foreach ($files as $file) {
+        if (is_file($file) && @unlink($file)) $removed++;
+    }
+    return $removed;
+}
+
+function gallery_clear_home_sliders(): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+    $pdo->exec('DELETE FROM home_slider_images');
+    return gallery_clear_directory_files(__DIR__ . '/uploads/sliders');
+}
+
+function gallery_clear_home_heroes(): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+    $pdo->exec('DELETE FROM home_heroes');
+    return gallery_clear_directory_files(__DIR__ . '/uploads/heroes');
+}
+
+function gallery_clear_exhibitions_only(): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+    $pdo->exec('DELETE FROM image_exhibitions');
+    $pdo->exec('DELETE FROM exhibitions');
+    return gallery_clear_directory_files(__DIR__ . '/uploads/exhibitions/full')
+        + gallery_clear_directory_files(__DIR__ . '/uploads/exhibitions/thumbs');
+}
+
+function gallery_clear_images_only(): int
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) throw new RuntimeException('Gallery database is unavailable.');
+
+    // remove image-specific relations and the images themselves
+    $pdo->exec('DELETE FROM image_tags');
+    $pdo->exec('DELETE FROM image_exhibitions');
+    $pdo->exec('DELETE FROM images');
+
+    // also clear lookup tables and collections/genres/mediums that are related to images
+    // this ensures a clean state with no leftover lookup rows referencing removed images
+    $lookupTables = ['tags', 'mediums', 'genres', 'collections'];
+    foreach ($lookupTables as $lt) {
+        $pdo->exec("DELETE FROM {$lt}");
+    }
+
+    // reset AUTO_INCREMENT / sqlite sequences for the affected lookup tables so new inserts start at 1
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'mysql') {
+        foreach ($lookupTables as $lt) {
+            $pdo->exec("ALTER TABLE {$lt} AUTO_INCREMENT = 1");
+        }
+    } elseif ($driver === 'sqlite') {
+        foreach ($lookupTables as $lt) {
+            $pdo->exec('DELETE FROM sqlite_sequence WHERE name = ' . $pdo->quote($lt));
+        }
+        // recommended to free space / reset internal counters
+        $pdo->exec('VACUUM');
+    }
+
+    return gallery_clear_directory_files(__DIR__ . '/uploads/full')
+        + gallery_clear_directory_files(__DIR__ . '/uploads/thumbs')
+        + gallery_clear_directory_files(__DIR__ . '/uploads/deleted');
 }
 
 function gallery_ensure_tag_links(PDO $pdo, int $imageId, array $tags): void
@@ -456,6 +1143,45 @@ function gallery_resize_image(string $sourcePath, string $destinationPath, int $
     return $saved;
 }
 
+function gallery_resize_cover(string $sourcePath, string $destinationPath, int $width, int $height, int $quality = 88): bool
+{
+    if (!is_file($sourcePath) || $width < 1 || $height < 1) return false;
+    $size = getimagesize($sourcePath);
+    if ($size === false) return false;
+
+    $sourceWidth = (int) $size[0];
+    $sourceHeight = (int) $size[1];
+    $type = $size[2];
+    $image = null;
+    switch ($type) {
+        case IMAGETYPE_JPEG: $image = imagecreatefromjpeg($sourcePath); break;
+        case IMAGETYPE_PNG: $image = imagecreatefrompng($sourcePath); break;
+        case IMAGETYPE_WEBP: $image = imagecreatefromwebp($sourcePath); break;
+        default: return false;
+    }
+    if ($image === false) return false;
+
+    $scale = max($width / $sourceWidth, $height / $sourceHeight);
+    $scaledWidth = (int) ceil($sourceWidth * $scale);
+    $scaledHeight = (int) ceil($sourceHeight * $scale);
+    $offsetX = (int) floor(($scaledWidth - $width) / 2);
+    $offsetY = (int) floor(($scaledHeight - $height) / 2);
+    $canvas = imagecreatetruecolor($width, $height);
+    imagealphablending($canvas, false);
+    imagesavealpha($canvas, true);
+    imagecopyresampled($canvas, $image, -$offsetX, -$offsetY, 0, 0, $scaledWidth, $scaledHeight, $sourceWidth, $sourceHeight);
+
+    $saved = false;
+    switch ($type) {
+        case IMAGETYPE_JPEG: $saved = imagejpeg($canvas, $destinationPath, $quality); break;
+        case IMAGETYPE_PNG: $saved = imagepng($canvas, $destinationPath, 9); break;
+        case IMAGETYPE_WEBP: $saved = imagewebp($canvas, $destinationPath, $quality); break;
+    }
+    imagedestroy($image);
+    imagedestroy($canvas);
+    return $saved;
+}
+
 function gallery_store_uploaded_asset(array $file, string $directory, string $prefix): array
 {
     if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
@@ -503,6 +1229,13 @@ function gallery_store_uploaded_named_asset(array $file, string $directory, stri
     if (!isset($allowed[$mime])) {
         throw new RuntimeException('Only JPG, PNG, and WEBP images are supported.');
     }
+    if ((int) ($file['size'] ?? 0) > 10 * 1024 * 1024) {
+        throw new RuntimeException('Uploaded images must be 10 MB or smaller.');
+    }
+    $dimensions = @getimagesize($file['tmp_name']);
+    if (!$dimensions || $dimensions[0] < 1 || $dimensions[1] < 1 || $dimensions[0] > 10000 || $dimensions[1] > 10000) {
+        throw new RuntimeException('Uploaded image dimensions are invalid or too large.');
+    }
 
     $originalName = basename((string) ($file['name'] ?? ''));
     $name = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $originalName);
@@ -540,6 +1273,7 @@ function gallery_normalize_image_row(array $row): array
         'thumbnail' => (string) ($row['thumbnail_url'] ?? $row['thumbnail_file'] ?? ''),
         'price' => (string) (($row['price_public'] ?? '') !== '' ? $row['price_public'] : ($row['price_private'] ?? '')),
         'pricePrivate' => (string) ($row['price_private'] ?? ''),
+        'active' => (bool) ($row['active'] ?? 1),
         'available' => (bool) ($row['available'] ?? 1),
         'medium' => (string) ($row['medium'] ?? ''),
         'genre' => (string) ($row['genre'] ?? ''),
@@ -561,6 +1295,7 @@ function gallery_normalize_image_row(array $row): array
         'artworkCreatedAt' => $row['artwork_created_at'] ?? null,
         'deletedAt' => $row['deleted_at'] ?? null,
         'status' => !empty($row['deleted_at']) ? 'Deleted' : (!empty($row['available']) ? 'Active' : 'Unavailable'),
+        'printsAvailable' => !empty($row['prints_available']) ? true : false,
     ];
 }
 
@@ -579,7 +1314,12 @@ function gallery_list_images(?PDO $pdo = null, bool $includeDeleted = false): ar
         return [];
     }
 
-        $deletedCondition = $includeDeleted ? '' : ' WHERE i.deleted_at IS NULL';
+        $conditions = [];
+        if (!$includeDeleted) {
+            $conditions[] = 'i.deleted_at IS NULL';
+            $conditions[] = 'i.active = 1';
+        }
+        $deletedCondition = $conditions ? ' WHERE ' . implode(' AND ', $conditions) : '';
             $sql = "SELECT i.*, GROUP_CONCAT(DISTINCT t.name, ',') AS tag_names, GROUP_CONCAT(DISTINCT e.slug) AS exhibition_slugs
             FROM images i
             LEFT JOIN image_tags it ON it.image_id = i.id
@@ -598,14 +1338,27 @@ function gallery_list_images(?PDO $pdo = null, bool $includeDeleted = false): ar
     return $items;
 }
 
-function gallery_list_exhibitions(?PDO $pdo = null): array
+function gallery_list_exhibitions(?PDO $pdo = null, bool $includeHidden = false): array
 {
     $pdo = $pdo ?: gallery_init_db();
     if (!$pdo) {
         return [];
     }
 
-    $stmt = $pdo->query("SELECT e.*, COUNT(ie.image_id) AS image_count FROM exhibitions e LEFT JOIN image_exhibitions ie ON ie.exhibition_id = e.id GROUP BY e.id ORDER BY e.start_date DESC, e.title ASC");
+    // choose where clause based on whether hidden exhibitions should be included
+    $where = $includeHidden ? '' : 'WHERE e.active = 1';
+
+    // decide ordering: if any exhibition has a non-null display_order, use display_order ASC
+    $hasManualOrder = (int) $pdo->query('SELECT COUNT(*) FROM exhibitions WHERE display_order IS NOT NULL')->fetchColumn() ?: 0;
+    if ($hasManualOrder > 0) {
+        $orderSql = 'ORDER BY COALESCE(e.display_order, 0) ASC, e.title ASC';
+    } else {
+        // default public order is by start date ascending, then title
+        $orderSql = 'ORDER BY COALESCE(e.start_date, e.created_at) ASC, e.title ASC';
+    }
+
+    $sql = "SELECT e.*, COUNT(ie.image_id) AS image_count FROM exhibitions e LEFT JOIN image_exhibitions ie ON ie.exhibition_id = e.id {$where} GROUP BY e.id {$orderSql}";
+    $stmt = $pdo->query($sql);
     $exhibitions = [];
     foreach ($stmt as $row) {
         $exhibitions[] = [
@@ -616,10 +1369,13 @@ function gallery_list_exhibitions(?PDO $pdo = null): array
             'endDate' => $row['end_date'],
             'location' => $row['location'],
             'description' => $row['description'],
+            'descriptionHtml' => gallery_render_formatted_text((string) ($row['description'] ?? '')),
             'heroImage' => $row['hero_image'],
             'thumbnailImage' => $row['thumbnail_url'],
             'imageCount' => (int) ($row['image_count'] ?? 0),
             'createdAt' => $row['created_at'] ?? null,
+            'active' => !empty($row['active']) ? 1 : 0,
+            'displayOrder' => isset($row['display_order']) ? $row['display_order'] : null,
         ];
     }
 
@@ -682,23 +1438,26 @@ function gallery_save_exhibition(array $data, array $files = []): array
     }
 
     if ($id > 0) {
-        $stmt = $pdo->prepare('UPDATE exhibitions SET slug = :slug, title = :title, start_date = :start_date, end_date = :end_date, location = :location, description = :description, hero_image = :hero_image, hero_file = :hero_file, thumbnail_file = :thumbnail_file, thumbnail_url = :thumbnail_url WHERE id = :id');
-        $stmt->execute([
-            ':slug' => $slug,
-            ':title' => $title,
-            ':start_date' => trim((string) ($data['startDate'] ?? $data['start_date'] ?? '')),
-            ':end_date' => trim((string) ($data['endDate'] ?? $data['end_date'] ?? '')),
-            ':location' => trim((string) ($data['location'] ?? '')),
-            ':description' => trim((string) ($data['description'] ?? '')),
-            ':hero_image' => $heroImage,
-            ':hero_file' => $heroFile ?: null,
-            ':thumbnail_file' => $thumbnailFile ?: null,
-            ':thumbnail_url' => $thumbnailImage ?: null,
-            ':id' => $id,
-        ]);
+        $activeVal = !empty($data['active']) ? 1 : 0;
+            $stmt = $pdo->prepare('UPDATE exhibitions SET slug = :slug, title = :title, start_date = :start_date, end_date = :end_date, location = :location, description = :description, hero_image = :hero_image, hero_file = :hero_file, thumbnail_file = :thumbnail_file, thumbnail_url = :thumbnail_url, active = :active WHERE id = :id');
+            $stmt->execute([
+                ':slug' => $slug,
+                ':title' => $title,
+                ':start_date' => trim((string) ($data['startDate'] ?? $data['start_date'] ?? '')),
+                ':end_date' => trim((string) ($data['endDate'] ?? $data['end_date'] ?? '')),
+                ':location' => trim((string) ($data['location'] ?? '')),
+                ':description' => trim((string) ($data['description'] ?? '')),
+                ':hero_image' => $heroImage,
+                ':hero_file' => $heroFile ?: null,
+                ':thumbnail_file' => $thumbnailFile ?: null,
+                ':thumbnail_url' => $thumbnailImage ?: null,
+                ':active' => $activeVal,
+                ':id' => $id,
+            ]);
         $exhibitionId = $id;
     } else {
-        $stmt = $pdo->prepare('INSERT INTO exhibitions (slug, title, start_date, end_date, location, description, hero_image, hero_file, thumbnail_file, thumbnail_url) VALUES (:slug, :title, :start_date, :end_date, :location, :description, :hero_image, :hero_file, :thumbnail_file, :thumbnail_url)');
+        $activeVal = !empty($data['active']) ? 1 : 0;
+        $stmt = $pdo->prepare('INSERT INTO exhibitions (slug, title, start_date, end_date, location, description, hero_image, hero_file, thumbnail_file, thumbnail_url, active) VALUES (:slug, :title, :start_date, :end_date, :location, :description, :hero_image, :hero_file, :thumbnail_file, :thumbnail_url, :active)');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -710,6 +1469,7 @@ function gallery_save_exhibition(array $data, array $files = []): array
             ':hero_file' => $heroFile ?: null,
             ':thumbnail_file' => $thumbnailFile ?: null,
             ':thumbnail_url' => $thumbnailImage ?: null,
+            ':active' => $activeVal,
         ]);
         $exhibitionId = (int) $pdo->lastInsertId();
     }
@@ -827,7 +1587,7 @@ function gallery_list_exhibition_images(int $exhibitionId, ?PDO $pdo = null): ar
         return [];
     }
 
-    $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names FROM images i INNER JOIN image_exhibitions ie ON ie.image_id = i.id LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id WHERE ie.exhibition_id = :exhibition_id AND i.deleted_at IS NULL GROUP BY i.id ORDER BY ie.sort_order ASC, i.artwork_created_at DESC, i.created_at DESC');
+    $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names FROM images i INNER JOIN image_exhibitions ie ON ie.image_id = i.id LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id WHERE ie.exhibition_id = :exhibition_id AND i.deleted_at IS NULL GROUP BY i.id ORDER BY i.title ASC');
     $stmt->execute([':exhibition_id' => $exhibitionId]);
     $items = [];
     foreach ($stmt as $row) {
@@ -906,7 +1666,7 @@ function gallery_save_image(array $data, array $files = []): array
         $storedThumb = gallery_store_uploaded_named_asset($thumbInput, __DIR__ . '/uploads/thumbs', 'thumb');
         $thumbPath = $storedThumb['path'];
         $thumbUrl = '/gallery/uploads/thumbs/' . $storedThumb['filename'];
-        if (!gallery_resize_image($thumbPath, $thumbPath, 200, 165, 88)) {
+        if (!gallery_resize_cover($thumbPath, $thumbPath, 200, 165, 88)) {
             throw new RuntimeException('Could not resize the thumbnail image.');
         }
     } elseif ($imageId === null && $filename !== '') {
@@ -932,7 +1692,7 @@ function gallery_save_image(array $data, array $files = []): array
             $thumbFilename = $thumbnailBase . 'thumb-' . bin2hex(random_bytes(4)) . '.jpg';
         }
         $thumbPath = __DIR__ . '/uploads/thumbs/' . $thumbFilename;
-        if (!gallery_resize_image($fullPath, $thumbPath, 200, 165, 88)) {
+        if (!gallery_resize_cover($fullPath, $thumbPath, 200, 165, 88)) {
             throw new RuntimeException('Could not generate the thumbnail image.');
         }
         $thumbUrl = '/gallery/uploads/thumbs/' . $thumbFilename;
@@ -985,10 +1745,12 @@ function gallery_save_image(array $data, array $files = []): array
         $artworkCreatedAt = gallery_detect_creation_date($fullInput['tmp_name']) ?? '';
     }
 
+    $printsAvailable = !empty($data['printsAvailable']) || !empty($data['prints_available']) ? 1 : 0;
+
     $pdo->beginTransaction();
     try {
     if ($isUpdate) {
-        $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, prints_available = :prints_available, active = :active, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -998,7 +1760,9 @@ function gallery_save_image(array $data, array $files = []): array
             ':thumbnail_url' => $thumbUrl,
             ':price_public' => trim((string) ($data['pricePublic'] ?? $data['price'] ?? '')),
             ':price_private' => trim((string) ($data['pricePrivate'] ?? '')),
-            ':available' => isset($data['available']) ? ((int) $data['available']) : 1,
+            ':prints_available' => $printsAvailable,
+            ':active' => isset($data['active']) ? ((int) $data['active']) : 1,
+            ':available' => !empty($data['sold']) ? 0 : (isset($data['available']) ? ((int) $data['available']) : 1),
             ':medium' => $mediumValue,
             ':medium_id' => $mediumId,
             ':genre' => $genreValue,
@@ -1018,7 +1782,7 @@ function gallery_save_image(array $data, array $files = []): array
             ':id' => $imageId,
         ]);
     } else {
-        $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
+        $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, prints_available, active, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :prints_available, :active, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
         $stmt->execute([
             ':slug' => $slug,
             ':title' => $title,
@@ -1028,7 +1792,9 @@ function gallery_save_image(array $data, array $files = []): array
             ':thumbnail_url' => $thumbUrl,
             ':price_public' => trim((string) ($data['pricePublic'] ?? $data['price'] ?? '')),
             ':price_private' => trim((string) ($data['pricePrivate'] ?? '')),
-            ':available' => isset($data['available']) ? ((int) $data['available']) : 1,
+            ':prints_available' => $printsAvailable,
+            ':active' => isset($data['active']) ? ((int) $data['active']) : 1,
+            ':available' => !empty($data['sold']) ? 0 : (isset($data['available']) ? ((int) $data['available']) : 1),
             ':medium' => $mediumValue,
             ':medium_id' => $mediumId,
             ':genre' => $genreValue,

@@ -22,6 +22,49 @@
     clear: both;
 }
 
+.da-thumbs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.da-thumbs > li {
+  float: none;
+  width: auto;
+  margin: 0;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.da-thumbs > li > a {
+  display: block;
+  width: 100%;
+  height: 200px;
+  background: #fff;
+}
+
+.da-thumbs > li > a img {
+  display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: contain;
+  background: #fff;
+}
+
+@media (max-width: 767px) {
+  .da-thumbs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .da-thumbs {
+    grid-template-columns: 1fr;
+  }
+}
+
 .section-heading {
     margin-top: 30px;
     margin-bottom: 10px;
@@ -53,7 +96,7 @@
 <body id="pageBody">
 <div id="divBoxed" class="container">
 
-  <div class="transparent-bg" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;"></div>
+  <div class="transparent-bg"></div>
 
   <div class="divPanel notop nobottom">
     <div class="row-fluid">
@@ -113,30 +156,55 @@
       <!-- Exhibitions Section -->
       <h3 class="section-heading" id="exhibitions-heading">Solo Exhibitions and Art Fair Collections</h3>
       <ul id="exhibitions-list" class="da-thumbs"></ul>
-      <div id="pagination-exhibitions" style="text-align:center; margin-top:20px;"></div>
+      <div id="pagination-exhibitions" class="pagination-center"></div>
 
       <!-- Works Section -->
-      <h3 class="section-heading" id="works-heading">Individual Works</h3>
+      <div class="works-heading-row">
+        <h3 class="section-heading" id="works-heading">Individual Works</h3>
+        <div id="applied-filters" class="applied-filters-placeholder"></div>
+      </div>
         
         <!-- Filters Section -->
-        <div id="filters" class="filters-container">
-            <div class="filter-group">
+        <div id="filters" class="filters-container collapsed">
+          <div id="filter-panel-toggle" class="filter-panel-toggle" role="button" tabindex="0" aria-expanded="false">Search, Sort &amp; Filter <span class="toggle-indicator">▼</span></div>
+          <div id="filters-body" class="filters-body">
+          <div class="filter-group">
+              <label>Search:</label>
+              <div class="filter-search-input-wrap">
+                <input type="text" id="filter-search" placeholder="Search title or description">
+              </div>
+            </div>
+          <div class="filter-group">
                 <label>Medium:</label>
-                <select id="filter-medium">
+                  <select id="filter-medium" title="Filter by medium">
                     <option value="">All</option>                  
                 </select>
             </div>
 			
 			<div class="filter-group">
                 <label>Genre:</label>
-                <select id="filter-genre">
+                <select id="filter-genre" title="Filter by genre">
                     <option value="">All</option>                  
                 </select>
             </div>
 
             <div class="filter-group">
+              <label>Collection:</label>
+              <select id="filter-collection" title="Filter by collection">
+                <option value="">All</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>Award:</label>
+              <select id="filter-award" title="Filter by award">
+                <option value="">All</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
                 <label>Sold:</label>
-                <select id="filter-sold">
+                <select id="filter-sold" title="Filter by sold status">
                     <option value="">All</option>
                     <option value="sold">Sold</option>
                     <option value="available">Available</option>
@@ -144,16 +212,33 @@
             </div>
 
             <div class="filter-group">
-                <label>Search:</label>
-                <input type="text" id="filter-search" placeholder="Search title or medium">
+              <label>Limited Prints:</label>
+              <select id="filter-prints" title="Filter by limited print availability">
+                <option value="">All</option>
+                <option value="available">Available</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>Order by:</label>
+              <select id="filter-order" title="Order gallery works">
+                <option value="created-desc">Artwork Creation Date</option>
+                <option value="title-asc">Title</option>
+              </select>
             </div>
 
             <button id="filter-reset" class="btn">Reset</button>
-            <a href="/gallery/admin-login.php" class="btn btn-primary">Manage gallery uploads</a>
-        </div>
+            <div id="filter-breadcrumb" class="filter-breadcrumb"></div>
+            </div>
+          </div>
         
       <ul id="works-list" class="da-thumbs"></ul>
-      <div id="pagination-works" style="text-align:center; margin-top:20px;"></div>
+      <div id="pagination-works" class="pagination-center"></div>
+      <div id="manage-gallery-panel">
+        <a id="manage-gallery" href="/gallery/admin-login.php">Manage gallery uploads</a>
+      </div>
+      
 
       <!-- ⭐ FOOTER INNER SEPARATOR -->
       <div id="footerInnerSeparator"></div>
@@ -185,6 +270,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+
+<br />
+<br />
+<br />
 
 <script src="scripts/bootstrap/js/bootstrap.min.js"></script>
 <script src="scripts/default.js"></script>
