@@ -70,59 +70,6 @@
     <!--End Camera Slider here-->
     <div id="divHeaderText" class="page-content">
 
-    <!-- Dynamic home heroes loader: fetches visible heroes from gallery-api and replaces static hero blocks -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      function renderHeroes(heroes) {
-        var container = document.getElementById('home-heroes-container');
-        if (!container) {
-          // create placeholder at top of content if not present
-          var header = document.getElementById('divHeaderText');
-          container = document.createElement('div');
-          container.id = 'home-heroes-container';
-          header.parentNode.insertBefore(container, header.nextSibling);
-        }
-        heroes.forEach(function (hero) {
-          if (!hero.visible) return;
-          var wrap = document.createElement('div');
-          var style = hero.visual_style || 'info';
-          wrap.className = 'alert alert-' + style;
-          if (hero.title) {
-            var h = document.createElement('h2');
-            h.innerHTML = '<div align="center">' + hero.title + '</div>';
-            wrap.appendChild(h);
-          }
-          if (hero.body) {
-            var b = document.createElement('div');
-            b.className = 'hero-body';
-            b.innerHTML = hero.body;
-            wrap.appendChild(b);
-          }
-          if (hero.slug) {
-            var cwrap = document.createElement('div');
-            cwrap.style.textAlign = 'center';
-            var a = document.createElement('a');
-            a.href = '/gallery/public-hero.php?slug=' + encodeURIComponent(hero.slug);
-            a.className = 'btn btn-primary';
-            a.textContent = 'Read more';
-            cwrap.appendChild(a);
-            wrap.appendChild(cwrap);
-          }
-          container.appendChild(wrap);
-        });
-      }
-
-      fetch('/gallery-api.php?action=list-home-heroes', { headers: { Accept: 'application/json' } })
-        .then(function (res) { return res.text(); })
-        .then(function (text) {
-          try { var payload = JSON.parse(text); } catch (e) { console.error('Invalid JSON for home heroes', e); return; }
-          if (!payload || !payload.success || !Array.isArray(payload.heroes)) return;
-          // hide existing static hero blocks (if present)
-          document.querySelectorAll('.alert.alert-info, .alert.alert-success').forEach(function (el) { el.style.display = 'none'; });
-          renderHeroes(payload.heroes);
-        }).catch(function (err) { console.error('Failed to load home heroes', err); });
-    });
-    </script>
       <div id="divHeaderLine1"></div>
     </div>
 
@@ -148,7 +95,9 @@
         try{ var payload = JSON.parse(text); } catch(e){ console.error('Invalid heroes JSON', e); return; }
         if(!payload || !payload.success || !Array.isArray(payload.heroes)) return;
         var container = document.getElementById('home-heroes-container');
-        payload.heroes.forEach(function(hero){
+                // clear any existing rendered heroes to avoid duplicates
+                container.innerHTML = '';
+                payload.heroes.forEach(function(hero){
           if(!hero.visible) return;
           var style = hero.visual_style || 'info';
           var wrap = document.createElement('div');
@@ -176,17 +125,6 @@
             var b = document.createElement('div');
             b.innerHTML = hero.body;
             bodyWrap.appendChild(b);
-          }
-          if(hero.slug){
-            var footer = document.createElement('div');
-            footer.style.textAlign = 'center';
-            footer.style.marginTop = '0.5rem';
-            var a = document.createElement('a');
-            a.href = '/gallery/public-hero.php?slug=' + encodeURIComponent(hero.slug);
-            a.className = 'btn btn-primary';
-            a.textContent = 'Read more';
-            footer.appendChild(a);
-            bodyWrap.appendChild(footer);
           }
 
           wrap.appendChild(bodyWrap);
