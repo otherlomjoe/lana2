@@ -101,7 +101,7 @@
           if(!hero.visible) return;
           var style = hero.visual_style || 'info';
           var wrap = document.createElement('div');
-          wrap.className = 'home-hero alert alert-' + style;
+          wrap.className = 'home-hero alert alert-' + style + ' home-hero-panel';
 
           if(hero.image_url){
             var imgWrap = document.createElement('div');
@@ -116,14 +116,43 @@
 
           var bodyWrap = document.createElement('div');
           bodyWrap.className = 'hero-body';
-          if(hero.title){
+          if (hero.title) {
             var h = document.createElement('h2');
-            h.innerHTML = '<div align="center">' + hero.title + '</div>';
+            // use textContent to avoid injecting raw HTML into the title
+            var titleDiv = document.createElement('div');
+            titleDiv.setAttribute('align', 'center');
+            titleDiv.textContent = hero.title;
+            h.appendChild(titleDiv);
             bodyWrap.appendChild(h);
           }
-          if(hero.body){
+          if (hero.body || hero.bodyHtml) {
             var b = document.createElement('div');
-            b.innerHTML = hero.body;
+            // render markdown-like body the same way admin preview does
+            function escapeHtml(value) { return value.replace(/[&<>"']/g, function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]); }); }
+            function render(text) {
+              var escaped = escapeHtml((text||'').trim()).replace(/\r\n|\r/g,'\n')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/\[([^\]]+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+              return escaped.split(/\n\s*\n/).filter(Boolean).map(function(block){
+                var lines = block.split('\n').map(function(line){ return line.trim(); }).filter(Boolean);
+                if (lines.every(function(line){ return /^-\s+/.test(line); })) {
+                  return '<ul>' + lines.map(function(line){ return '<li>' + line.replace(/^-\s+/, '') + '</li>'; }).join('') + '</ul>';
+                }
+                return lines.map(function(line){
+                  var match = line.match(/^(#{1,6})\s+(.+)$/);
+                  if (match) return '<h' + match[1].length + '>' + match[2] + '</h' + match[1].length + '>';
+                  return '<p>' + line + '</p>';
+                }).join('');
+              }).join('');
+            }
+            b.className = 'home-hero-body';
+            if (hero.body) {
+              b.innerHTML = render(hero.body);
+            } else {
+              // bodyHtml is server-rendered and safe (rendered by gallery_render_formatted_text)
+              b.innerHTML = hero.bodyHtml || '';
+            }
             bodyWrap.appendChild(b);
           }
 
