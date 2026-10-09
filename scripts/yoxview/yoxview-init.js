@@ -1,4 +1,4 @@
-﻿var yoxviewPath = getYoxviewPath();
+var yoxviewPath = getYoxviewPath();
 var cssLink = top.document.createElement("link");
 cssLink.setAttribute("rel", "Stylesheet");
 cssLink.setAttribute("type", "text/css");
@@ -13,7 +13,7 @@ function LoadScript(url)
 var jQueryIsLoaded = typeof jQuery != "undefined";
 
 if (!jQueryIsLoaded)
-    LoadScript("http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js");
+    LoadScript("https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js");
     
 LoadScript(yoxviewPath + "jquery.yoxview-2.21.js");
 

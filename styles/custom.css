@@ -122,7 +122,7 @@ margin-right: -20px !important; /* fix bg cover issue */
 
 img {max-width:100%;height:auto;width:auto;-moz-box-sizing:border-box;-webkit-box-sizing:border-box;box-sizing:border-box;}
 
-/* Responsive Video from Zurb Foundation. Copyright (c) 2011 ZURB, http://www.zurb.com/ License: MIT */
+/* Responsive Video from Zurb Foundation. Copyright (c) 2011 ZURB, https://www.zurb.com/ License: MIT */
 
 .flex-video {position:relative;padding-top:25px;padding-bottom:67.5%;height:0;margin-bottom:16px;overflow: hidden;}
 
@@ -833,5 +833,6 @@ h6,.page-content h6 a {font-weight: normal; font-style: normal; font-family: 'So
 .tag:hover {
     background: #ddd;
 }
+
 
 
