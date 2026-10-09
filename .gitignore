@@ -1,0 +1,27 @@
+# Local test/dev helpers — keep these local only
+/check_html.php
+/router.php
+
+# Local index backups (explicit + wildcard for numbered backups)
+#index.html.bak, index.html.bak2, etc.
+/index.html.bak
+/index.html.bak*
+/index.nbaks
+*.nbaks
+
+# Local archive folder (keeps your Archive\09102926 out of Git)
+/Archive/
+/Archive/**
+
+# Editor/OS temp files
+/.vscode/
+/.idea/
+/*.sublime-workspace
+*.swp
+*~
+Thumbs.db
+.DS_Store
+
+# Logs / temp
+*.log
+*.tmp
