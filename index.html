@@ -1,19 +1,16 @@
-<html><head></head><body dir="ltr" spellcheck="true" style="direction: ltr; min-height: 159px;" id="pageBody"><p>
-
-
+<html><head>
 <meta charset="utf-8">
 <title>Lana-Leigh Lombard - Welcome</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="">
 <meta name="author" content="">
-<link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet"></p>
-<p><link href="scripts/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet"></p>
-
+<link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+<link href="scripts/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
 <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements --><!-- Icons -->
-<p><link href="scripts/icons/general/stylesheets/general_foundicons.css" media="screen" rel="stylesheet" type="text/css"></p>
-<p><link href="scripts/icons/social/stylesheets/social_foundicons.css" media="screen" rel="stylesheet" type="text/css"></p>
-<p><link rel="stylesheet" href="scripts/fontawesome/css/font-awesome.min.css"></p>
-<p><link href="scripts/carousel/style.css" rel="stylesheet" type="text/css">
+<link href="scripts/icons/general/stylesheets/general_foundicons.css" media="screen" rel="stylesheet" type="text/css">
+<link href="scripts/icons/social/stylesheets/social_foundicons.css" media="screen" rel="stylesheet" type="text/css">
+<link rel="stylesheet" href="scripts/fontawesome/css/font-awesome.min.css">
+<link href="scripts/carousel/style.css" rel="stylesheet" type="text/css">
 <link href="scripts/camera/css/camera.css" rel="stylesheet" type="text/css">
 <link href="scripts/wookmark/css/style.css" rel="stylesheet" type="text/css">
 <link href="scripts/yoxview/yoxview.css" rel="stylesheet" type="text/css">
@@ -27,7 +24,11 @@
 <link rel="stylesheet" type="text/css" href="circlehover/css/common.css">
 <link rel="stylesheet" type="text/css" href="circlehover/css/style2.css">
 <link href="http://fonts.googleapis.com/css?family=Open+Sans:300,700" rel="stylesheet" type="text/css">
-</p><script type="text/javascript" src="circlehover/js/modernizr.custom.79639.js"></script>
+<script type="text/javascript" src="circlehover/js/modernizr.custom.79639.js"></script>
+</head><body dir="ltr" spellcheck="true" style="direction: ltr; min-height: 159px;" id="pageBody"><p>
+
+
+
 
 
 
@@ -131,18 +132,18 @@
             function escapeHtml(value) { return value.replace(/[&<>"']/g, function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]); }); }
             function render(text) {
               var escaped = escapeHtml((text||'').trim()).replace(/\r\n|\r/g,'\n')
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                .replace(/\[([^\]]+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+                .replace(/\*\*(.+?)\*\*/g, '\x3Cstrong\x3E$1\x3C/strong\x3E')
+                .replace(/\*(.+?)\*/g, '\x3Cem\x3E$1\x3C/em\x3E')
+                .replace(/\[([^\]]+)\]\((https:\/\/[^)]+)\)/g, '\x3Ca href="$2" target="_blank" rel="noopener noreferrer"\x3E$1\x3C/a\x3E');
               return escaped.split(/\n\s*\n/).filter(Boolean).map(function(block){
                 var lines = block.split('\n').map(function(line){ return line.trim(); }).filter(Boolean);
                 if (lines.every(function(line){ return /^-\s+/.test(line); })) {
-                  return '<ul>' + lines.map(function(line){ return '<li>' + line.replace(/^-\s+/, '') + '</li>'; }).join('') + '</ul>';
+                  return '\x3Cul\x3E' + lines.map(function(line){ return '\x3Cli\x3E' + line.replace(/^-\s+/, '') + '\x3C/li\x3E'; }).join('') + '\x3C/ul\x3E';
                 }
                 return lines.map(function(line){
                   var match = line.match(/^(#{1,6})\s+(.+)$/);
-                  if (match) return '<h' + match[1].length + '>' + match[2] + '</h' + match[1].length + '>';
-                  return '<p>' + line + '</p>';
+                  if (match) return '\x3Ch' + match[1].length + '\x3E' + match[2] + '\x3C/h' + match[1].length + '\x3E';
+                  return '\x3Cp\x3E' + line + '\x3C/p\x3E';
                 }).join('');
               }).join('');
             }
@@ -229,8 +230,8 @@
 
 				  <!-- Desktop Plugin -->
 				  <div id="fb-plugin">
-					<jodit data-jodit-temp="1" contenteditable="false" draggable="true" data-jodit_iframe_wrapper="1" style="border-width: medium; border-style: none; border-color: currentcolor; border-image: none; overflow: hidden; display: block; width: 500px; height: 500px;"><iframe src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Flanaleighsartyadventures%2F&amp;tabs=timeline&amp;width=500&amp;height=500&amp;small_header=true&amp;adapt_container_width=true&amp;hide_cover=true&amp;show_facepile=false&amp;appId" width="500" height="500" style="border:none;overflow:hidden" scrolling="yes" frameborder="0" allowtransparency="true">
-					</iframe></jodit>
+					<div data-jodit-temp="1" data-jodit="true" contenteditable="false" draggable="true" data-jodit_iframe_wrapper="1" style="border-width: medium; border-style: none; border-color: currentcolor; border-image: none; overflow: hidden; display: block; width: 500px; height: 500px;"><iframe src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Flanaleighsartyadventures%2F&amp;tabs=timeline&amp;width=500&amp;height=500&amp;small_header=true&amp;adapt_container_width=true&amp;hide_cover=true&amp;show_facepile=false&amp;appId" width="500" height="500" style="border:none;overflow:hidden" scrolling="yes" frameborder="0" allowtransparency="true">
+					</iframe></div>
 				  </div>
 
 				  <!-- Mobile Fallback -->
@@ -334,3 +335,4 @@ $(function () {
 
 
 </body></html>
+
