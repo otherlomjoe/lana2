@@ -114,9 +114,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
-                    if (!@rename($fullSrc, $destPath)) {
+                    if (!rename($fullSrc, $destPath)) {
                         // try copy
-                        if (!@copy($fullSrc, $destPath)) throw new RuntimeException('Could not move/copy full image: ' . $fullSrc);
+                        if (!copy($fullSrc, $destPath)) {
+                            error_log('admin-import-json: failed to move or copy full image from ' . $fullSrc . ' to ' . $destPath);
+                            throw new RuntimeException('Could not move/copy full image: ' . $fullSrc);
+                        }
                     }
                     $destFull = $destPath;
                     $fullUrl = '/gallery/uploads/full/' . basename($destPath);
@@ -136,8 +139,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $tdestPath = $tdestDir . '/' . $tsafe;
                         $j++;
                     }
-                    if (!@rename($thumbSrc, $tdestPath)) {
-                        if (!@copy($thumbSrc, $tdestPath)) throw new RuntimeException('Could not move/copy thumb image: ' . $thumbSrc);
+                    if (!rename($thumbSrc, $tdestPath)) {
+                        if (!copy($thumbSrc, $tdestPath)) {
+                            error_log('admin-import-json: failed to move or copy thumb image from ' . $thumbSrc . ' to ' . $tdestPath);
+                            throw new RuntimeException('Could not move/copy thumb image: ' . $thumbSrc);
+                        }
                     }
                     $destThumb = $tdestPath;
                     $thumbUrl = '/gallery/uploads/thumbs/' . basename($tdestPath);
@@ -279,8 +285,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         $heroFilename = 'exhibition-' . $exSlug . '-' . bin2hex(random_bytes(4)) . '.' . ($ext ?: 'jpg');
                                         $heroDest = $exFullDir . '/' . $heroFilename;
                                         // copy full to exhibition full
-                                        if (!@copy($destFull, $heroDest)) {
-                                            // ignore failure
+                                        if (!copy($destFull, $heroDest)) {
+                                            error_log('admin-import-json: failed to copy ' . $destFull . ' to ' . $heroDest);
                                         } else {
                                             $heroUrl = '/gallery/uploads/exhibitions/full/' . $heroFilename;
                                             // generate thumbnail

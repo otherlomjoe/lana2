@@ -268,6 +268,18 @@ function gallery_slugify(string $value): string
     return $value !== '' ? $value : 'untitled';
 }
 
+/**
+ * Validate a table name against a known whitelist to avoid accidental SQL injection
+ */
+function gallery_is_allowed_table(string $name): bool
+{
+    static $allowed = [
+        'image_exhibitions','image_tags','images','exhibitions',
+        'home_heroes','home_slider_images','tags','mediums','genres','collections'
+    ];
+    return preg_match('/^[a-z_]+$/', $name) === 1 && in_array($name, $allowed, true);
+}
+
 function gallery_build_title_from_filename(string $filename): string
 {
     $filename = basename($filename);
@@ -309,8 +321,27 @@ function gallery_detect_orientation(string $imagePath): string
         return 'landscape';
     }
 
-    $size = @getimagesize($imagePath);
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = $finfo->file($imagePath);
+    if ($mime === false || stripos((string)$mime, 'image/') !== 0) {
+        error_log("gallery_detect_orientation: not an image: {$imagePath}");
+        return 'landscape';
+    }
+
+    try {
+        set_error_handler(function($severity, $message) use ($imagePath) {
+            error_log("getimagesize warning for {$imagePath}: {$message}");
+            throw new ErrorException($message);
+        });
+        $size = getimagesize($imagePath);
+        restore_error_handler();
+    } catch (Throwable $e) {
+        restore_error_handler();
+        error_log("gallery_detect_orientation: getimagesize failed for {$imagePath}: " . $e->getMessage());
+        return 'landscape';
+    }
     if (!$size || !isset($size[0], $size[1])) {
+        error_log("gallery_detect_orientation: getimagesize returned invalid data for {$imagePath}");
         return 'landscape';
     }
 
@@ -323,16 +354,61 @@ function gallery_detect_creation_date(string $imagePath): ?string
         return null;
     }
 
-    if (function_exists('exif_read_data') && @getimagesize($imagePath)[2] === IMAGETYPE_JPEG) {
-        $exif = @exif_read_data($imagePath, 'EXIF', true);
-        $date = $exif['EXIF']['DateTimeOriginal'] ?? $exif['EXIF']['DateTimeDigitized'] ?? null;
-        if (is_string($date) && preg_match('/^(\d{4}):(\d{2}):(\d{2})/', $date, $matches)) {
-            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
+    // Prefer EXIF for JPEGs if available
+    if (function_exists('exif_read_data')) {
+        try {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($imagePath);
+            if ($mime === 'image/jpeg') {
+                // protect against warnings from exif_read_data
+                set_error_handler(function($severity, $message) use ($imagePath) {
+                    error_log("exif_read_data warning for {$imagePath}: {$message}");
+                    throw new ErrorException($message);
+                });
+                try {
+                    $exif = exif_read_data($imagePath, 'EXIF', true);
+                } catch (Throwable $e) {
+                    // already logged by handler
+                    $exif = null;
+                }
+                restore_error_handler();
+
+                $date = $exif['EXIF']['DateTimeOriginal'] ?? $exif['EXIF']['DateTimeDigitized'] ?? null;
+                if (is_string($date) && preg_match('/^(\d{4}):(\d{2}):(\d{2})/', $date, $matches)) {
+                    return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
+                }
+            }
+        } catch (Throwable $e) {
+            // fall-through to filesystem timestamps
+            restore_error_handler();
         }
     }
 
-    $timestamp = @filemtime($imagePath);
+    // Fallback to file modification time
+    $timestamp = filemtime($imagePath);
     return $timestamp !== false ? date('Y-m-d', $timestamp) : null;
+}
+
+/**
+ * Safe wrapper around getimagesize to avoid suppressed warnings. Returns array or false.
+ */
+function gallery_safe_getimagesize(string $path)
+{
+    if (!is_file($path)) {
+        return false;
+    }
+    try {
+        set_error_handler(function($severity, $message) use ($path) {
+            error_log("getimagesize warning for {$path}: {$message}");
+            throw new ErrorException($message);
+        });
+        $size = getimagesize($path);
+        restore_error_handler();
+    } catch (Throwable $e) {
+        restore_error_handler();
+        return false;
+    }
+    return $size;
 }
 
 /**
@@ -347,38 +423,62 @@ function gallery_derive_artwork_date(string $imagePath): array
 
     // 1) Try EXIF (DateTimeOriginal, DateTimeDigitized, DateTime)
     if (function_exists('exif_read_data')) {
-        $size = @getimagesize($imagePath);
-        if ($size && isset($size[2]) && $size[2] === IMAGETYPE_JPEG) {
-            $exif = @exif_read_data($imagePath, 'EXIF', true);
-            $candidates = [];
-            if (!empty($exif)) {
-                if (!empty($exif['EXIF']['DateTimeOriginal'])) $candidates[] = $exif['EXIF']['DateTimeOriginal'];
-                if (!empty($exif['EXIF']['DateTimeDigitized'])) $candidates[] = $exif['EXIF']['DateTimeDigitized'];
-                if (!empty($exif['EXIF']['DateTime'])) $candidates[] = $exif['EXIF']['DateTime'];
-                // also check flattened keys
-                if (!empty($exif['IFD0']['DateTime'])) $candidates[] = $exif['IFD0']['DateTime'];
-            }
-            foreach ($candidates as $exifDate) {
-                if (!is_string($exifDate)) continue;
-                if (preg_match('/^(\d{4}):(\d{2}):(\d{2})/', $exifDate, $m)) {
-                    return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'exif'];
+        try {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($imagePath);
+            if ($mime === 'image/jpeg') {
+                set_error_handler(function($severity, $message) use ($imagePath) {
+                    error_log("exif_read_data warning for {$imagePath}: {$message}");
+                    throw new ErrorException($message);
+                });
+                try {
+                    $exif = exif_read_data($imagePath, 'EXIF', true);
+                } catch (Throwable $e) {
+                    $exif = null;
+                }
+                restore_error_handler();
+
+                $candidates = [];
+                if (!empty($exif)) {
+                    if (!empty($exif['EXIF']['DateTimeOriginal'])) $candidates[] = $exif['EXIF']['DateTimeOriginal'];
+                    if (!empty($exif['EXIF']['DateTimeDigitized'])) $candidates[] = $exif['EXIF']['DateTimeDigitized'];
+                    if (!empty($exif['EXIF']['DateTime'])) $candidates[] = $exif['EXIF']['DateTime'];
+                    if (!empty($exif['IFD0']['DateTime'])) $candidates[] = $exif['IFD0']['DateTime'];
+                }
+                foreach ($candidates as $exifDate) {
+                    if (!is_string($exifDate)) continue;
+                    if (preg_match('/^(\d{4}):(\d{2}):(\d{2})/', $exifDate, $m)) {
+                        return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'exif'];
+                    }
                 }
             }
+        } catch (Throwable $e) {
+            restore_error_handler();
         }
     }
 
     // 2) Try IPTC (APP13)
     $imageInfo = null;
-    @getimagesize($imagePath, $imageInfo);
-    if (!empty($imageInfo['APP13'])) {
-        $iptc = @iptcparse($imageInfo['APP13']);
+    try {
+        set_error_handler(function($severity, $message) use ($imagePath) {
+            error_log("getimagesize warning for {$imagePath}: {$message}");
+            throw new ErrorException($message);
+        });
+        $ok = getimagesize($imagePath, $imageInfo);
+        restore_error_handler();
+    } catch (Throwable $e) {
+        restore_error_handler();
+        $ok = false;
+    }
+
+    if ($ok !== false && !empty($imageInfo['APP13'])) {
+        $iptc = iptcparse($imageInfo['APP13'] ?? '');
         if (!empty($iptc['2#055'][0])) { // DateCreated YYYYMMDD
             $d = $iptc['2#055'][0];
             if (preg_match('/^(\d{4})(\d{2})(\d{2})/', $d, $m)) {
                 return ['date' => sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]), 'source' => 'iptc'];
             }
         }
-        // Sometimes TimeCreated is available in 2#060; we prefer combined DateCreated above
         if (!empty($iptc['2#060'][0]) && !empty($iptc['2#055'][0])) {
             $d = $iptc['2#055'][0];
             if (preg_match('/^(\d{4})(\d{2})(\d{2})/', $d, $m)) {
@@ -387,14 +487,14 @@ function gallery_derive_artwork_date(string $imagePath): array
         }
     }
 
-    // 3) Filesystem creation time (filectime) — on Windows this is the real creation time.
-    $ctime = @filectime($imagePath);
+    // 3) Filesystem creation time (filectime)
+    $ctime = filectime($imagePath);
     if ($ctime !== false) {
         return ['date' => date('Y-m-d', $ctime), 'source' => 'filectime'];
     }
 
     // 4) Filesystem modification time
-    $mtime = @filemtime($imagePath);
+    $mtime = filemtime($imagePath);
     if ($mtime !== false) {
         return ['date' => date('Y-m-d', $mtime), 'source' => 'filemtime'];
     }
@@ -647,7 +747,11 @@ function gallery_hard_delete_home_hero(int $id): bool
     $row = $stmt->fetch();
     if (!$row) return false;
     $deleted = $pdo->prepare('DELETE FROM home_heroes WHERE id = :id')->execute([':id' => $id]);
-    if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) @unlink($row['image_file']);
+    if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) {
+        if (!unlink($row['image_file'])) {
+            error_log("gallery_hard_delete_home_hero: failed to unlink " . $row['image_file']);
+        }
+    }
     return $deleted;
 }
 
@@ -821,7 +925,11 @@ function gallery_hard_delete_slider_image(int $id): bool
     $row = $stmt->fetch();
     if (!$row) return false;
     $deleted = $pdo->prepare('DELETE FROM home_slider_images WHERE id = :id')->execute([':id' => $id]);
-    if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) @unlink($row['image_file']);
+    if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) {
+        if (!unlink($row['image_file'])) {
+            error_log("gallery_hard_delete_slider_image: failed to unlink " . $row['image_file']);
+        }
+    }
     return $deleted;
 }
 
@@ -951,7 +1059,13 @@ function gallery_clear_directory_files(string $dir): int
     if ($files === false) return 0;
     $removed = 0;
     foreach ($files as $file) {
-        if (is_file($file) && @unlink($file)) $removed++;
+        if (is_file($file)) {
+            if (!unlink($file)) {
+                error_log("gallery_clear_directory_files: failed to unlink {$file}");
+            } else {
+                $removed++;
+            }
+        }
     }
     return $removed;
 }
@@ -996,6 +1110,9 @@ function gallery_clear_images_only(): int
     // this ensures a clean state with no leftover lookup rows referencing removed images
     $lookupTables = ['tags', 'mediums', 'genres', 'collections'];
     foreach ($lookupTables as $lt) {
+        if (!gallery_is_allowed_table($lt)) {
+            throw new RuntimeException('Refusing to operate on unknown lookup table: ' . $lt);
+        }
         $pdo->exec("DELETE FROM {$lt}");
     }
 
@@ -1003,10 +1120,16 @@ function gallery_clear_images_only(): int
     $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
     if ($driver === 'mysql') {
         foreach ($lookupTables as $lt) {
+            if (!gallery_is_allowed_table($lt)) {
+                throw new RuntimeException('Refusing to operate on unknown lookup table: ' . $lt);
+            }
             $pdo->exec("ALTER TABLE {$lt} AUTO_INCREMENT = 1");
         }
     } elseif ($driver === 'sqlite') {
         foreach ($lookupTables as $lt) {
+            if (!gallery_is_allowed_table($lt)) {
+                throw new RuntimeException('Refusing to operate on unknown lookup table: ' . $lt);
+            }
             $pdo->exec('DELETE FROM sqlite_sequence WHERE name = ' . $pdo->quote($lt));
         }
         // recommended to free space / reset internal counters
@@ -1232,7 +1355,18 @@ function gallery_store_uploaded_named_asset(array $file, string $directory, stri
     if ((int) ($file['size'] ?? 0) > 10 * 1024 * 1024) {
         throw new RuntimeException('Uploaded images must be 10 MB or smaller.');
     }
-    $dimensions = @getimagesize($file['tmp_name']);
+    // validate dimensions safely; guard against getimagesize warnings
+    try {
+        set_error_handler(function($severity, $message) use ($file) {
+            error_log("getimagesize warning for uploaded file {$file['tmp_name']}: {$message}");
+            throw new ErrorException($message);
+        });
+        $dimensions = getimagesize($file['tmp_name']);
+        restore_error_handler();
+    } catch (Throwable $e) {
+        restore_error_handler();
+        $dimensions = false;
+    }
     if (!$dimensions || $dimensions[0] < 1 || $dimensions[1] < 1 || $dimensions[0] > 10000 || $dimensions[1] > 10000) {
         throw new RuntimeException('Uploaded image dimensions are invalid or too large.');
     }
@@ -1937,7 +2071,9 @@ function gallery_hard_delete_image(int $imageId): bool
         foreach (['full_file', 'thumbnail_file', 'deleted_full_file', 'deleted_thumbnail_file'] as $column) {
             $file = (string) ($row[$column] ?? '');
             if ($file !== '' && is_file($file)) {
-                @unlink($file);
+                if (!unlink($file)) {
+                    error_log("gallery_hard_delete_image: failed to unlink {$file}");
+                }
             }
         }
     }
@@ -1963,7 +2099,9 @@ function gallery_remove_image_asset(int $imageId, string $asset): bool
     $urlColumn = $asset === 'full' ? 'full_url' : 'thumbnail_url';
     $file = (string) ($row[$column] ?? '');
     if ($file !== '' && is_file($file)) {
-        @unlink($file);
+        if (!unlink($file)) {
+            error_log("gallery_remove_image_asset: failed to unlink {$file}");
+        }
     }
 
     return $pdo->prepare("UPDATE images SET {$column} = NULL, {$urlColumn} = NULL WHERE id = :id")->execute([':id' => $imageId]);

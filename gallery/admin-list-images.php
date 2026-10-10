@@ -47,7 +47,10 @@ unset($_SESSION['gallery_admin_message']);
             <td>
               <?php
                 $imagePath = (string) ($item['full_file'] ?? '');
-                $imageInfo = $imagePath !== '' && is_file($imagePath) ? @getimagesize($imagePath) : false;
+                $imageInfo = false;
+                if ($imagePath !== '' && is_file($imagePath)) {
+                    $imageInfo = gallery_safe_getimagesize($imagePath);
+                }
                 $imageDetails = $imageInfo ? ((int) $imageInfo[0] . ' x ' . (int) $imageInfo[1] . ' px; ' . number_format((int) filesize($imagePath) / 1024, 1) . ' KB') : '';
               ?>
               <?php if (!empty($item['thumbnail'])): ?><img class="admin-list-thumbnail" src="<?= htmlspecialchars((string) $item['thumbnail'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($item['title'] ?? 'Image'), ENT_QUOTES, 'UTF-8') ?>"><br><?php endif; ?>

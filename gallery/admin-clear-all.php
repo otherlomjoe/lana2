@@ -78,16 +78,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
 
             foreach ($tables as $t) {
+                if (!function_exists('gallery_is_allowed_table') || !gallery_is_allowed_table($t)) {
+                    throw new RuntimeException('Refusing to operate on unknown table: ' . $t);
+                }
                 $pdo->exec("DELETE FROM {$t}");
             }
 
             $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
             if ($driver === 'mysql') {
                 foreach ($tables as $t) {
+                    if (!function_exists('gallery_is_allowed_table') || !gallery_is_allowed_table($t)) {
+                        throw new RuntimeException('Refusing to operate on unknown table: ' . $t);
+                    }
                     $pdo->exec("ALTER TABLE {$t} AUTO_INCREMENT = 1");
                 }
             } elseif ($driver === 'sqlite') {
                 foreach ($tables as $t) {
+                    if (!function_exists('gallery_is_allowed_table') || !gallery_is_allowed_table($t)) {
+                        throw new RuntimeException('Refusing to operate on unknown table: ' . $t);
+                    }
                     $pdo->exec('DELETE FROM sqlite_sequence WHERE name = ' . $pdo->quote($t));
                 }
                 $pdo->exec('VACUUM');

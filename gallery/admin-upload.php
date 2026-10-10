@@ -4,8 +4,12 @@ $versionFile = dirname(__DIR__) . '/version.txt';
 if (is_file($versionFile)) {
     $version = trim(file_get_contents($versionFile));
 } elseif (is_dir(dirname(__DIR__) . '/.git')) {
-    $git = @shell_exec('git -C ' . escapeshellarg(dirname(__DIR__)) . ' describe --tags --always 2>/dev/null');
-    if ($git) $version = trim($git);
+    $git = shell_exec('git -C ' . escapeshellarg(dirname(__DIR__)) . ' describe --tags --always 2>/dev/null');
+    if (is_string($git) && $git !== '') {
+        $version = trim($git);
+    } elseif ($git === null) {
+        error_log('admin-upload: shell_exec returned null when attempting to get git version');
+    }
 }
 echo '<div id="deploy-version">Version: ' . htmlspecialchars($version, ENT_QUOTES, 'UTF-8') . '</div>';
 
