@@ -1,0 +1,298 @@
+/* Bundled admin scripts: admin-media-preview.js + gallery-admin.js
+ * Built 2026-10-10 - Created for convenience so admin pages can include one script.
+ * Note: This is a simple concatenation; both modules are IIFE-style and should not conflict.
+ */
+
+// --- admin-media-preview.js ---
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('[data-media-input]').forEach(function (input) {
+    const preview = document.querySelector('[data-media-preview="' + input.id + '"]');
+    if (!preview) return;
+
+    const update = function () {
+      preview.innerHTML = '';
+      const file = input.files && input.files[0];
+      if (!file) return;
+
+      const image = document.createElement('img');
+      image.src = URL.createObjectURL(file);
+      image.alt = 'Selected ' + (input.dataset.mediaInput || 'image');
+      image.style.maxWidth = input.dataset.mediaInput === 'thumbnail' ? '200px' : '320px';
+      image.style.maxHeight = input.dataset.mediaInput === 'thumbnail' ? '165px' : '320px';
+      image.style.height = 'auto';
+
+      const name = document.createElement('div');
+      name.textContent = file.name;
+
+      const details = document.createElement('small');
+      details.textContent = (file.size / 1024).toFixed(1) + ' KB';
+      image.addEventListener('load', function () {
+        details.textContent = image.naturalWidth + ' x ' + image.naturalHeight + ' px; ' + (file.size / 1024).toFixed(1) + ' KB';
+        URL.revokeObjectURL(image.src);
+      });
+
+      const clear = document.createElement('button');
+      clear.type = 'button';
+      clear.className = 'btn btn-small';
+      clear.textContent = 'Clear selection';
+      clear.addEventListener('click', function () {
+        input.value = '';
+        update();
+        input.dispatchEvent(new Event('change'));
+      });
+
+      preview.appendChild(image);
+      preview.appendChild(name);
+      preview.appendChild(details);
+      preview.appendChild(clear);
+    };
+
+    input.addEventListener('change', update);
+  });
+});
+
+// --- gallery-admin.js ---
+(function () {
+  'use strict';
+
+  // Integration module for admin-side helper behaviors.
+  // The original tail referenced helpers (API_URL, fetchJson, getUploadedItems, saveUploadedItems,
+  // statusText, formData, AUTH_KEY, showAuthPanel, ensureLoggedInState). This module exposes
+  // a safe, self-contained API and defensive implementations so the tail behavior can be
+  // invoked by other admin scripts without top-level await or missing symbols.
+
+  const DEFAULT_API = '/gallery/gallery-api.php';
+  const API_URL = (window.API_URL && String(window.API_URL)) || DEFAULT_API;
+  const AUTH_KEY = (window.AUTH_KEY && String(window.AUTH_KEY)) || 'gallery_admin_authenticated';
+  const STORAGE_KEY = 'gallery_uploaded_items';
+
+  async function fetchJson(url, options = {}) {
+    const opts = Object.assign({ credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } }, options);
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error('Invalid JSON response: ' + (text ? text.slice(0, 2000) : '(empty)'));
+    }
+  }
+
+  function getUploadedItems() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch (e) {
+      console.warn('gallery-admin: corrupt uploaded items in localStorage, resetting');
+      localStorage.removeItem(STORAGE_KEY);
+      return [];
+    }
+  }
+
+  function saveUploadedItems(items) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items || []));
+    } catch (e) {
+      console.warn('gallery-admin: could not persist uploaded items', e);
+    }
+  }
+
+  // Handle a successful upload result object (as returned by the API).
+  // This mirrors the original tail: merge the returned item into locally stored list,
+  // show a status message, and redirect back to gallery.html after a short delay.
+  function handleUploadSaved(result) {
+    const uploadedItem = result && result.item ? result.item : null;
+    if (uploadedItem) {
+      const existing = getUploadedItems();
+      const next = [uploadedItem, ...existing.filter(item => item.slug !== uploadedItem.slug)];
+      saveUploadedItems(next);
+    }
+
+    const statusEl = document.getElementById('gallery-admin-status') || document.querySelector('.gallery-admin-status');
+    if (statusEl) statusEl.textContent = 'Upload saved. Returning to the gallery…';
+
+    setTimeout(() => {
+      window.location.href = '/gallery.html';
+    }, 700);
+  }
+
+  // Handle an upload error by setting status text if available
+  function handleUploadError(err) {
+    const statusEl = document.getElementById('gallery-admin-status') || document.querySelector('.gallery-admin-status');
+    if (statusEl) statusEl.textContent = (err && err.message) ? err.message : 'There was a problem uploading the images.';
+    else console.error(err);
+  }
+
+  // Attempt to wire up an upload event if a form and submit flow exists. If your other admin
+  // scripts call galleryAdmin.handleUploadSaved(result) then this auto-binding is optional.
+  // This module purposely does not attempt to reimplement the full upload flow; instead it
+  // provides helpers and a public handler for the result.
+
+  // Expose logout handling: attach to #gallery-admin-logout if present
+  (function attachLogout() {
+    const logoutBtn = document.getElementById('gallery-admin-logout');
+    if (!logoutBtn) return;
+    logoutBtn.addEventListener('click', async function (ev) {
+      ev.preventDefault();
+      try {
+        await fetchJson(API_URL + '?action=logout');
+      } catch (error) {
+        // ignore server logout errors
+        console.info('gallery-admin: logout request failed', error);
+      }
+      try {
+        sessionStorage.removeItem(AUTH_KEY);
+      } catch (e) { /* ignore */ }
+      if (typeof window.showAuthPanel === 'function') {
+        try { window.showAuthPanel(); } catch (e) { console.warn('showAuthPanel threw', e); }
+      }
+      const authStatus = document.getElementById('gallery-auth-status');
+      if (authStatus) authStatus.textContent = 'Logged out.';
+    });
+  })();
+
+  // Basic ensureLoggedInState fallback. If the real admin page defines ensureLoggedInState,
+  // prefer that; otherwise provide a minimal implementation that toggles UI elements based on sessionStorage.
+  function ensureLoggedInStateFallback() {
+    const isAuthed = !!sessionStorage.getItem(AUTH_KEY);
+    const shell = document.querySelector('.gallery-admin-shell');
+    const login = document.querySelector('.gallery-admin-login');
+    if (shell) shell.hidden = !isAuthed;
+    if (login) login.hidden = isAuthed;
+  }
+
+  if (typeof window.ensureLoggedInState !== 'function') {
+    window.ensureLoggedInState = ensureLoggedInStateFallback;
+  }
+
+  // Expose public API for other admin scripts to call when an upload completes.
+  window.galleryAdmin = Object.assign(window.galleryAdmin || {}, {
+    fetchJson,
+    getUploadedItems,
+    saveUploadedItems,
+    handleUploadSaved,
+    handleUploadError,
+    API_URL,
+    AUTH_KEY,
+  });
+
+  // If the page defines a global variable 'AUTOBIND_GALLERY_ADMIN_RESULT' with a Promise or function,
+  // attempt to bind it. (This is a non-invasive helper for legacy flows.)
+  try {
+    if (window.AUTOBIND_GALLERY_ADMIN_RESULT && typeof window.AUTOBIND_GALLERY_ADMIN_RESULT.then === 'function') {
+      window.AUTOBIND_GALLERY_ADMIN_RESULT.then(handleUploadSaved, handleUploadError);
+    }
+  } catch (e) { /* ignore */ }
+
+  // Run the ensureLoggedInState hook now to set initial UI state.
+  try { window.ensureLoggedInState(); } catch (e) { console.warn('ensureLoggedInState threw', e); }
+
+  // Auto-enhance image-save forms (submit via fetch to gallery-api?action=upload and call handlers)
+  (function autoEnhanceUploadForms() {
+    try {
+      const selector = 'form[action="/gallery/image-save.php"]';
+      document.querySelectorAll(selector).forEach(form => {
+        // opt-out: set data-ajax="0" on form to skip enhancement
+        if (form.dataset.ajax === '0') return;
+        if (form.dataset.enhanced === '1') return;
+        form.dataset.enhanced = '1';
+        form.addEventListener('submit', async function (ev) {
+          ev.preventDefault();
+          const submitter = ev.submitter;
+          const formData = new FormData(form);
+          // include clicked submit button value if present
+          if (submitter && submitter.name) {
+            formData.append(submitter.name, submitter.value);
+          }
+
+          try {
+            // Submit to the form's action URL (preserves original server behavior). If the form's action is not present, fall back to the API URL.
+            const targetUrl = form.action && form.action.trim() ? form.action : (API_URL + '?action=upload');
+            const res = await fetchJson(targetUrl, { method: 'POST', body: formData });
+            if (res && res.success) {
+              // server returns { success:true, result: {...} }
+              const saved = res.result || res.item || null;
+              try { window.galleryAdmin.handleUploadSaved({ item: saved }); } catch (e) { console.warn('handleUploadSaved threw', e); }
+            } else {
+              const err = new Error(res && res.error ? res.error : 'Upload failed');
+              try { window.galleryAdmin.handleUploadError(err); } catch (e) { console.warn('handleUploadError threw', e); }
+            }
+          } catch (err) {
+            try { window.galleryAdmin.handleUploadError(err); } catch (e) { console.error('galleryAdmin error handling failed', e); }
+          }
+        });
+      });
+    } catch (e) {
+      console.warn('gallery-admin: autoEnhanceUploadForms failed to initialize', e);
+    }
+  })();
+
+  // Generate a thumbnail from the currently selected full image and set it on the thumbnail file input
+  (function attachGenerateThumbnail() {
+    function createThumbnailBlob(file, targetW = 200, targetH = 165) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            // create canvas of target size and draw image centered/cropped to cover
+            const canvas = document.createElement('canvas');
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext('2d');
+            // compute cover scaling
+            const ratio = Math.max(targetW / img.naturalWidth, targetH / img.naturalHeight);
+            const sw = Math.round(targetW / ratio);
+            const sh = Math.round(targetH / ratio);
+            // draw centered
+            const sx = Math.max(0, Math.floor((img.naturalWidth - sw) / 2));
+            const sy = Math.max(0, Math.floor((img.naturalHeight - sh) / 2));
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+            canvas.toBlob((blob) => {
+              if (!blob) return reject(new Error('Could not create thumbnail blob'));
+              resolve(blob);
+            }, 'image/jpeg', 0.9);
+          } catch (e) { reject(e); }
+        };
+        img.onerror = (e) => reject(new Error('Could not load image for thumbnail'));
+        // load from file blob
+        const url = URL.createObjectURL(file);
+        img.src = url;
+      });
+    }
+
+    async function onGenerateClick(ev) {
+      const fullInput = document.getElementById('full-image') || document.getElementById('full');
+      const thumbInput = document.getElementById('thumbnail-file') || document.querySelector('input[name="thumbnail"]');
+      const statusEl = document.getElementById('gallery-admin-status') || document.querySelector('.gallery-admin-status');
+      if (!fullInput || !thumbInput) {
+        if (statusEl) statusEl.textContent = 'Full image or thumbnail input not found on page.';
+        return;
+      }
+      const file = fullInput.files && fullInput.files[0];
+      if (!file) {
+        if (statusEl) statusEl.textContent = 'Select a full image file first to generate a thumbnail.';
+        return;
+      }
+      try {
+        if (statusEl) statusEl.textContent = 'Generating thumbnail preview…';
+        const blob = await createThumbnailBlob(file);
+        const baseName = (file.name || 'image').replace(/\.[^.]+$/, '');
+        const thumbName = baseName + '-thumb.jpg';
+        const thumbFile = new File([blob], thumbName, { type: 'image/jpeg' });
+        // set File on thumbnail input using DataTransfer
+        const dt = new DataTransfer();
+        dt.items.add(thumbFile);
+        thumbInput.files = dt.files;
+        // trigger change so admin-media-preview shows it
+        thumbInput.dispatchEvent(new Event('change', { bubbles: true }));
+        if (statusEl) statusEl.textContent = 'Thumbnail generated: ' + thumbName;
+      } catch (e) {
+        console.error('Thumbnail generation failed', e);
+        if (statusEl) statusEl.textContent = 'Thumbnail generation failed: ' + (e && e.message ? e.message : String(e));
+      }
+    }
+
+    document.querySelectorAll('#generate-thumbnail-btn, #generate-exhibition-thumbnail-btn').forEach(btn => {
+      btn.addEventListener('click', onGenerateClick);
+    });
+  })();
+
+})();

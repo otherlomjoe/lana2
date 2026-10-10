@@ -1,4 +1,4 @@
-﻿Yox = {
+Yox = {
     // Adds a stylesheet link reference in the specified document's HEAD
     addStylesheet: function(_document, cssUrl)
     {
@@ -267,7 +267,7 @@
     Support: {
         rgba: function()
         {
-            // From http://leaverou.me/2009/03/check-whether-the-browser-supports-rgba-and-other-css3-values/
+            // From https://leaverou.me/2009/03/check-whether-the-browser-supports-rgba-and-other-css3-values/
 	        if(!('result' in arguments.callee))
 	        {
 	            var element = document.createElement('div');

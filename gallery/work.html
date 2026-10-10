@@ -1,88 +1,71 @@
 <!DOCTYPE HTML>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<title>Artwork</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <title>Artwork</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link href="../../../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-<link href="../../../scripts/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
-<link href="../../../scripts/icons/general/stylesheets/general_foundicons.css" rel="stylesheet">
-<link href="../../../scripts/icons/social/stylesheets/social_foundicons.css" rel="stylesheet">
-<link rel="stylesheet" href="../../../scripts/fontawesome/css/font-awesome.min.css">
-<link href="../../../styles/custom.css" rel="stylesheet">
+  <link href="../../../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="../../../scripts/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+  <link href="../../../scripts/icons/general/stylesheets/general_foundicons.css" rel="stylesheet">
+  <link href="../../../scripts/icons/social/stylesheets/social_foundicons.css" rel="stylesheet">
+  <link rel="stylesheet" href="../../../scripts/fontawesome/css/font-awesome.min.css">
+  <link href="../../../styles/custom.css" rel="stylesheet">
 
-<style>
-  #art-image-wrapper {
-      padding: 8px;
-      border: 1px solid #ccc;
-      background: #fff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      margin-bottom: 20px;
-  }
-  #art-image {
-      width: 100%;
-      height: auto;
-      display: block;
-  }
-  .nav-buttons {
-      margin-top: 20px;
-  }
-  .nav-buttons a {
-      margin-right: 10px;
-  }
-</style>
 </head>
 
 <body id="pageBody">
-<div id="divBoxed" class="container">
+  <div id="divBoxed" class="container">
 
-  <!-- Transparent background overlay (CRITICAL) -->
-  <div class="transparent-bg" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;zoom:1;"></div>
+    <!-- Transparent background overlay (CRITICAL) -->
+    <div class="transparent-bg"></div>
 
-  <!-- Header -->
-  <div class="divPanel notop nobottom">
-    <div class="row-fluid">
-      <div class="span12">
-        <div id="divLogo">
-          <a href="../../../index.html" id="divSiteTitle">Lana-Leigh Lombard</a><br />
-          <a href="../../../index.html" id="divTagLine">Arty Adventures</a>
+    <!-- Header -->
+    <header class="divPanel notop nobottom">
+      <div class="row-fluid">
+        <div class="span12">
+          <div id="divLogo">
+            <h1 id="divSiteTitle"><a href="../../../index.html">Lana-Leigh Lombard</a></h1>
+            <p id="divTagLine">Arty Adventures</p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Navigation bar (CRITICAL) -->
-    <div class="row-fluid">
-      <div class="span12">
-        <div class="centered_menu">
-          <div class="navbar">
-            <button type="button" class="btn btn-navbar-highlight btn-large btn-primary" data-toggle="collapse" data-target=".nav-collapse">
-              NAVIGATION <span class="icon-chevron-down icon-white"></span>
-            </button>
-            <div class="nav-collapse collapse">
-              <ul class="nav nav-pills ddmenu">
-                <li><a href="../../../index.html">Home</a></li>
-                <li><a href="../../../about.html">About</a></li>
-                <li><a href="../../../services.html">Services</a></li>
-                <li><a href="../../../gallery.html">Gallery</a></li>
-                <li><a href="../../../contact.html">Contact</a></li>
-              </ul>
+      <!-- Navigation bar (CRITICAL) -->
+      <div class="row-fluid">
+        <div class="span12">
+          <div class="centered_menu">
+            <div class="navbar">
+              <button type="button" class="btn btn-navbar-highlight btn-large btn-primary" data-toggle="collapse"
+                data-target=".nav-collapse">
+                NAVIGATION <span class="icon-chevron-down icon-white"></span>
+              </button>
+              <div class="nav-collapse collapse">
+                <ul class="nav nav-pills ddmenu">
+                  <li><a href="../../../index.html">Home</a></li>
+                  <li><a href="../../../about.html">About</a></li>
+                  <li><a href="../../../services.html">Services</a></li>
+                  <li><a href="../../../gallery.html">Gallery</a></li>
+                  <li><a href="../../../contact.html">Contact</a></li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Separator (CRITICAL) -->
-    <div class="row-fluid">
-      <div class="span12">
-        <div id="contentInnerSeparator"></div>
+      <!-- Separator (CRITICAL) -->
+      <div class="row-fluid">
+        <div class="span12">
+          <div id="contentInnerSeparator"></div>
+        </div>
       </div>
-    </div>
   </div>
+  </header>
 
   <!-- White main content area -->
-  <div class="contentArea">
+  <main class="contentArea">
     <div class="divPanel notop page-content">
 
       <div class="breadcrumbs">
@@ -96,11 +79,12 @@
         <!-- IMAGE + TITLE -->
         <div class="span8" id="divMain">
           <h3 id="art-title"></h3>
-			<div id="item-meta" class="tags-container"></div>
+          <span id="art-award"></span>
+          <div id="item-meta" class="tags-container"></div>
 
           <div id="art-image-wrapper">
             <a id="art-image-link">
-              <img id="art-image" alt="Artwork image" />
+              <img id="art-image" alt="Artwork image">
             </a>
           </div>
 
@@ -113,240 +97,330 @@
         <!-- DESCRIPTION -->
         <div class="span4">
           <h3>Description</h3>
+          <div id="art-price-value" class="art-price"></div>
           <h5 id="art-medium"></h5>
           <p id="art-description"></p>
+          <div id="art-dimensions" class="art-dimensions"></div>
+          <div id="art-date" class="art-date"></div>
+          <div id="private-info" class="private-info" hidden></div>
+          <div class="work-admin-edit-wrap">
+            <a id="work-admin-edit" class="work-admin-edit" hidden>Edit</a>
+          </div>
         </div>
 
       </div>
 
       <div id="footerInnerSeparator"></div>
     </div>
-  </div>
+  </main>
 
   <div id="footerOuterSeparator"></div>
 
   <!-- Footer placeholder -->
-  <div id="footer-placeholder"></div>
+  <footer id="footer-placeholder"></footer>
+  <noscript><iframe src="../footer.html" title="Footer"
+      style="border:0;width:100%;min-height:50px;"></iframe></noscript>
 
-</div>
+  </div>
 
-<!-- Dynamic loader -->
-<script>
+  <!-- Dynamic loader -->
+  <script>
 
-//
-// ---------------------------------------------------------
-// AUTO‑DERIVE HELPERS (match gallery.html)
-// ---------------------------------------------------------
-//
-function fileSlug(slug) {
-    return slug.replace(/-/g, "");
-}
+    //
+    // ---------------------------------------------------------
+    // AUTO‑DERIVE HELPERS (match gallery.html)
+    // ---------------------------------------------------------
+    //
+    function fileSlug(slug) {
+      return slug.replace(/-/g, "");
+    }
 
-function getTitle(item) {
-    return item.title && item.title.trim() !== ""
+    function getTitle(item) {
+      return item.title && item.title.trim() !== ""
         ? item.title
         : item.slug
-            .split('-')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(' ');
-}
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+    }
 
-function getFull(item) {
-    return item.full && item.full.trim() !== ""
+    function getFull(item) {
+      return item.full && item.full.trim() !== ""
         ? item.full
         : `/gallery/all/full/${fileSlug(item.slug)}.jpg`;
-}
+    }
 
-//
-// ---------------------------------------------------------
-// DESCRIPTION FORMATTER (your existing tiny‑markup parser)
-// ---------------------------------------------------------
-//
-function formatDescription(text) {
-  const escaped = (text || "").replace(/[&<>\"']/g, character => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
-  })[character]);
-  return escaped
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .split(/\n\s*\n/)
-    .map(paragraph => {
-      const lines = paragraph.split("\n").filter(Boolean);
-      if (lines.every(line => /^-\s+/.test(line))) {
-        return `<ul>${lines.map(line => `<li>${line.replace(/^-\s+/, "")}</li>`).join("")}</ul>`;
-      }
-      return `<p>${lines.join("<br>")}</p>`;
-    })
-    .join("");
-}
+    //
+    // ---------------------------------------------------------
+    // DESCRIPTION FORMATTER (your existing tiny‑markup parser)
+    // ---------------------------------------------------------
+    //
+    function formatDescription(text) {
+      const escaped = (text || "").replace(/[&<>\"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
+      })[character]);
+      return escaped
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .split(/\n\s*\n/)
+        .map(paragraph => {
+          const lines = paragraph.split("\n").filter(Boolean);
+          if (lines.every(line => /^-\s+/.test(line))) {
+            return `<ul>${lines.map(line => `<li>${line.replace(/^-\s+/, "")}</li>`).join("")}</ul>`;
+          }
+          return `<p>${lines.join("<br>")}</p>`;
+        })
+        .join("");
+    }
 
-//
-// ---------------------------------------------------------
-// MAIN LOADER
-// ---------------------------------------------------------
-//
-function normalizeUploadedItem(item) {
-    if (!item || !item.slug) return null;
+    //
+    // ---------------------------------------------------------
+    // MAIN LOADER
+    // ---------------------------------------------------------
+    //
+    function normalizeUploadedItem(item) {
+      if (!item || !item.slug) return null;
 
-    return {
+      return {
         ...item,
         title: item.title || "",
         medium: item.medium || "",
         genre: item.genre || "",
         description: item.description || "",
+        awardDescription: item.awardDescription || item.award_description || item.awardDesc || '',
         price: item.price || "",
+        dimensions: item.dimensions || "",
+        printsAvailable: Boolean(item.printsAvailable || item.prints_available || item.prints),
         thumbnail: item.thumbnail || item.thumbnail_path || "",
         full: item.full || item.full_path || item.thumbnail || item.thumbnail_path || "",
         dateAdded: item.dateAdded || item.date_added || "",
         disabled: Boolean(item.disabled),
-        sold: Boolean(item.sold),
+        available: item.available !== false && item.available !== 0 && item.available !== "0",
+        sold: item.sold === true || item.sold === 1 || item.sold === "1" || item.available === false || item.available === 0 || item.available === "0",
         source: item.source || "server"
-    };
-}
+      };
+    }
 
-async function getUploadedGalleryItems() {
-    try {
+    async function getUploadedGalleryItems() {
+      try {
         const response = await fetch("/gallery-api.php?action=list", {
-            headers: { Accept: "application/json" },
-            credentials: "same-origin"
+          headers: { Accept: "application/json" },
+          credentials: "same-origin"
         });
 
         if (!response.ok) {
-            throw new Error("Gallery API unavailable");
+          throw new Error("Gallery API unavailable");
         }
 
         const data = await response.json();
         const items = Array.isArray(data) ? data : [];
         return items.map(normalizeUploadedItem).filter(Boolean);
-    } catch (error) {
+      } catch (error) {
         return [];
+      }
     }
-}
 
-async function loadArtwork() {
-    const slug = window.location.hash.replace("#", "");
+    async function loadArtwork() {
+      const slug = window.location.hash.replace("#", "");
 
-    const uploadedItems = await getUploadedGalleryItems();
-    const items = uploadedItems;
+      const uploadedItems = await getUploadedGalleryItems();
+      const items = uploadedItems;
 
-    const item = items.find(i => i.slug === slug);
+      const item = items.find(i => i.slug === slug);
 
-    if (!item) {
+      if (!item) {
         document.getElementById("art-title").innerText = "Artwork not found";
         return;
-    }
+      }
 
-    //
-    // TITLE + BREADCRUMB
-    //
-    const title = getTitle(item);
-    document.getElementById("crumb-title").innerText = title;
-    document.getElementById("art-title").innerText = title;
+      //
+      // TITLE + BREADCRUMB
+      //
+      const title = getTitle(item);
+      document.getElementById("crumb-title").innerText = title;
+      document.getElementById("art-title").innerText = title;
 
-    //
-    // FULL IMAGE (auto‑derived or overridden)
-    //
-    const fullImage = getFull(item);
+      // Ensure the img alt matches the title for accessibility
+      const imgEl = document.getElementById("art-image");
+      if (imgEl) imgEl.alt = title || imgEl.alt || '';
 
-    document.getElementById("art-image").onerror = () => {
-        document.getElementById("art-image").src = "/gallery/all/full/fallback.jpg";
-    };
+      //
+      // FULL IMAGE (auto‑derived or overridden)
+      //
+      const fullImage = getFull(item);
 
-    document.getElementById("art-image").src = fullImage;
-    document.getElementById("art-image-link").href = fullImage;
+      if (imgEl) {
+        imgEl.onerror = () => { imgEl.src = "/gallery/all/full/fallback.jpg"; };
+        imgEl.src = fullImage;
+      }
+      document.getElementById("art-image-link").href = fullImage;
 
-    //
-    // MEDIUM
-    //
-    document.getElementById("art-medium").innerText = item.medium || "";
+      //
+      // MEDIUM
+      //
+      document.getElementById("art-medium").innerText = item.medium || "";
 
-    //
-    // DESCRIPTION
-    //
-    document.getElementById("art-description").innerHTML =
+      //
+      // DESCRIPTION
+      //
+      document.getElementById("art-description").innerHTML =
         formatDescription(item.description || "");
-	
-	//
-	// METADATA TAGS (clickable → gallery filters)
-	//
-	const metaContainer = document.getElementById("item-meta");
-	let metaTags = [];
 
-	// Genre
-	if (item.genre) {
-		const safe = item.genre.toLowerCase().replace(/\s+/g, '-');
-		metaTags.push(`<a class="tag" href="/gallery.html#genre-${safe}">Genre: ${item.genre}</a>`);
-	}
+      //
+      // METADATA TAGS (clickable → gallery filters)
+      //
+      const metaContainer = document.getElementById("item-meta");
+      let metaTags = [];
 
-	// Medium
-	if (item.medium) {
-		const safe = item.medium.toLowerCase().replace(/\s+/g, '-');
-		metaTags.push(`<a class="tag" href="/gallery.html#medium-${safe}">Medium: ${item.medium}</a>`);
-	}
+      // Genre
+      if (item.genre) {
+        metaTags.push(`<a class="tag" href="/gallery.html?g=${encodeURIComponent(item.genre)}">Genre: ${item.genre}</a>`);
+      }
 
-	// Date Added
-	if (item.dateAdded) {
-		metaTags.push(`<a class="tag" href="/gallery.html#date-${item.dateAdded}">Added: ${item.dateAdded}</a>`);
-	}
+      // Medium
+      if (item.medium) {
+        metaTags.push(`<a class="tag" href="/gallery.html?m=${encodeURIComponent(item.medium)}">Medium: ${item.medium}</a>`);
+      }
 
-	// Disabled (optional)
-	if (item.disabled) {
-		metaTags.push(`<a class="tag" href="/gallery.html#disabled-true">Disabled</a>`);
-	}
+      // Collection
+      if (item.collection) {
+        metaTags.push(`<a class="tag" href="/gallery.html?c=${encodeURIComponent(item.collection)}">Collection: ${item.collection}</a>`);
+      }
 
-	metaContainer.innerHTML = metaTags.join("");
-	
-    //
-    // PREVIOUS / NEXT NAVIGATION
-    // (skip disabled works)
-    //
-    const enabledItems = items.filter(i => !i.disabled);
-    const index = enabledItems.findIndex(i => i.slug === slug);
+      // Date Added (moved to under description on work page)
 
-    const prev = enabledItems[index - 1];
-    const next = enabledItems[index + 1];
+      // Disabled (optional)
+      if (item.disabled) {
+        metaTags.push(`<a class="tag" href="/gallery.html?d=1">Disabled</a>`);
+      }
 
-    if (prev) {
+      // Available
+      if (typeof item.available !== 'undefined') {
+        if (item.available) metaTags.push(`<a class="tag" href="/gallery.html?s=available">Original: Available</a>`);
+        else metaTags.push(`<a class="tag" href="/gallery.html?s=sold">Original: Sold</a>`);
+      }
+
+      // Sold (copiesSold > 0)
+      // Original status is shown above, so do not add a second sold badge.
+
+      // Only show a print badge when limited prints are available.
+      if (item.printsAvailable === true) {
+        metaTags.push(`<a class="tag" href="/gallery.html?p=available">Limited Prints: Available</a>`);
+      }
+
+      // Award (show badge and optional award description)
+      if (item.awardTitle) {
+        const desc = item.awardDescription || item.award_description || item.awardDesc || '';
+        const escapedDesc = (desc || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch]));
+        const safeDesc = escapedDesc ? `<span class="award-desc">${escapedDesc}</span>` : '';
+        document.getElementById('art-award').innerHTML = `<span class="award-badge">★ ${item.awardTitle}</span>` + safeDesc;
+      }
+
+      // Public price / value under description
+      try {
+        const pv = document.getElementById('art-price-value');
+        if (pv) {
+          if (item.price && item.price !== '') {
+            pv.innerText = `Price: ${item.price}`;
+            pv.style.display = '';
+          } else {
+            pv.innerText = '';
+            pv.style.display = 'none';
+          }
+        }
+      } catch (e) { /* ignore */ }
+
+      const dimensions = document.getElementById('art-dimensions');
+      if (dimensions) {
+        dimensions.innerText = item.dimensions ? `Dimensions: ${item.dimensions}` : '';
+        dimensions.style.display = item.dimensions ? '' : 'none';
+      }
+
+      metaContainer.innerHTML = metaTags.join("");
+
+      //
+      // PREVIOUS / NEXT NAVIGATION
+      // (skip disabled works)
+      //
+      const enabledItems = items.filter(i => !i.disabled);
+      const index = enabledItems.findIndex(i => i.slug === slug);
+
+      const prev = enabledItems[index - 1];
+      const next = enabledItems[index + 1];
+
+      if (prev) {
         document.getElementById("prev-link").href = `/gallery/work.html#${prev.slug}`;
         document.getElementById("prev-link").style.display = "";
-    } else {
+      } else {
         document.getElementById("prev-link").style.display = "none";
-    }
+      }
 
-    if (next) {
+      if (next) {
         document.getElementById("next-link").href = `/gallery/work.html#${next.slug}`;
         document.getElementById("next-link").style.display = "";
-    } else {
+      } else {
         document.getElementById("next-link").style.display = "none";
+      }
+
+      // If the viewer is an authenticated admin, fetch full item to show private info
+      try {
+        const statusRes = await fetch('/gallery-api.php?action=status', { credentials: 'same-origin' });
+        if (statusRes.ok) {
+          const statusJson = await statusRes.json();
+          if (statusJson.authenticated) {
+            const editLink = document.getElementById('work-admin-edit');
+            if (editLink) {
+              editLink.href = '/gallery/admin-edit.php?id=' + encodeURIComponent(item.id || '');
+              editLink.hidden = !item.id;
+            }
+            const itemRes = await fetch('/gallery-api.php?action=item&slug=' + encodeURIComponent(slug), { credentials: 'same-origin' });
+            if (itemRes.ok) {
+              const body = await itemRes.json();
+              if (body && body.success && body.item) {
+                const full = body.item;
+                const priv = document.getElementById('private-info');
+                priv.hidden = false;
+                priv.innerHTML = `<strong>Private administration</strong><br>Private price: ${full.pricePrivate || '(none)'}<br>Copies sold: ${full.copiesSold || 0}<br><div class="private-notes">${full.privateNotes ? full.privateNotes : ''}</div>`;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // ignore silently
+      }
     }
-}
 
-//
-// ---------------------------------------------------------
-// INIT
-// ---------------------------------------------------------
-//
-loadArtwork();
-window.addEventListener("hashchange", loadArtwork);
+    //
+    // ---------------------------------------------------------
+    // INIT
+    // ---------------------------------------------------------
+    //
+    loadArtwork();
+    window.addEventListener("hashchange", loadArtwork);
 
-</script>
+  </script>
 
 
-<!-- Load footer -->
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  fetch("/footer.html")
-    .then(res => res.text())
-    .then(html => {
-      document.getElementById("footer-placeholder").innerHTML = html;
+  <!-- Load footer -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      fetch("../footer.html")
+        .then(res => res.text())
+        .then(html => {
+          document.getElementById("footer-placeholder").innerHTML = html;
+        });
     });
-});
-</script>
+  </script>
 
-<script src="../../../scripts/jquery.min.js"></script>
-<script src="../../../scripts/bootstrap/js/bootstrap.min.js"></script>
-<script src="../../../scripts/default.js"></script>
+  <br>
+  <br>
+  <br>
+
+  <script src="../../../scripts/jquery.min.js"></script>
+  <script src="../../../scripts/bootstrap/js/bootstrap.min.js"></script>
+  <script src="../../../scripts/default.js"></script>
 
 </body>
+
 </html>

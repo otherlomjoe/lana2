@@ -46,6 +46,18 @@ if ($action === 'status') {
     exit;
 }
 
+if ($action === 'list-home-heroes') {
+    header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
+    echo json_encode(['success' => true, 'heroes' => gallery_list_home_heroes(false)], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+if ($action === 'list-slider-images') {
+    header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
+    echo json_encode(['success' => true, 'slides' => gallery_list_slider_images(false)], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 if ($action === 'login') {
     $password = (string) ($_POST['password'] ?? '');
     $storedHash = getenv('GALLERY_ADMIN_PASSWORD_HASH');
@@ -93,8 +105,77 @@ if ($action === 'list' || $action === 'list-images') {
     exit;
 }
 
+if ($action === 'item') {
+    $pdo = gallery_init_db();
+    if (!$pdo) {
+        galleryApiError('Database connection failed.', 500);
+    }
+    $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
+    $slug = trim((string) ($_GET['slug'] ?? $_POST['slug'] ?? ''));
+    if ($id <= 0 && $slug === '') {
+        galleryApiError('No id or slug supplied.', 400);
+    }
+
+    $stmt = $pdo->prepare('SELECT i.*, GROUP_CONCAT(DISTINCT t.name) AS tag_names, GROUP_CONCAT(DISTINCT e.slug) AS exhibition_slugs FROM images i LEFT JOIN image_tags it ON it.image_id = i.id LEFT JOIN tags t ON t.id = it.tag_id LEFT JOIN image_exhibitions ie ON ie.image_id = i.id LEFT JOIN exhibitions e ON e.id = ie.exhibition_id WHERE ' . ($id > 0 ? 'i.id = :id' : 'i.slug = :slug') . ' GROUP BY i.id LIMIT 1');
+    $params = [];
+    if ($id > 0) {
+        $params[':id'] = $id;
+    } else {
+        $params[':slug'] = $slug;
+    }
+    $stmt->execute($params);
+    $row = $stmt->fetch();
+    if (!$row) {
+        galleryApiError('Item not found.', 404);
+    }
+    $item = gallery_normalize_image_row($row);
+    if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
+        $item = gallery_public_image($item);
+    }
+    echo json_encode(['success' => true, 'item' => $item]);
+    exit;
+}
+
 if ($action === 'list-exhibitions') {
     echo json_encode(gallery_list_exhibitions(gallery_init_db()));
+    exit;
+}
+
+if ($action === 'exhibition-shift') {
+    galleryApiRequireAuth();
+    galleryApiEnsureCsrf();
+    $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    $direction = (int) ($_POST['direction'] ?? $_GET['direction'] ?? 0);
+    if ($id <= 0 || !in_array($direction, [-1, 1], true)) {
+        galleryApiError('Invalid parameters for shift.', 400);
+    }
+    $moved = false;
+    try {
+        $moved = gallery_shift_exhibition($id, $direction);
+    } catch (Throwable $e) {
+        galleryApiError('Error shifting exhibition: ' . $e->getMessage(), 500);
+    }
+    echo json_encode(['success' => (bool) $moved, 'message' => $moved ? 'Exhibition order updated.' : 'Could not move exhibition.']);
+    exit;
+}
+
+if ($action === 'exhibition-toggle') {
+    galleryApiRequireAuth();
+    galleryApiEnsureCsrf();
+    $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    if ($id <= 0) galleryApiError('No exhibition id supplied.', 400);
+    $pdo = gallery_init_db();
+    if (!$pdo) galleryApiError('Database unavailable.', 500);
+    $stmt = $pdo->prepare('SELECT active FROM exhibitions WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) galleryApiError('Exhibition not found.', 404);
+    $current = !empty($row['active']);
+    // allow explicit active value, otherwise toggle
+    $explicit = isset($_POST['active']) ? (int) $_POST['active'] : (isset($_GET['active']) ? (int) $_GET['active'] : null);
+    $new = $explicit !== null ? (bool) $explicit : !$current;
+    $updated = gallery_set_exhibition_active($id, $new);
+    echo json_encode(['success' => (bool) $updated, 'active' => $new ? 1 : 0, 'message' => $updated ? 'Exhibition visibility updated.' : 'Could not update visibility.']);
     exit;
 }
 
@@ -153,6 +234,7 @@ if ($action === 'delete') {
 
     $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
     $slug = trim((string) ($_POST['slug'] ?? $_GET['slug'] ?? ''));
+    $deleted = false;
 
     if ($id > 0) {
         $deleted = gallery_soft_delete_image($id);
