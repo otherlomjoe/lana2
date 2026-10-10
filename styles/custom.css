@@ -846,7 +846,22 @@ h6,.page-content h6 a {font-weight: normal; font-style: normal; font-family: 'So
 
 .tag:hover {
     background: #ddd;
+.tag:hover {
+    background: #ddd;
 }
-
+/* Work page specific rules (migrated from gallery/work.html) */
+#art-image-wrapper {
+    padding: 8px;
+    border: 1px solid #ccc;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    margin-bottom: 20px;
+}
+#art-image { width: 100%; height: auto; display: block; }
+.nav-buttons { margin-top: 20px; }
+.nav-buttons a { margin-right: 10px; }
+.tags-container .tag { display:inline-block; margin-right:6px; padding:4px 8px; background:#f1f1f1; border-radius:3px; color:#333; text-decoration:none }
+.award-badge { display:inline-block; margin-left:8px; padding:4px 8px; background:gold; color:#000; border-radius:4px; font-weight:700 }
+.private-info { margin-top:18px; padding:10px; border:1px dashed #ccc; background:#fafafa }
 
 
