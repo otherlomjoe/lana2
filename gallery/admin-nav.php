@@ -5,7 +5,8 @@
     </button>
     <div class="admin-nav-collapse nav-collapse collapse">
       <ul class="nav nav-pills ddmenu">
-        <li><a href="/index.html">Home</a></li>
+        <li class="non-admin-link"><a href="/index.html">Home</a></li>
+        <li class="non-admin-link"><a href="/gallery.html">Gallery</a></li>
         <!-- Public gallery removed from admin menu -->
         <li><a href="/gallery/admin-list-sliders.php">Home slider</a></li>
         <li><a href="/gallery/admin-list-heroes.php">Home heroes</a></li>

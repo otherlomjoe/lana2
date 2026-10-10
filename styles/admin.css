@@ -1,5 +1,21 @@
 /* Admin-specific styles (loaded only on admin pages) */
 
+/* Visual difference for public non-admin nav links */
+.nav .non-admin-link a {
+  color: #333;
+  font-style: italic;
+  background: none;
+  padding-right: 8px;
+}
+.nav .non-admin-link a::after {
+  content: " (public)";
+  font-size: 0.85em;
+  color: #666;
+  margin-left: 6px;
+}
+
+
+
 /* Exhibition image checkbox tiles */
 .ex-images-grid label.ex-image-tile {
   display: inline-block;
