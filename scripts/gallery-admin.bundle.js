@@ -204,7 +204,9 @@ document.addEventListener('DOMContentLoaded', function () {
           }
 
           try {
-            const res = await fetchJson(API_URL + '?action=upload', { method: 'POST', body: formData });
+            // Submit to the form's action URL (preserves original server behavior). If the form's action is not present, fall back to the API URL.
+            const targetUrl = form.action && form.action.trim() ? form.action : (API_URL + '?action=upload');
+            const res = await fetchJson(targetUrl, { method: 'POST', body: formData });
             if (res && res.success) {
               // server returns { success:true, result: {...} }
               const saved = res.result || res.item || null;
