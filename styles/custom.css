@@ -398,6 +398,20 @@ body {background-image: url(mirrored_squares.png); background-color: rgb(181, 18
 
 .navContainer .navMenu li.current a {}
 
+/* Exhibition hero image (migrated from gallery.css) */
+#ex-hero .ex-hero-img,
+.ex-hero-img {
+  max-width: 100%;
+  margin: 20px 0;
+  display: block;
+  height: auto;
+}
+
+/* Optional: ensure hero image doesn't overflow its container */
+#ex-hero {
+  overflow: visible;
+}
+
 .camera_caption > div {opacity: 0.85;filter:alpha(opacity=85);}
 
 .camera_prevThumbs, .camera_nextThumbs, .camera_prev, .camera_next, .camera_commands, .camera_thumbs_cont {opacity: 0.85;filter:alpha(opacity=85) !important;background-color:rgb(240, 240, 240);}

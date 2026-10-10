@@ -558,14 +558,29 @@ function loadGalleryMode(filters) {
         const pageItems = exData.slice(start, start + exPageSize);
 
         pageItems.forEach(item => {
-            exList.insertAdjacentHTML("beforeend", `
-                <li>
-                    <a href="${item.link}">
-                        <img src="${item.thumb}">
-                        <div><span>${item.text}</span></div>
-                    </a>
-                </li>
-            `);
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = item.link || '#';
+            const img = document.createElement('img');
+            img.src = item.thumb || '';
+            // Derive a sensible alt from the text/title (strip HTML tags)
+            const altText = (item.text || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+            img.alt = altText || '';
+            img.loading = 'lazy';
+            img.addEventListener('load', () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    img.setAttribute('width', img.naturalWidth);
+                    img.setAttribute('height', img.naturalHeight);
+                }
+            });
+            a.appendChild(img);
+            const div = document.createElement('div');
+            const span = document.createElement('span');
+            span.innerHTML = item.text || '';
+            div.appendChild(span);
+            a.appendChild(div);
+            li.appendChild(a);
+            exList.appendChild(li);
         });
 
         $('#exhibitions-list > li').each(function() { $(this).hoverdir(); });
@@ -610,14 +625,28 @@ function loadGalleryMode(filters) {
         const pageItems = worksData.slice(start, start + worksPageSize);
 
         pageItems.forEach(item => {
-            worksList.insertAdjacentHTML("beforeend", `
-                <li>
-                    <a href="${item.link}">
-                        <img src="${item.thumb}">
-                        <div><span>${item.text}</span></div>
-                    </a>
-                </li>
-            `);
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = item.link || '#';
+            const img = document.createElement('img');
+            img.src = item.thumb || '';
+            const altText = (item.text || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+            img.alt = altText || '';
+            img.loading = 'lazy';
+            img.addEventListener('load', () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    img.setAttribute('width', img.naturalWidth);
+                    img.setAttribute('height', img.naturalHeight);
+                }
+            });
+            a.appendChild(img);
+            const div = document.createElement('div');
+            const span = document.createElement('span');
+            span.innerHTML = item.text || '';
+            div.appendChild(span);
+            a.appendChild(div);
+            li.appendChild(a);
+            worksList.appendChild(li);
         });
 
         $('#works-list > li').each(function() { $(this).hoverdir(); });
@@ -684,7 +713,7 @@ function loadExhibitionMode(tag, filters) {
 
     // Show hero image under date
     document.getElementById("ex-hero").innerHTML = hero
-        ? `<img src="${hero}" alt="${title}" style="max-width:100%;margin:20px 0;">`
+        ? `<img src="${hero}" alt="${title}" class="ex-hero-img">`
         : "";
 
     //
@@ -729,14 +758,28 @@ function loadExhibitionMode(tag, filters) {
         const pageItems = filtered.slice(start, start + pageSize);
 
         pageItems.forEach(item => {
-            worksList.insertAdjacentHTML("beforeend", `
-                <li>
-                    <a href="${getPage(item)}">
-                        <img src="${getThumb(item)}">
-                        <div><span>${getTitle(item)}<br>${item.medium || ""}</span></div>
-                    </a>
-                </li>
-            `);
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = getPage(item) || '#';
+            const img = document.createElement('img');
+            img.src = getThumb(item) || '';
+            const altText = (getTitle(item) || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+            img.alt = altText || '';
+            img.loading = 'lazy';
+            img.addEventListener('load', () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    img.setAttribute('width', img.naturalWidth);
+                    img.setAttribute('height', img.naturalHeight);
+                }
+            });
+            a.appendChild(img);
+            const div = document.createElement('div');
+            const span = document.createElement('span');
+            span.innerHTML = `${getTitle(item)}<br>${item.medium || ""}`;
+            div.appendChild(span);
+            a.appendChild(div);
+            li.appendChild(a);
+            worksList.appendChild(li);
         });
 
         $('#works-list > li').each(function() { $(this).hoverdir(); });
@@ -830,14 +873,28 @@ function loadExhibitionMode(tag, filters) {
         const pageItems = filtered.slice(start, start + pageSize);
 
         pageItems.forEach(item => {
-            worksList.insertAdjacentHTML("beforeend", `
-                <li>
-                    <a href="${getPage(item)}">
-                        <img src="${getThumb(item)}">
-                        <div><span>${getTitle(item)}<br>${item.medium || ""}</span></div>
-                    </a>
-                </li>
-            `);
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = getPage(item) || '#';
+            const img = document.createElement('img');
+            img.src = getThumb(item) || '';
+            const altText = (getTitle(item) || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+            img.alt = altText || '';
+            img.loading = 'lazy';
+            img.addEventListener('load', () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    img.setAttribute('width', img.naturalWidth);
+                    img.setAttribute('height', img.naturalHeight);
+                }
+            });
+            a.appendChild(img);
+            const div = document.createElement('div');
+            const span = document.createElement('span');
+            span.innerHTML = `${getTitle(item)}<br>${item.medium || ""}`;
+            div.appendChild(span);
+            a.appendChild(div);
+            li.appendChild(a);
+            worksList.appendChild(li);
         });
 
         $('#works-list > li').each(function() { $(this).hoverdir(); });
