@@ -148,7 +148,7 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
         input.addEventListener('input', update); update();
       }());
     </script>
-    <script src="/scripts/admin-media-preview.js"></script>
+    <script src="/scripts/gallery-admin.bundle.js"></script>
   </div>
 </body>
 </html>

@@ -238,6 +238,6 @@ if (!empty($item['thumbnail_file']) && is_file($item['thumbnail_file'])) {
       <p>Image not found.</p>
     <?php endif; ?>
   </div>
-  <script src="/scripts/admin-media-preview.js"></script>
+  <script src="/scripts/gallery-admin.bundle.js"></script>
 </body>
 </html>

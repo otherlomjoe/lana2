@@ -95,7 +95,7 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
       <button type="submit" class="btn btn-primary">Save image</button>
     </form>
   </div>
-    <script src="/scripts/admin-media-preview.js"></script>
+    <script src="/scripts/gallery-admin.bundle.js"></script>
     <script>
       document.getElementById('full-image').addEventListener('change', function () {
         const title = document.getElementById('image-title');

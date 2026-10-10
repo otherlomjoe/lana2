@@ -8,45 +8,6 @@
 <body>
   <p>Redirecting to the database-first gallery admin system...</p>
   <p><a href="/gallery/admin-login.php">Open gallery admin</a></p>
-</body>
-</html>
-    }
-
-    const result = await fetchJson(API_URL, {
-      method: "POST",
-      body: formData,
-    });
-
-    const uploadedItem = result && result.item ? result.item : null;
-    if (uploadedItem) {
-      const existing = getUploadedItems();
-      const next = [uploadedItem, ...existing.filter(item => item.slug !== uploadedItem.slug)];
-      saveUploadedItems(next);
-    }
-
-    statusText.textContent = "Upload saved. Returning to the gallery…";
-    setTimeout(() => {
-      window.location.href = "/gallery.html";
-    }, 700);
-  } catch (error) {
-    statusText.textContent = error.message || "There was a problem uploading the images.";
-  }
-});
-
-document.getElementById("gallery-admin-logout").addEventListener("click", async function () {
-  try {
-    await fetchJson(`${API_URL}?action=logout`);
-  } catch (error) {
-    // Ignore logout errors and fall back to local session handling.
-  }
-
-  sessionStorage.removeItem(AUTH_KEY);
-  showAuthPanel();
-  authStatus.textContent = "Logged out.";
-});
-
-ensureLoggedInState();
-})();
-  </script>
+  <script src="/scripts/gallery-admin.js"></script>
 </body>
 </html>
