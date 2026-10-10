@@ -225,4 +225,74 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   })();
 
+  // Generate a thumbnail from the currently selected full image and set it on the thumbnail file input
+  (function attachGenerateThumbnail() {
+    function createThumbnailBlob(file, targetW = 200, targetH = 165) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            // create canvas of target size and draw image centered/cropped to cover
+            const canvas = document.createElement('canvas');
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext('2d');
+            // compute cover scaling
+            const ratio = Math.max(targetW / img.naturalWidth, targetH / img.naturalHeight);
+            const sw = Math.round(targetW / ratio);
+            const sh = Math.round(targetH / ratio);
+            // draw centered
+            const sx = Math.max(0, Math.floor((img.naturalWidth - sw) / 2));
+            const sy = Math.max(0, Math.floor((img.naturalHeight - sh) / 2));
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+            canvas.toBlob((blob) => {
+              if (!blob) return reject(new Error('Could not create thumbnail blob'));
+              resolve(blob);
+            }, 'image/jpeg', 0.9);
+          } catch (e) { reject(e); }
+        };
+        img.onerror = (e) => reject(new Error('Could not load image for thumbnail'));
+        // load from file blob
+        const url = URL.createObjectURL(file);
+        img.src = url;
+      });
+    }
+
+    async function onGenerateClick(ev) {
+      const fullInput = document.getElementById('full-image') || document.getElementById('full');
+      const thumbInput = document.getElementById('thumbnail-file') || document.querySelector('input[name="thumbnail"]');
+      const statusEl = document.getElementById('gallery-admin-status') || document.querySelector('.gallery-admin-status');
+      if (!fullInput || !thumbInput) {
+        if (statusEl) statusEl.textContent = 'Full image or thumbnail input not found on page.';
+        return;
+      }
+      const file = fullInput.files && fullInput.files[0];
+      if (!file) {
+        if (statusEl) statusEl.textContent = 'Select a full image file first to generate a thumbnail.';
+        return;
+      }
+      try {
+        if (statusEl) statusEl.textContent = 'Generating thumbnail preview…';
+        const blob = await createThumbnailBlob(file);
+        const baseName = (file.name || 'image').replace(/\.[^.]+$/, '');
+        const thumbName = baseName + '-thumb.jpg';
+        const thumbFile = new File([blob], thumbName, { type: 'image/jpeg' });
+        // set File on thumbnail input using DataTransfer
+        const dt = new DataTransfer();
+        dt.items.add(thumbFile);
+        thumbInput.files = dt.files;
+        // trigger change so admin-media-preview shows it
+        thumbInput.dispatchEvent(new Event('change', { bubbles: true }));
+        if (statusEl) statusEl.textContent = 'Thumbnail generated: ' + thumbName;
+      } catch (e) {
+        console.error('Thumbnail generation failed', e);
+        if (statusEl) statusEl.textContent = 'Thumbnail generation failed: ' + (e && e.message ? e.message : String(e));
+      }
+    }
+
+    document.querySelectorAll('#generate-thumbnail-btn, #generate-exhibition-thumbnail-btn').forEach(btn => {
+      btn.addEventListener('click', onGenerateClick);
+    });
+  })();
+
 })();
