@@ -85,22 +85,23 @@
   pointer-events: none;
 }
 /* Public page links in the admin navigation (visually distinguish public pages) */
-.nav.nav-pills .public-nav { margin-left: 10px; }
-.nav.nav-pills .public-nav > a.public-link {
-  display: inline-flex;
+.centered_menu .nav.nav-pills .public-nav { margin-left: 10px; }
+.centered_menu .nav.nav-pills .public-nav > a.public-link {
+  display: inline-flex !important;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(180deg, rgba(44,123,229,0.06), rgba(44,123,229,0.02));
-  color: #1557b1; /* stronger blue accent to indicate public site */
-  border: 1px solid rgba(21,87,177,0.12);
+  background: linear-gradient(180deg, rgba(44,123,229,0.10), rgba(44,123,229,0.04));
+  color: #0b5ed7 !important; /* more noticeable Bootstrap blue */
+  border: 1px solid rgba(11,94,215,0.18);
   padding: 6px 12px;
   border-radius: 6px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
   box-shadow: 0 1px 0 rgba(0,0,0,0.03); /* subtle elevation */
   transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
+  margin-left: 8px;
 }
-.nav.nav-pills .public-nav > a.public-link::before {
+.centered_menu .nav.nav-pills .public-nav > a.public-link::before {
   content: "\1F310"; /* globe emoji as fallback glyph (U+1F310) */
   display: inline-block;
   font-size: 1.05em;
@@ -108,23 +109,23 @@
   margin-right: 4px;
   transform: translateY(-1px);
 }
-.nav.nav-pills .public-nav > a.public-link::after {
+.centered_menu .nav.nav-pills .public-nav > a.public-link::after {
   content: "Public";
   display: inline-block;
   margin-left: 6px;
-  background: rgba(21,87,177,0.06);
-  color: rgba(21,87,177,0.9);
+  background: rgba(11,94,215,0.10);
+  color: rgba(11,94,215,0.95);
   border-radius: 12px;
   padding: 2px 8px;
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1;
 }
-.nav.nav-pills .public-nav > a.public-link:hover,
-.nav.nav-pills .public-nav > a.public-link:focus {
+.centered_menu .nav.nav-pills .public-nav > a.public-link:hover,
+.centered_menu .nav.nav-pills .public-nav > a.public-link:focus {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(21,87,177,0.08);
-  background: linear-gradient(180deg, rgba(44,123,229,0.10), rgba(44,123,229,0.04));
+  box-shadow: 0 6px 18px rgba(11,94,215,0.12);
+  background: linear-gradient(180deg, rgba(44,123,229,0.14), rgba(44,123,229,0.06));
   text-decoration: none;
 }
 /* Slightly dim the admin home link to contrast with admin actions */
@@ -135,14 +136,17 @@
 
 /* Compact, single-line actions cell for admin lists (used by heroes/sliders/images/exhibitions) */
 .admin-friendly-actions {
-  white-space: nowrap;            /* keep actions on one line */
-  vertical-align: middle;        /* align with row content */
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;           /* vertically center children */
+  gap: 8px;                      /* consistent spacing between items */
   padding-left: 6px;             /* small pad to separate from previous columns */
+  background: transparent;       /* ensure no stray background shows */
 }
 .admin-friendly-actions > * {
-  display: inline-block;         /* ensure children sit inline */
-  vertical-align: middle;
-  margin: 0;                     /* spacing provided by separator pseudo-element */
+  display: inline-flex;          /* inline flex to allow center alignment */
+  align-items: center;
+  margin: 0;                     /* spacing handled by gap/separators */
 }
 
 /* Insert a visual separator between action items (CSS-driven instead of literal pipes) */
@@ -150,6 +154,9 @@
   content: " |";
   color: #bbb;
   margin-left: 8px;
+  display: inline-block;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .admin-friendly-actions a,
@@ -159,7 +166,9 @@
   margin: 0;                      /* reset extra margins */
 }
 .admin-friendly-actions .form-check {
-  display: inline-block;          /* ensure toggle labels stay inline */
+  display: inline-flex;           /* ensure toggle labels stay inline and centered */
+  align-items: center;
+  gap: 6px;
   margin: 0;                      /* controlled by parent gap */
 }
 .admin-friendly-actions .btn-link { padding: 0; }
@@ -173,7 +182,7 @@
 
 /* If a table gets narrow, ensure buttons don't overflow too aggressively */
 @media (max-width: 720px) {
-  .admin-friendly-actions { white-space: normal; }
+  .admin-friendly-actions { white-space: normal; flex-direction: column; align-items: stretch; }
   .admin-friendly-actions > * { display: block; margin: 6px 0; }
   .admin-panel-links a:not(:last-child)::after { content: ""; }
 }
