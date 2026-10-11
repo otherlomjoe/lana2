@@ -58,15 +58,7 @@ try {
 <body>
   <div class="container admin-friendly">
     <?php require __DIR__ . '/admin-nav.php'; ?>
-    <?php
-      $versionFile = dirname(__DIR__) . '/version.txt';
-      if (is_readable($versionFile)) {
-        $v = trim((string) file_get_contents($versionFile));
-        if ($v !== '') {
-          echo '<div id="deploy-version" class="deploy-version">v' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</div>';
-        }
-      }
-    ?>
+
     <h1>Admin Home</h1>
     <p class="lead">Quick summary of gallery data</p>
     <div class="row">
