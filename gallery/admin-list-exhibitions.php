@@ -114,22 +114,21 @@ unset($_SESSION['gallery_admin_message']);
       if (!id) return;
       const newVal = checkbox.checked ? 1 : 0;
       checkbox.disabled = true;
-      postForm('/gallery/gallery-api.php?action=exhibition-toggle', { id: id, active: newVal }).then(json => {
+      // Use the same API path and behavior as other lists
+      postForm('/gallery-api.php?action=exhibition-toggle', { id: id, active: newVal }).then(json => {
         if (json && json.success) {
           row.setAttribute('data-ex-active', json.active ? '1' : '0');
-          const badge = row.querySelector('.ex-status .badge');
-          if (badge) {
-            badge.textContent = json.active ? 'Published' : 'Unpublished';
-            badge.className = 'badge ' + (json.active ? 'badge-success' : 'badge-secondary');
-          }
           row.classList.add('ex-row-highlight');
           setTimeout(() => row.classList.remove('ex-row-highlight'), 1200);
           showTempMessage(json.message || (json.active ? 'Published' : 'Unpublished'));
         } else {
-          showTempMessage(json.error || 'Could not update', false);
+          showTempMessage(json && json.error ? json.error : 'Could not update', false);
           checkbox.checked = !checkbox.checked;
         }
-      }).catch(err => { showTempMessage('Error: ' + err, false); checkbox.checked = !checkbox.checked; }).finally(() => { checkbox.disabled = false; });
+      }).catch(err => {
+        showTempMessage('Error: ' + err, false);
+        checkbox.checked = !checkbox.checked;
+      }).finally(() => { checkbox.disabled = false; });
     });
   });
 

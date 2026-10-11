@@ -1354,7 +1354,6 @@ function gallery_normalize_image_row(array $row): array
         'createdAt' => $row['created_at'] ?? null,
         'artworkCreatedAt' => $row['artwork_created_at'] ?? null,
         'deletedAt' => $row['deleted_at'] ?? null,
-        'status' => !empty($row['deleted_at']) ? 'Deleted' : (!empty($row['available']) ? 'Active' : 'Unavailable'),
         'printsAvailable' => !empty($row['prints_available']) ? true : false,
     ];
 }
