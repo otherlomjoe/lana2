@@ -31,7 +31,7 @@ unset($_SESSION['gallery_admin_message']);
     <p><a href="/gallery/admin-exhibition-edit.php">Add exhibition</a></p>
     <p><small>Tip: When selecting images for an exhibition, hold Ctrl (Windows/Linux) or ⌘ Command (Mac) and click to select multiple images. If you prefer a checkbox-style multi-select in the images list, say so and it can be changed.</small></p>
     <table class="table table-striped">
-      <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th><th>Images</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th><th>Images</th><th>Published</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($exhibitions as $exhibition): ?>
           <tr data-ex-id="<?= (int) $exhibition['id'] ?>" data-ex-active="<?= !empty($exhibition['active']) ? '1' : '0' ?>">
@@ -40,13 +40,17 @@ unset($_SESSION['gallery_admin_message']);
             <td class="ex-location"><?= htmlspecialchars((string) $exhibition['location']) ?></td>
             <td class="ex-dates"><?= htmlspecialchars((string) ($exhibition['startDate'] ?? '')) ?> - <?= htmlspecialchars((string) ($exhibition['endDate'] ?? '')) ?></td>
             <td class="ex-count"><?= (int) ($exhibition['imageCount'] ?? 0) ?></td>
-            <td class="ex-status"><span class="badge <?= !empty($exhibition['active']) ? 'badge-success' : 'badge-secondary' ?>"><?= !empty($exhibition['active']) ? 'Visible' : 'Hidden' ?></span></td>
+            <td class="ex-status">
+              <label class="form-check form-check-inline">
+                <input type="checkbox" class="form-check-input ex-toggle" data-id="<?= (int) $exhibition['id'] ?>" <?= !empty($exhibition['active']) ? 'checked' : '' ?> aria-label="Toggle published">
+                <span class="form-check-label badge <?= !empty($exhibition['active']) ? 'badge-success' : 'badge-secondary' ?>"><?= !empty($exhibition['active']) ? 'Published' : 'Unpublished' ?></span>
+              </label>
+            </td>
             <td class="ex-actions">
               <a class="btn btn-link" href="/gallery/admin-exhibition-edit.php?id=<?= (int) $exhibition['id'] ?>">Edit</a>
               | <a class="btn btn-link text-error" href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
               | <button type="button" class="btn btn-link ex-shift" data-direction="-1" title="Move up" aria-label="Move up">Up</button>
               <button type="button" class="btn btn-link ex-shift" data-direction="1" title="Move down" aria-label="Move down">Down</button>
-              | <button type="button" class="btn btn-link ex-toggle" title="Toggle visibility" aria-label="Toggle visibility">Toggle</button>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -107,29 +111,30 @@ unset($_SESSION['gallery_admin_message']);
     setTimeout(() => { wrapper.remove(); }, 7000);
   }
 
-  document.querySelectorAll('.ex-toggle').forEach(btn => {
-    btn.addEventListener('click', function (ev) {
-      const row = ev.target.closest('tr');
-      const id = row.getAttribute('data-ex-id');
+  document.querySelectorAll('.ex-toggle').forEach(cb => {
+    cb.addEventListener('change', function (ev) {
+      const checkbox = ev.target;
+      const row = checkbox.closest('tr');
+      const id = checkbox.getAttribute('data-id') || row.getAttribute('data-ex-id');
       if (!id) return;
-      if (!confirm('Change visibility for this exhibition?')) return;
-      postForm('/gallery/gallery-api.php?action=exhibition-toggle', { id: id }).then(json => {
+      const newVal = checkbox.checked ? 1 : 0;
+      checkbox.disabled = true;
+      postForm('/gallery/gallery-api.php?action=exhibition-toggle', { id: id, active: newVal }).then(json => {
         if (json && json.success) {
-          const active = json.active ? '1' : '0';
-          row.setAttribute('data-ex-active', active);
+          row.setAttribute('data-ex-active', json.active ? '1' : '0');
           const badge = row.querySelector('.ex-status .badge');
           if (badge) {
-            badge.textContent = json.active ? 'Visible' : 'Hidden';
+            badge.textContent = json.active ? 'Published' : 'Unpublished';
             badge.className = 'badge ' + (json.active ? 'badge-success' : 'badge-secondary');
           }
-          // brief highlight
           row.classList.add('ex-row-highlight');
           setTimeout(() => row.classList.remove('ex-row-highlight'), 1200);
-          showTempMessage(json.message || 'Updated');
+          showTempMessage(json.message || (json.active ? 'Published' : 'Unpublished'));
         } else {
           showTempMessage(json.error || 'Could not update', false);
+          checkbox.checked = !checkbox.checked;
         }
-      }).catch(err => { showTempMessage('Error: ' + err, false); });
+      }).catch(err => { showTempMessage('Error: ' + err, false); checkbox.checked = !checkbox.checked; }).finally(() => { checkbox.disabled = false; });
     });
   });
 

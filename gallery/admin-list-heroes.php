@@ -30,21 +30,21 @@ $csrf = gallery_set_csrf_token();
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <p><a class="btn btn-primary" href="/gallery/admin-hero-edit.php">Add home hero</a></p>
-    <p>Visible heroes appear on the homepage in the order shown below. Uncheck visibility to keep a hero as a draft.</p>
+    <p>Published heroes appear on the homepage in the order shown below. Uncheck Published to keep a hero as a draft.</p>
     <table class="table table-striped">
-      <thead><tr><th>Title</th><th>Style</th><th>Visible</th><th>Updated</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Title</th><th>Style</th><th>Published</th><th>Updated</th><th>Actions</th></tr></thead>
       <tbody>
       <?php foreach ($heroes as $hero): ?>
         <tr data-hero-id="<?= (int) $hero['id'] ?>" data-hero-visible="<?= $hero['visible'] ? '1' : '0' ?>">
           <td><?= htmlspecialchars($hero['title'], ENT_QUOTES, 'UTF-8') ?></td>
           <td><?= htmlspecialchars($hero['visualStyle'], ENT_QUOTES, 'UTF-8') ?></td>
-          <td class="hero-visible-label"><?= $hero['visible'] ? 'Yes' : 'Draft' ?></td>
+          <td class="hero-visible-label"><?= $hero['visible'] ? 'Published' : 'Draft' ?></td>
           <td><?= htmlspecialchars((string) ($hero['updatedAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
           <td class="admin-friendly-actions">
             <button type="button" class="btn btn-link hero-shift" data-direction="-1" aria-label="Move hero up">Up</button>
             <button type="button" class="btn btn-link hero-shift" data-direction="1" aria-label="Move hero down">Down</button>
             <a href="/gallery/admin-hero-edit.php?id=<?= (int) $hero['id'] ?>">Edit</a>
-            <button type="button" class="btn btn-link hero-toggle"><?= $hero['visible'] ? 'Hide' : 'Publish' ?></button>
+            <label class="form-check form-check-inline" style="margin-left:8px"><input type="checkbox" class="form-check-input hero-toggle" data-id="<?= (int) $hero['id'] ?>" <?= $hero['visible'] ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label"><?= $hero['visible'] ? 'Published' : 'Draft' ?></span></label>
             <form method="post" action="/gallery/hero-action.php" style="display:inline" onsubmit="return confirm('Permanently delete this hero and its image? This cannot be undone.')">
               <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
               <input type="hidden" name="id" value="<?= (int) $hero['id'] ?>">
@@ -181,26 +181,30 @@ $csrf = gallery_set_csrf_token();
     });
   });
 
-  document.querySelectorAll('.hero-toggle').forEach(btn => {
-    btn.addEventListener('click', function (ev) {
-      const row = ev.target.closest('tr');
-      const id = row.getAttribute('data-hero-id');
+  document.querySelectorAll('.hero-toggle').forEach(el => {
+    el.addEventListener('change', function (ev) {
+      const cb = ev.target;
+      const row = cb.closest('tr');
+      const id = cb.getAttribute('data-id');
       if (!id) return;
-      if (!confirm('Change visibility for this hero?')) return;
-      postForm('/gallery/hero-action.php', { id: id, action: 'visibility', visible: row.getAttribute('data-hero-visible') === '1' ? '0' : '1' }).then(json => {
+      const newVal = cb.checked ? '1' : '0';
+      cb.disabled = true;
+      postForm('/gallery/hero-action.php', { id: id, action: 'visibility', visible: newVal }).then(json => {
         if (json && json.success) {
-          const visible = row.getAttribute('data-hero-visible') === '1' ? '0' : '1';
-          row.setAttribute('data-hero-visible', visible);
+          row.setAttribute('data-hero-visible', newVal);
           const label = row.querySelector('.hero-visible-label');
-          if (label) label.textContent = visible === '1' ? 'Yes' : 'Draft';
+          if (label) label.textContent = newVal === '1' ? 'Published' : 'Draft';
           row.classList.add('ex-row-highlight');
           setTimeout(() => row.classList.remove('ex-row-highlight'), 900);
-          btn.textContent = visible === '1' ? 'Hide' : 'Publish';
-          showTempMessage(json.message || 'Updated');
+          showTempMessage(json.message || (newVal === '1' ? 'Published' : 'Unpublished'));
         } else {
           showTempMessage(json.message || 'Could not update', false);
+          cb.checked = !cb.checked;
         }
-      }).catch(err => showTempMessage('Error: ' + err, false));
+      }).catch(err => {
+        showTempMessage('Error: ' + err, false);
+        cb.checked = !cb.checked;
+      }).finally(() => { cb.disabled = false; });
     });
   });
 })();

@@ -15,6 +15,9 @@ try {
     }
     $result = gallery_save_home_hero($_POST, $_FILES ?? []);
     $_SESSION['gallery_admin_message'] = 'Home hero saved successfully.';
+    if (!empty($result['warning'])) {
+        $_SESSION['gallery_admin_message_warning'] = $result['warning'];
+    }
     $destination = ($_POST['save_mode'] ?? 'list') === 'stay' ? '/gallery/admin-hero-edit.php?id=' . (int) $result['id'] : '/gallery/admin-list-heroes.php';
     header('Location: ' . $destination, true, 303);
     exit;

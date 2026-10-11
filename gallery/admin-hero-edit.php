@@ -16,7 +16,8 @@ if ($id > 0 && !$hero) {
 $exhibitions = gallery_list_exhibitions(gallery_init_db(), true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
-unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
+$warning = $_SESSION['gallery_admin_message_warning'] ?? '';
+unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error'], $_SESSION['gallery_admin_message_warning']);
 $csrf = gallery_set_csrf_token();
 ?>
 <!DOCTYPE html>
@@ -34,13 +35,14 @@ $csrf = gallery_set_csrf_token();
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1><?= $hero ? 'Edit home hero' : 'Create home hero' ?></h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <?php if ($warning !== ''): ?><div class="alert alert-warning"><?= htmlspecialchars($warning, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <form method="post" action="/gallery/hero-save.php" enctype="multipart/form-data">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
       <input type="hidden" name="id" value="<?= (int) ($hero['id'] ?? 0) ?>">
       <div class="control-group"><label for="hero-title">Title</label><input id="hero-title" type="text" name="title" required value="<?= htmlspecialchars((string) ($hero['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><p class="help-block">Shown as the main heading on the homepage panel and hero page.</p></div>
       <div class="control-group"><label for="hero-slug">Slug</label><input id="hero-slug" type="text" name="slug" value="<?= htmlspecialchars((string) ($hero['slug'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><p class="help-block">Leave blank to create it from the title.</p></div>
-      <div class="control-group"><label><input type="checkbox" name="visible" value="1"<?= !empty($hero['visible']) ? ' checked' : '' ?>> Display on homepage</label><p class="help-block">Leave unchecked to save this as a hidden draft.</p></div>
+      <div class="control-group"><label><input type="checkbox" name="published" value="1"<?= !empty($hero['visible']) ? ' checked' : '' ?>> Published</label><p class="help-block">Leave unchecked to save this as a draft (not published to the homepage).</p></div>
       <div class="control-group"><label for="visual-style">Panel style</label><select id="visual-style" name="visualStyle"><option value="info"<?= ($hero['visualStyle'] ?? 'info') === 'info' ? ' selected' : '' ?>>Info (blue)</option><option value="success"<?= ($hero['visualStyle'] ?? '') === 'success' ? ' selected' : '' ?>>Success (green)</option><option value="neutral"<?= ($hero['visualStyle'] ?? '') === 'neutral' ? ' selected' : '' ?>>Neutral</option></select><p class="help-block">Sets the panel colour on the homepage and hero page.</p></div>
       <div class="control-group"><label for="hero-image">Hero image</label><?php if (!empty($hero['image'])): ?><p><img src="<?= htmlspecialchars($hero['image'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($hero['imageAlt'], ENT_QUOTES, 'UTF-8') ?>" style="max-width:320px;height:auto;"><br><small>Current image</small></p><?php endif; ?><input id="hero-image" type="file" name="image" accept="image/jpeg,image/png,image/webp"><p class="help-block">Optional JPG, PNG, or WEBP image.</p></div>
       <div class="control-group"><label for="image-alt">Image alt text</label><input id="image-alt" type="text" name="imageAlt" value="<?= htmlspecialchars((string) ($hero['imageAlt'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><p class="help-block">Describes the image for screen readers; defaults to the title if left blank.</p></div>

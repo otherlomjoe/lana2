@@ -93,7 +93,7 @@ if ($item) {
             <button type="button" id="generate-thumbnail-btn" class="btn">Generate correctly named 200 x 165 thumbnail</button>
           </div>
         </fieldset>
-        <div class="control-group image-title-active-row"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"><label class="active-checkbox"><input type="checkbox" name="active" value="1"<?= ($item['active'] ?? 1) ? ' checked' : '' ?>> Active</label></div>
+        <div class="control-group image-title-active-row"><label>Title</label><input id="image-title" type="text" name="title" value="<?= htmlspecialchars((string) $item['title']) ?>"><label class="active-checkbox"><input type="checkbox" name="published" value="1"<?= ($item['active'] ?? 1) ? ' checked' : '' ?>> Published</label></div>
         <fieldset><legend>Public information</legend>
         <div class="control-group"><label>Public price</label><input type="text" name="pricePublic" value="<?= htmlspecialchars((string) ($item['price_public'] ?? '')) ?>"></div>
         <div class="control-group"><label>Artwork creation date (editable)</label><input type="date" name="artworkCreatedAt" value="<?= htmlspecialchars((string) ($item['artwork_created_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><p class="help-block">This is the modifiable artwork date. New uploads default to the image EXIF date where available, otherwise the file timestamp.</p></div>

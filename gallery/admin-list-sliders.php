@@ -31,24 +31,24 @@ $csrf = gallery_set_csrf_token();
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <div class="admin-help-card">
       <p><strong>Recommended image size:</strong> 1600 &times; 600px, landscape, JPG/PNG/WEBP, under 10 MB.</p>
-      <p>Active slides appear on the homepage in the order shown below. Turn a slide off to keep it without showing it.</p>
+      <p>Published slides appear on the homepage in the order shown below. Turn a slide off to keep it as an unpublished draft.</p>
     </div>
     <p><a class="btn btn-primary btn-large" href="/gallery/admin-slider-edit.php">Add slide</a></p>
     <table class="table table-striped admin-friendly-table">
-      <thead><tr><th>Image</th><th>Title</th><th>Link</th><th>Active</th><th>Updated</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Image</th><th>Title</th><th>Link</th><th>Published</th><th>Updated</th><th>Actions</th></tr></thead>
       <tbody>
       <?php foreach ($slides as $slide): ?>
         <tr data-slide-id="<?= (int) $slide['id'] ?>" data-slide-active="<?= $slide['active'] ? '1' : '0' ?>">
           <td><?php if ($slide['image']): ?><img src="<?= htmlspecialchars($slide['image'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="admin-list-thumbnail"><?php endif; ?></td>
           <td><?= htmlspecialchars($slide['title'], ENT_QUOTES, 'UTF-8') ?></td>
           <td><?= $slide['linkUrl'] !== '' ? htmlspecialchars($slide['linkUrl'], ENT_QUOTES, 'UTF-8') : '&mdash;' ?></td>
-          <td class="slide-active-label"><?= $slide['active'] ? 'Yes' : 'Off' ?></td>
+          <td class="slide-active-label"><?= $slide['active'] ? 'Published' : 'Draft' ?></td>
           <td><?= htmlspecialchars((string) ($slide['updatedAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
           <td class="admin-friendly-actions">
             <button type="button" class="btn btn-link slide-shift" data-direction="-1" aria-label="Move slide up">Up</button>
             <button type="button" class="btn btn-link slide-shift" data-direction="1" aria-label="Move slide down">Down</button>
             <a href="/gallery/admin-slider-edit.php?id=<?= (int) $slide['id'] ?>">Edit</a>
-            <button type="button" class="btn btn-link slide-toggle"><?= $slide['active'] ? 'Turn off' : 'Turn on' ?></button>
+            <label class="form-check form-check-inline"><input type="checkbox" class="form-check-input slide-toggle" data-id="<?= (int) $slide['id'] ?>" <?= $slide['active'] ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label"><?= $slide['active'] ? 'Published' : 'Draft' ?></span></label>
             <form method="post" action="/gallery/slider-action.php" style="display:inline" onsubmit="return confirm('Permanently delete this slide and its image? This cannot be undone.')"><input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="id" value="<?= (int) $slide['id'] ?>"><input type="hidden" name="action" value="hard-delete"><button type="submit" class="btn-link text-error">Delete</button></form>
           </td>
         </tr>
@@ -178,25 +178,30 @@ $csrf = gallery_set_csrf_token();
     });
   });
 
-  document.querySelectorAll('.slide-toggle').forEach(btn => {
-    btn.addEventListener('click', function (ev) {
-      const row = ev.target.closest('tr');
-      const id = row.getAttribute('data-slide-id');
+  document.querySelectorAll('.slide-toggle').forEach(cb => {
+    cb.addEventListener('change', function (ev) {
+      const checkbox = ev.target;
+      const row = checkbox.closest('tr');
+      const id = checkbox.getAttribute('data-id');
       if (!id) return;
-      postForm('/gallery/slider-action.php', { id: id, action: 'active', active: row.getAttribute('data-slide-active') === '1' ? '0' : '1' }).then(json => {
+      const newVal = checkbox.checked ? '1' : '0';
+      checkbox.disabled = true;
+      postForm('/gallery/slider-action.php', { id: id, action: 'active', active: newVal }).then(json => {
         if (json && json.success) {
-          const active = row.getAttribute('data-slide-active') === '1' ? '0' : '1';
-          row.setAttribute('data-slide-active', active);
+          row.setAttribute('data-slide-active', newVal);
           const label = row.querySelector('.slide-active-label');
-          if (label) label.textContent = active === '1' ? 'Yes' : 'Off';
+          if (label) label.textContent = newVal === '1' ? 'Published' : 'Draft';
           row.classList.add('ex-row-highlight');
           setTimeout(() => row.classList.remove('ex-row-highlight'), 900);
-          btn.textContent = active === '1' ? 'Turn off' : 'Turn on';
-          showTempMessage(json.message || 'Updated');
+          showTempMessage(json.message || (newVal === '1' ? 'Published' : 'Unpublished'));
         } else {
           showTempMessage(json.message || 'Could not update', false);
+          checkbox.checked = !checkbox.checked;
         }
-      }).catch(err => showTempMessage('Error: ' + err, false));
+      }).catch(err => {
+        showTempMessage('Error: ' + err, false);
+        checkbox.checked = !checkbox.checked;
+      }).finally(() => { checkbox.disabled = false; });
     });
   });
 })();

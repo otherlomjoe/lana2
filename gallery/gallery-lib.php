@@ -565,6 +565,17 @@ function gallery_save_home_hero(array $data, array $files = []): array
         throw new RuntimeException('Gallery database is unavailable.');
     }
 
+    // Accept canonical 'published' parameter from UI and map to internal 'visible'
+    if (array_key_exists('published', $data)) {
+        $pub = $data['published'];
+        if (is_string($pub)) {
+            $pub = in_array(strtolower(trim($pub)), ['1','true','on','yes'], true) ? 1 : 0;
+        } else {
+            $pub = !empty($pub) ? 1 : 0;
+        }
+        $data['visible'] = (int) $pub;
+    }
+
     $id = (int) ($data['id'] ?? 0);
     $title = trim((string) ($data['title'] ?? ''));
     $body = trim((string) ($data['body'] ?? ''));
@@ -771,6 +782,17 @@ function gallery_save_slider_image(array $data, array $files = []): array
     $pdo = gallery_init_db();
     if (!$pdo) {
         throw new RuntimeException('Gallery database is unavailable.');
+    }
+
+    // Accept canonical 'published' parameter and map to internal 'active'
+    if (array_key_exists('published', $data)) {
+        $pub = $data['published'];
+        if (is_string($pub)) {
+            $pub = in_array(strtolower(trim($pub)), ['1','true','on','yes'], true) ? 1 : 0;
+        } else {
+            $pub = !empty($pub) ? 1 : 0;
+        }
+        $data['active'] = (int) $pub;
     }
 
     $id = (int) ($data['id'] ?? 0);
@@ -1419,6 +1441,17 @@ function gallery_save_exhibition(array $data, array $files = []): array
     $pdo = gallery_init_db();
     if (!$pdo) {
         throw new RuntimeException('Gallery database is unavailable.');
+    }
+
+    // Accept canonical 'published' parameter and map to internal 'active'
+    if (array_key_exists('published', $data)) {
+        $pub = $data['published'];
+        if (is_string($pub)) {
+            $pub = in_array(strtolower(trim($pub)), ['1','true','on','yes'], true) ? 1 : 0;
+        } else {
+            $pub = !empty($pub) ? 1 : 0;
+        }
+        $data['active'] = (int) $pub;
     }
 
     $title = trim((string) ($data['title'] ?? ''));
