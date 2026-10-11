@@ -31,7 +31,7 @@ unset($_SESSION['gallery_admin_message']);
     <p><a href="/gallery/admin-exhibition-edit.php">Add exhibition</a></p>
     <p><small>Tip: When selecting images for an exhibition, hold Ctrl (Windows/Linux) or ⌘ Command (Mac) and click to select multiple images. If you prefer a checkbox-style multi-select in the images list, say so and it can be changed.</small></p>
     <table class="table table-striped">
-      <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th><th>Images</th><th>Published</th><th>Actions</th></tr></thead>
+      <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Dates</th><th>Images</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($exhibitions as $exhibition): ?>
           <tr data-ex-id="<?= (int) $exhibition['id'] ?>" data-ex-active="<?= !empty($exhibition['active']) ? '1' : '0' ?>">
@@ -40,14 +40,9 @@ unset($_SESSION['gallery_admin_message']);
             <td class="ex-location"><?= htmlspecialchars((string) $exhibition['location']) ?></td>
             <td class="ex-dates"><?= htmlspecialchars((string) ($exhibition['startDate'] ?? '')) ?> - <?= htmlspecialchars((string) ($exhibition['endDate'] ?? '')) ?></td>
             <td class="ex-count"><?= (int) ($exhibition['imageCount'] ?? 0) ?></td>
-            <td class="ex-status">
-              <label class="form-check form-check-inline">
-                <input type="checkbox" class="form-check-input ex-toggle" data-id="<?= (int) $exhibition['id'] ?>" <?= !empty($exhibition['active']) ? 'checked' : '' ?> aria-label="Toggle published">
-                <span class="form-check-label badge <?= !empty($exhibition['active']) ? 'badge-success' : 'badge-secondary' ?>"><?= !empty($exhibition['active']) ? 'Published' : 'Unpublished' ?></span>
-              </label>
-            </td>
             <td class="ex-actions">
               <a class="btn btn-link" href="/gallery/admin-exhibition-edit.php?id=<?= (int) $exhibition['id'] ?>">Edit</a>
+              <label class="form-check form-check-inline" style="margin-left:8px"><input type="checkbox" class="form-check-input ex-toggle" data-id="<?= (int) $exhibition['id'] ?>" <?= !empty($exhibition['active']) ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label badge <?= !empty($exhibition['active']) ? 'badge-success' : 'badge-secondary' ?>"><?= !empty($exhibition['active']) ? 'Published' : 'Unpublished' ?></span></label>
               | <a class="btn btn-link text-error" href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
               | <button type="button" class="btn btn-link ex-shift" data-direction="-1" title="Move up" aria-label="Move up">Up</button>
               <button type="button" class="btn btn-link ex-shift" data-direction="1" title="Move down" aria-label="Move down">Down</button>

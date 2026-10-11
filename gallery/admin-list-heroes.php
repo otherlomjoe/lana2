@@ -32,13 +32,12 @@ $csrf = gallery_set_csrf_token();
     <p><a class="btn btn-primary" href="/gallery/admin-hero-edit.php">Add home hero</a></p>
     <p>Published heroes appear on the homepage in the order shown below. Uncheck Published to keep a hero as a draft.</p>
     <table class="table table-striped">
-      <thead><tr><th>Title</th><th>Style</th><th>Published</th><th>Updated</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Title</th><th>Style</th><th>Updated</th><th>Actions</th></tr></thead>
       <tbody>
       <?php foreach ($heroes as $hero): ?>
         <tr data-hero-id="<?= (int) $hero['id'] ?>" data-hero-visible="<?= $hero['visible'] ? '1' : '0' ?>">
           <td><?= htmlspecialchars($hero['title'], ENT_QUOTES, 'UTF-8') ?></td>
           <td><?= htmlspecialchars($hero['visualStyle'], ENT_QUOTES, 'UTF-8') ?></td>
-          <td class="hero-visible-label"><?= $hero['visible'] ? 'Published' : 'Draft' ?></td>
           <td><?= htmlspecialchars((string) ($hero['updatedAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
           <td class="admin-friendly-actions">
             <button type="button" class="btn btn-link hero-shift" data-direction="-1" aria-label="Move hero up">Up</button>

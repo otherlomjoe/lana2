@@ -402,6 +402,12 @@ function gallery_derive_artwork_date(string $imagePath): array
     return ['date' => null, 'source' => null];
 }
 
+/**
+ * Return trimmed string if value is a string, otherwise empty string.
+ *
+ * @param mixed $value
+ * @return string
+ */
 function gallery_string_or_empty($value): string
 {
     return is_string($value) ? trim($value) : '';
@@ -1787,11 +1793,22 @@ function gallery_save_image(array $data, array $files = []): array
     // a thumbnail with the same basename already exists in the images table.
     if ($imageId === null && $thumbPath !== '') {
         $thumbBase = basename((string) $thumbPath);
-        $checkStmt = $pdo->prepare('SELECT id FROM images WHERE (thumbnail_file IS NOT NULL AND (thumbnail_file LIKE :like)) OR (thumbnail_url IS NOT NULL AND thumbnail_url LIKE :like) LIMIT 1');
+        // Query candidates that contain the basename, then verify exact basename equality in PHP
+        $checkStmt = $pdo->prepare('SELECT id, thumbnail_file, thumbnail_url FROM images WHERE (thumbnail_file IS NOT NULL AND thumbnail_file LIKE :like) OR (thumbnail_url IS NOT NULL AND thumbnail_url LIKE :like)');
         $like = '%' . $thumbBase;
         $checkStmt->execute([':like' => $like]);
-        $found = $checkStmt->fetch();
-        if ($found) {
+        $foundExact = false;
+        while ($row = $checkStmt->fetch(PDO::FETCH_ASSOC)) {
+            if (!empty($row['thumbnail_file']) && basename($row['thumbnail_file']) === $thumbBase) {
+                $foundExact = true;
+                break;
+            }
+            if (!empty($row['thumbnail_url']) && basename($row['thumbnail_url']) === $thumbBase) {
+                $foundExact = true;
+                break;
+            }
+        }
+        if ($foundExact) {
             throw new InvalidArgumentException('A thumbnail with the same filename already exists in another image ("' . $thumbBase . '"). Choose a different thumbnail filename or reuse the existing image.');
         }
     }
@@ -2088,7 +2105,7 @@ function gallery_set_csrf_token(): string
     return $token;
 }
 
-function gallery_normalize_string_array($value): array
+function gallery_normalize_string_array(mixed $value): array
 {
     if (is_array($value)) {
         return array_values(array_filter(array_map('trim', $value), static fn ($item) => $item !== ''));

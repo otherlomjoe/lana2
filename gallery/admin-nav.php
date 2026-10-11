@@ -20,8 +20,17 @@
     </div>
   </div>
 </div>
-<div id="contentInnerSeparator"></div>
-<script src="/scripts/jquery.min.js"></script>
-<script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
-
+  <?php
+    // show deploy/version badge on all admin pages (reads repo root version.txt)
+    $versionFile = dirname(__DIR__) . '/version.txt';
+    if (is_readable($versionFile)) {
+      $v = trim((string) @file_get_contents($versionFile));
+      if ($v !== '') {
+        echo '<div id="deploy-version" class="deploy-version">v' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</div>';
+      }
+    }
+  ?>
+  <div id="contentInnerSeparator"></div>
+  <script src="/scripts/jquery.min.js"></script>
+  <script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
 

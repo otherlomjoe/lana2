@@ -85,18 +85,46 @@
   pointer-events: none;
 }
 /* Public page links in the admin navigation (visually distinguish public pages) */
-.nav.nav-pills .public-nav { margin-left: 8px; }
+.nav.nav-pills .public-nav { margin-left: 10px; }
 .nav.nav-pills .public-nav > a.public-link {
-  background: transparent;
-  color: #2c7be5; /* blue accent to indicate public site */
-  border: 1px solid rgba(44,123,229,0.12);
-  padding: 6px 10px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(180deg, rgba(44,123,229,0.06), rgba(44,123,229,0.02));
+  color: #1557b1; /* stronger blue accent to indicate public site */
+  border: 1px solid rgba(21,87,177,0.12);
+  padding: 6px 12px;
+  border-radius: 6px;
   font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03); /* subtle elevation */
+  transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
+}
+.nav.nav-pills .public-nav > a.public-link::before {
+  content: "\1F310"; /* globe emoji as fallback glyph (U+1F310) */
+  display: inline-block;
+  font-size: 1.05em;
+  line-height: 1;
+  margin-right: 4px;
+  transform: translateY(-1px);
+}
+.nav.nav-pills .public-nav > a.public-link::after {
+  content: "Public";
+  display: inline-block;
+  margin-left: 6px;
+  background: rgba(21,87,177,0.06);
+  color: rgba(21,87,177,0.9);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
 }
 .nav.nav-pills .public-nav > a.public-link:hover,
 .nav.nav-pills .public-nav > a.public-link:focus {
-  background: rgba(44,123,229,0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(21,87,177,0.08);
+  background: linear-gradient(180deg, rgba(44,123,229,0.10), rgba(44,123,229,0.04));
   text-decoration: none;
 }
 /* Slightly dim the admin home link to contrast with admin actions */
