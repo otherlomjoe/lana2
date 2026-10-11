@@ -174,22 +174,42 @@ function getFull(item) {
 // ---------------------------------------------------------
 //
 function formatDescription(text) {
-  const escaped = (text || "").replace(/[&<>\"']/g, character => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
-  })[character]);
-  return escaped
+  const escaped = (text || "").replace(/[&<>\"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]));
+  const withInline = escaped
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .split(/\n\s*\n/)
-    .map(paragraph => {
-      const lines = paragraph.split("\n").filter(Boolean);
-      if (lines.every(line => /^-\s+/.test(line))) {
-        return `<ul>${lines.map(line => `<li>${line.replace(/^-\s+/, "")}</li>`).join("")}</ul>`;
+    .replace(/\*(.+?)\*/g, "<em>$1</em>");
+
+  const paragraphs = withInline.split(/\n\s*\n/);
+  const parts = [];
+  for (const p of paragraphs) {
+    if (!p.trim()) continue;
+    const lines = p.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.every(l => /^-\s+/.test(l))) {
+      parts.push(`<ul>${lines.map(l => `<li>${l.replace(/^-\s+/, '')}</li>`).join('')}</ul>`);
+      continue;
+    }
+
+    let hasHeading = false;
+    const contentLines = [];
+    for (const line of lines) {
+      const m = line.match(/^(#{1,6})\s+(.+)$/);
+      if (m) {
+        hasHeading = true;
+        const level = m[1].length;
+        parts.push('<h' + level + '>' + m[2] + '</h' + level + '>');
+      } else {
+        contentLines.push(line);
       }
-      return `<p>${lines.join("<br>")}</p>`;
-    })
-    .join("");
+    }
+
+    if (hasHeading && contentLines.length) {
+      parts.push('<p>' + contentLines.join('<br>') + '</p>');
+    } else if (!hasHeading) {
+      parts.push('<p>' + lines.join('<br>') + '</p>');
+    }
+  }
+  return parts.join('');
 }
 
 //
