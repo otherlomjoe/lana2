@@ -186,3 +186,69 @@
   .admin-friendly-actions > * { display: block; margin: 6px 0; }
   .admin-panel-links a:not(:last-child)::after { content: ""; }
 }
+
+/* Stronger overrides for public-link visuals and action cell alignment (use high specificity) */
+.centered_menu .nav.nav-pills > li.public-nav > a.public-link,
+.centered_menu .nav.nav-pills li.public-nav > a.public-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: linear-gradient(180deg, rgba(44,123,229,0.12), rgba(44,123,229,0.06)) !important;
+  color: #0b5ed7 !important;
+  border: 1px solid rgba(11,94,215,0.18) !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03) !important;
+  margin-left: 8px !important;
+}
+.centered_menu .nav.nav-pills > li.public-nav > a.public-link::before,
+.centered_menu .nav.nav-pills li.public-nav > a.public-link::before {
+  content: "\1F310" !important;
+  margin-right: 6px !important;
+}
+.centered_menu .nav.nav-pills > li.public-nav > a.public-link::after,
+.centered_menu .nav.nav-pills li.public-nav > a.public-link::after {
+  content: "Public" !important;
+  margin-left: 8px !important;
+  background: rgba(11,94,215,0.12) !important;
+  color: rgba(11,94,215,0.95) !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+}
+
+/* Ensure the actions cell has transparent background and no borders */
+td.admin-friendly-actions, td.admin-friendly-actions * {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Align checkbox vertically with links and remove extra offset */
+.admin-friendly-actions .form-check-input,
+.admin-friendly-actions input[type="checkbox"] {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  vertical-align: middle !important;
+  transform: translateY(0) !important;
+}
+.admin-friendly-actions .form-check-label {
+  line-height: 1 !important;
+  vertical-align: middle !important;
+}
+
+/* If Bootstrap is adding background to odd table rows, force white for the table body rows in admin lists */
+.admin-friendly .table.table-striped tbody > tr {
+  background-color: #fff !important;
+}
+.admin-friendly .table.table-striped tbody > tr:nth-child(odd) {
+  background-color: #fff !important;
+}
+
+/* If there's a stray rule adding borders between cells, neutralize it for admin lists */
+.admin-friendly .table.table-striped tbody > tr > td {
+  border-top: 1px solid #eee !important;
+  background-clip: padding-box !important;
+}
