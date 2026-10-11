@@ -5,7 +5,7 @@ session_start();
 header('Content-Type: text/html; charset=utf-8');
 
 if (!empty($_SESSION['gallery_admin_authenticated']) && $_SESSION['gallery_admin_authenticated'] === true) {
-    header('Location: /gallery/admin-upload.php');
+    header('Location: /gallery/admin-index.php');
     exit;
 }
 
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($hash !== false && $hash !== '' && password_verify($password, $hash)) {
         $_SESSION['gallery_admin_authenticated'] = true;
         $_SESSION['gallery_admin_user'] = 'admin';
-        header('Location: /gallery/admin-upload.php');
+        header('Location: /gallery/admin-index.php');
         exit;
     }
     $error = 'Incorrect password.';

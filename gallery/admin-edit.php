@@ -20,6 +20,7 @@ $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
 unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
 $id = (int) ($_GET['id'] ?? 0);
+$isNew = $id === 0;
 $item = null;
 $prevId = null; $nextId = null;
 if ($id > 0) {
@@ -45,7 +46,7 @@ if ($item) {
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Edit Image</title>
+  <title><?= $isNew ? 'Add Image' : 'Edit Image' ?></title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="../scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
   <link href="../styles/custom.css" rel="stylesheet">
@@ -63,17 +64,17 @@ if ($item) {
         }
       }
     ?>
-    <h1>Edit Image</h1>
+    <h1><?= $isNew ? 'Add Image' : 'Edit Image' ?></h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($item): ?>
       <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
-        <input type="hidden" name="id" value="<?= htmlspecialchars((string) $item['id']) ?>">
+        <input type="hidden" name="id" value="<?= (int) ($item['id'] ?? 0) ?>">
         <fieldset><legend>Images</legend>
           <div class="control-group">
             <label>Full image</label>
             <?php if (!empty($item['full_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['full_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['full_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No full image is currently stored.</p><?php endif; ?>
-            <input id="full-image" data-media-input="full image" type="file" name="full" accept="image/*"><div data-media-preview="full-image"></div>
+            <input id="full-image" data-media-input="full image" type="file" name="full" accept="image/*"<?= $isNew ? ' required' : '' ?>><div data-media-preview="full-image"></div>
             <p class="help-block">Choose a replacement full image.</p>
             <?php if (!empty($item['full_file'])): ?>
               <button type="button" class="btn btn-small" onclick="if(confirm('Remove the full image from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='full';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove full image</button>

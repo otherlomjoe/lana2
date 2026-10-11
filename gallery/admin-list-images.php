@@ -37,7 +37,7 @@ unset($_SESSION['gallery_admin_message']);
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1>Images</h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-    <p><a href="/gallery/admin-upload.php">Add image</a></p>
+    <p><a href="/gallery/admin-edit.php">Add image</a></p>
     <table class="table table-striped">
       <thead><tr><th>ID</th><th>Thumbnail</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Active</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
