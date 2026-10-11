@@ -71,6 +71,7 @@
 
 /* Deploy/version badge shown on admin pages */
 .deploy-version {
+.deploy-version {
   position: fixed;
   top: 8px;
   left: 8px;
@@ -83,3 +84,20 @@
   opacity: 0.9;
   pointer-events: none;
 }
+/* Public page links in the admin navigation (visually distinguish public pages) */
+.nav.nav-pills .public-nav { margin-left: 8px; }
+.nav.nav-pills .public-nav > a.public-link {
+  background: transparent;
+  color: #2c7be5; /* blue accent to indicate public site */
+  border: 1px solid rgba(44,123,229,0.12);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.nav.nav-pills .public-nav > a.public-link:hover,
+.nav.nav-pills .public-nav > a.public-link:focus {
+  background: rgba(44,123,229,0.06);
+  text-decoration: none;
+}
+/* Slightly dim the admin home link to contrast with admin actions */
+.nav.nav-pills > li:first-child > a { font-weight: 700; }

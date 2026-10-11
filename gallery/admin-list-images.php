@@ -39,7 +39,7 @@ unset($_SESSION['gallery_admin_message']);
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <p><a href="/gallery/admin-image-edit.php">Add image</a></p>
     <table class="table table-striped">
-      <thead><tr><th>ID</th><th>Thumbnail</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Active</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>ID</th><th>Thumbnail</th><th>Title</th><th>Medium</th><th>Genre</th><th>Tags</th><th>Published</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
         <?php foreach ($items as $item): ?>
           <tr <?php if ($filterExhibition > 0): ?>data-image-id="<?= (int) $item['id'] ?>" data-ex-id="<?= $filterExhibition ?>"<?php endif; ?>>
@@ -57,7 +57,7 @@ unset($_SESSION['gallery_admin_message']);
             <td><?= htmlspecialchars((string) $item['medium']) ?></td>
             <td><?= htmlspecialchars((string) $item['genre']) ?></td>
             <td><?= htmlspecialchars(implode(', ', (array) $item['tags'])) ?></td>
-            <td><?= !empty($item['active']) ? 'Yes' : 'No' ?></td>
+            <td><label class="form-check form-check-inline"><input class="form-check-input image-toggle" type="checkbox" data-id="<?= (int) $item['id'] ?>" <?= !empty($item['active']) ? 'checked' : '' ?> aria-label="Toggle published"><span class="form-check-label">&nbsp;</span></label></td>
             <td><?= htmlspecialchars((string) $item['status']) ?></td>
             <td>
               <a href="/gallery/work.html#<?= urlencode((string) $item['slug']) ?>" target="_blank">Preview</a> | <a href="/gallery/admin-image-edit.php?id=<?= (int) $item['id'] ?>">Edit</a>
@@ -191,6 +191,29 @@ unset($_SESSION['gallery_admin_message']);
             showTempMessage(json.error || 'Could not move', false);
           }
         }).catch(err => { showTempMessage('Error: ' + err, false); });
+      });
+    });
+
+    // Quick publish/unpublish toggle for images
+    document.querySelectorAll('.image-toggle').forEach(el => {
+      el.addEventListener('change', function (ev) {
+        const cb = ev.target;
+        const id = cb.getAttribute('data-id');
+        if (!id) return;
+        const newVal = cb.checked ? 1 : 0;
+        cb.disabled = true;
+        postForm('/gallery-api.php?action=image-toggle', { id: id, active: newVal }).then(json => {
+          if (json && json.success) {
+            showTempMessage(json.message || (newVal ? 'Published' : 'Unpublished'));
+          } else {
+            showTempMessage(json && json.error ? json.error : 'Could not update', false);
+            // revert checkbox
+            cb.checked = !cb.checked;
+          }
+        }).catch(err => {
+          showTempMessage('Error: ' + err, false);
+          cb.checked = !cb.checked;
+        }).finally(() => { cb.disabled = false; });
       });
     });
   })();

@@ -620,6 +620,25 @@ function gallery_save_home_hero(array $data, array $files = []): array
         ':image_alt' => trim((string) ($data['imageAlt'] ?? $title)),
         ':exhibition_id' => !empty($data['exhibitionId']) ? (int) $data['exhibitionId'] : null,
     ];
+
+    // Server-side normalization: if attempting to publish a hero that links to an unpublished exhibition,
+    // silently demote to hidden and return a warning in the result so the UI can inform the user.
+    $visibilityWarning = null;
+    if (!empty($params[':visible']) && !empty($params[':exhibition_id'])) {
+        try {
+            $check = $pdo->prepare('SELECT active FROM exhibitions WHERE id = :id LIMIT 1');
+            $check->execute([':id' => (int) $params[':exhibition_id']]);
+            $er = $check->fetch();
+            if ($er && empty($er['active'])) {
+                // linked exhibition is not active; prevent hero from being published
+                $params[':visible'] = 0;
+                $visibilityWarning = 'Hero could not be published because the linked exhibition is unpublished; saved as hidden.';
+            }
+        } catch (Throwable $e) {
+            // ignore check failures to avoid blocking save; keep original visibility
+        }
+    }
+
     if ($id > 0) {
         $params[':id'] = $id;
         $stmt = $pdo->prepare('UPDATE home_heroes SET slug = :slug, title = :title, visible = :visible, display_order = :display_order, visual_style = :visual_style, body = :body, image_file = :image_file, image_url = :image_url, image_alt = :image_alt, exhibition_id = :exhibition_id, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
@@ -628,7 +647,10 @@ function gallery_save_home_hero(array $data, array $files = []): array
     }
     $stmt->execute($params);
     $id = $id > 0 ? $id : (int) $pdo->lastInsertId();
-    return ['id' => $id, 'slug' => $slug];
+
+    $result = ['id' => $id, 'slug' => $slug];
+    if ($visibilityWarning) $result['warning'] = $visibilityWarning;
+    return $result;
 }
 
 function gallery_set_home_hero_visibility(int $id, bool $visible): bool
@@ -810,6 +832,16 @@ function gallery_set_slider_image_active(int $id, bool $active): bool
     $pdo = gallery_init_db();
     if (!$pdo) return false;
     return $pdo->prepare('UPDATE home_slider_images SET active = :active, updated_at = CURRENT_TIMESTAMP WHERE id = :id')->execute([':active' => $active ? 1 : 0, ':id' => $id]);
+}
+
+/**
+ * Toggle an image's active/published flag.
+ */
+function gallery_set_image_active(int $id, bool $active): bool
+{
+    $pdo = gallery_init_db();
+    if (!$pdo) return false;
+    return $pdo->prepare('UPDATE images SET active = :active, updated_at = CURRENT_TIMESTAMP WHERE id = :id')->execute([':active' => $active ? 1 : 0, ':id' => $id]);
 }
 
 function gallery_hard_delete_slider_image(int $id): bool
@@ -1474,6 +1506,15 @@ function gallery_save_exhibition(array $data, array $files = []): array
         $exhibitionId = (int) $pdo->lastInsertId();
     }
 
+    // Server-side normalization: if exhibition is unpublished, ensure any home heroes linked to it are hidden.
+    if (isset($activeVal) && (int) $activeVal === 0) {
+        try {
+            $pdo->prepare('UPDATE home_heroes SET visible = 0 WHERE exhibition_id = :id')->execute([':id' => $exhibitionId]);
+        } catch (Throwable $e) {
+            // ignore failures to avoid blocking exhibition save
+        }
+    }
+
     if (array_key_exists('imageIds', $data)) {
         $imageIds = array_map('intval', (array) $data['imageIds']);
         $pdo->prepare('DELETE FROM image_exhibitions WHERE exhibition_id = :exhibition_id')->execute([':exhibition_id' => $exhibitionId]);
@@ -1605,6 +1646,17 @@ function gallery_save_image(array $data, array $files = []): array
 
     gallery_ensure_upload_directories();
 
+    // Backwards-compatibility: accept 'published' from older UIs and map it to 'active'.
+    if (array_key_exists('published', $data)) {
+        $published = $data['published'];
+        if (is_string($published)) {
+            $published = in_array(strtolower(trim($published)), ['1', 'true', 'on', 'yes'], true) ? 1 : 0;
+        } else {
+            $published = !empty($published) ? 1 : 0;
+        }
+        $data['active'] = (int) $published;
+    }
+
     $fullInput = $files['full'] ?? $files['fullImage'] ?? null;
     $thumbInput = $files['thumbnail'] ?? $files['thumb'] ?? null;
     $filename = trim((string) ($data['filename'] ?? ($fullInput['name'] ?? '')));
@@ -1696,6 +1748,19 @@ function gallery_save_image(array $data, array $files = []): array
             throw new RuntimeException('Could not generate the thumbnail image.');
         }
         $thumbUrl = '/gallery/uploads/thumbs/' . $thumbFilename;
+    }
+
+    // Duplicate-prevention: authoritative server-side check to block creating a new image when
+    // a thumbnail with the same basename already exists in the images table.
+    if ($imageId === null && $thumbPath !== '') {
+        $thumbBase = basename((string) $thumbPath);
+        $checkStmt = $pdo->prepare('SELECT id FROM images WHERE (thumbnail_file IS NOT NULL AND (thumbnail_file LIKE :like)) OR (thumbnail_url IS NOT NULL AND thumbnail_url LIKE :like) LIMIT 1');
+        $like = '%' . $thumbBase;
+        $checkStmt->execute([':like' => $like]);
+        $found = $checkStmt->fetch();
+        if ($found) {
+            throw new InvalidArgumentException('A thumbnail with the same filename already exists in another image ("' . $thumbBase . '"). Choose a different thumbnail filename or reuse the existing image.');
+        }
     }
 
     if ($fullPath === '') {

@@ -179,6 +179,31 @@ if ($action === 'exhibition-toggle') {
     exit;
 }
 
+// Toggle an image's active/published flag via AJAX.
+if ($action === 'image-toggle') {
+    galleryApiRequireAuth();
+    galleryApiEnsureCsrf();
+    $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    if ($id <= 0) galleryApiError('No image id supplied.', 400);
+    $pdo = gallery_init_db();
+    if (!$pdo) galleryApiError('Database unavailable.', 500);
+    $stmt = $pdo->prepare('SELECT active FROM images WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) galleryApiError('Image not found.', 404);
+    $current = !empty($row['active']);
+    $explicit = isset($_POST['active']) ? (int) $_POST['active'] : (isset($_GET['active']) ? (int) $_GET['active'] : null);
+    $new = $explicit !== null ? (bool) $explicit : !$current;
+    $updated = false;
+    try {
+        $updated = gallery_set_image_active($id, $new);
+    } catch (Throwable $e) {
+        galleryApiError('Could not update image: ' . $e->getMessage(), 500);
+    }
+    echo json_encode(['success' => (bool) $updated, 'active' => $new ? 1 : 0, 'message' => $updated ? 'Image visibility updated.' : 'Could not update visibility.']);
+    exit;
+}
+
 if ($action === 'dropdowns') {
     $pdo = gallery_init_db();
     if (!$pdo) {

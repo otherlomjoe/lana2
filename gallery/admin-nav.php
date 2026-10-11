@@ -6,8 +6,9 @@
     <div class="admin-nav-collapse nav-collapse collapse">
       <ul class="nav nav-pills ddmenu">
         <li><a href="/gallery/admin-index.php">Admin Home</a></li>
-        <li><a href="/index.html">Home</a></li>
-        <!-- Public gallery removed from admin menu -->
+        <li class="public-nav"><a class="public-link" href="/index.html">Home</a></li>
+        <li class="public-nav"><a class="public-link" href="/gallery/">Gallery</a></li>
+        <!-- Public gallery was previously removed from admin menu -->
         <li><a href="/gallery/admin-list-sliders.php">Home slider</a></li>
         <li><a href="/gallery/admin-list-heroes.php">Home heroes</a></li>
         <li><a href="/gallery/admin-list-exhibitions.php">Exhibitions</a></li>
