@@ -68,3 +68,18 @@
 /* Stronger visual highlight when an item is checked */
 .ex-images-list label.checked { background: #e9f7ff; border-left: 4px solid #007bff; }
 .ex-images-list label.checked .item-title { color: #0056b3; }
+
+/* Deploy/version badge shown on admin pages */
+.deploy-version {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 12px;
+  z-index: 10000;
+  border-radius: 4px;
+  opacity: 0.9;
+  pointer-events: none;
+}

@@ -60,7 +60,7 @@ if ($item) {
       if (is_readable($versionFile)) {
         $v = trim((string) file_get_contents($versionFile));
         if ($v !== '') {
-          echo '<div id="deploy-version" style="position:fixed;top:8px;left:8px;background:#222;color:#fff;padding:6px 10px;border-radius:4px;z-index:9999;font-size:12px;opacity:0.9">v' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</div>';
+          echo '<div id="deploy-version" class="deploy-version">v' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</div>';
         }
       }
     ?>
@@ -118,7 +118,7 @@ if ($item) {
         </fieldset>
         <div class="form-actions">
           <?php if (!empty($prevId)): ?>
-            <a class="btn nav-anchor" href="/gallery/admin-edit.php?id=<?= (int)$prevId ?>" data-direction="prev">&larr; Prev</a>
+            <a class="btn nav-anchor" href="/gallery/admin-image-edit.php?id=<?= (int)$prevId ?>" data-direction="prev">&larr; Prev</a>
           <?php endif; ?>
           <button type="submit" name="save_mode" value="stay" class="btn btn-primary">Save and stay</button>
           <?php if (!empty($nextId)): ?>
@@ -344,3 +344,5 @@ if ($item) {
   <script src="/scripts/admin-media-preview.js"></script>
 </body>
 </html>
+
+

@@ -58,3 +58,5 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
 header('Location: /gallery/admin-list-exhibitions.php', true, 303);
 exit;
+
+

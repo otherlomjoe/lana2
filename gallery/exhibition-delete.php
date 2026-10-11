@@ -18,3 +18,5 @@ if ($id > 0) {
 }
 header('Location: /gallery/admin-list-exhibitions.php');
 exit;
+
+

@@ -152,3 +152,5 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
   </div>
 </body>
 </html>
+
+

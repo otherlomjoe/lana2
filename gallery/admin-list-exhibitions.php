@@ -213,3 +213,5 @@ unset($_SESSION['gallery_admin_message']);
 </script>
 </body>
 </html>
+
+

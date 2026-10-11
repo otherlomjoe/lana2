@@ -14,3 +14,5 @@ if ($id > 0) {
 }
 header('Location: /gallery/admin-list-images.php');
 exit;
+
+

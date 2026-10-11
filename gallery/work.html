@@ -386,7 +386,7 @@ async function loadArtwork() {
         if (statusJson.authenticated) {
           const editLink = document.getElementById('work-admin-edit');
           if (editLink) {
-            editLink.href = '/gallery/admin-edit.php?id=' + encodeURIComponent(item.id || '');
+            editLink.href = '/gallery/admin-image-edit.php?id=' + encodeURIComponent(item.id || '');
             editLink.hidden = !item.id;
           }
           const itemRes = await fetch('/gallery-api.php?action=item&slug=' + encodeURIComponent(slug), { credentials: 'same-origin' });
@@ -438,3 +438,5 @@ document.addEventListener("DOMContentLoaded", function () {
 
 </body>
 </html>
+
+

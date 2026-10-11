@@ -40,7 +40,7 @@ try {
         $_SESSION['gallery_admin_message'] = 'Image saved successfully.';
         $saveMode = ($_POST['save_mode'] ?? 'list');
         $destination = $saveMode === 'stay'
-            ? '/gallery/admin-edit.php?id=' . (int) $result['id']
+            ? '/gallery/admin-image-edit.php?id=' . (int) $result['id']
             : '/gallery/admin-list-images.php?saved=1';
 
         // support goto next/prev after saving when requested
@@ -53,12 +53,12 @@ try {
                         $stmt = $pdo->prepare('SELECT id FROM images WHERE id > :id ORDER BY id ASC LIMIT 1');
                         $stmt->execute([':id' => (int) $result['id']]);
                         $nextId = $stmt->fetchColumn();
-                        if ($nextId) $destination = '/gallery/admin-edit.php?id=' . (int) $nextId;
+                        if ($nextId) $destination = '/gallery/admin-image-edit.php?id=' . (int) $nextId;
                     } elseif ($goto === 'prev') {
                         $stmt = $pdo->prepare('SELECT id FROM images WHERE id < :id ORDER BY id DESC LIMIT 1');
                         $stmt->execute([':id' => (int) $result['id']]);
                         $prevId = $stmt->fetchColumn();
-                        if ($prevId) $destination = '/gallery/admin-edit.php?id=' . (int) $prevId;
+                        if ($prevId) $destination = '/gallery/admin-image-edit.php?id=' . (int) $prevId;
                     }
                 }
             }
@@ -74,3 +74,5 @@ try {
     file_put_contents(__DIR__ . '/image-save-error.log', date('c') . ' ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n", FILE_APPEND);
     imageSaveError($e->getMessage(), 400);
 }
+
+

@@ -2002,3 +2002,5 @@ function gallery_normalize_string_array($value): array
 
     return [];
 }
+
+

@@ -28,3 +28,5 @@ if (!$hero || !$hero['visible']) {
   </main>
 </body>
 </html>
+
+

@@ -7,7 +7,7 @@ if (is_file($versionFile)) {
     $git = @shell_exec('git -C ' . escapeshellarg(dirname(__DIR__)) . ' describe --tags --always 2>/dev/null');
     if ($git) $version = trim($git);
 }
-echo '<div id="deploy-version">Version: ' . htmlspecialchars($version, ENT_QUOTES, 'UTF-8') . '</div>';
+echo '<div id="deploy-version" class="deploy-version">v' . htmlspecialchars($version, ENT_QUOTES, 'UTF-8') . '</div>';
 
 require __DIR__ . '/gallery-lib.php';
 
@@ -40,16 +40,17 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
   <link href="../styles/custom.css" rel="stylesheet">
   <link href="../styles/admin.css" rel="stylesheet">
   <style>
-#deploy-version {
+.deploy-version {
   position: fixed;
   top: 8px;
   left: 8px;
   background: rgba(0,0,0,0.6);
   color: #fff;
-  padding: 4px 8px;
+  padding: 6px 10px;
   font-size: 12px;
   z-index: 10000;
-  border-radius: 3px;
+  border-radius: 4px;
+  opacity: 0.9;
   pointer-events: none;
 }
 </style>
@@ -124,3 +125,5 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
     </script>
 </body>
 </html>
+
+

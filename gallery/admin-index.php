@@ -58,13 +58,22 @@ try {
 <body>
   <div class="container admin-friendly">
     <?php require __DIR__ . '/admin-nav.php'; ?>
+    <?php
+      $versionFile = dirname(__DIR__) . '/version.txt';
+      if (is_readable($versionFile)) {
+        $v = trim((string) file_get_contents($versionFile));
+        if ($v !== '') {
+          echo '<div id="deploy-version" class="deploy-version">v' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+      }
+    ?>
     <h1>Admin Home</h1>
     <p class="lead">Quick summary of gallery data</p>
     <div class="row">
       <div class="col-md-3">
         <div class="panel panel-default">
           <div class="panel-heading">Images</div>
-          <div class="panel-body"><strong><?= (int) $counts['images'] ?></strong><br><a href="/gallery/admin-list-images.php">Manage images</a> | <a href="/gallery/admin-image-add.php">Add new</a></div>
+          <div class="panel-body"><strong><?= (int) $counts['images'] ?></strong><br><a href="/gallery/admin-list-images.php">Manage images</a> | <a href="/gallery/admin-image-edit.php">Add new</a></div>
         </div>
       </div>
       <div class="col-md-3">
@@ -120,7 +129,7 @@ try {
     <?php else: ?>
       <ul>
         <?php foreach ($recentImages as $ri): ?>
-          <li><a href="/gallery/admin-edit.php?id=<?= (int) $ri['id'] ?>"><?= htmlspecialchars((string) $ri['title'], ENT_QUOTES, 'UTF-8') ?></a> — <?= htmlspecialchars((string) $ri['created_at'], ENT_QUOTES, 'UTF-8') ?></li>
+          <li><a href="/gallery/admin-image-edit.php?id=<?= (int) $ri['id'] ?>"><?= htmlspecialchars((string) $ri['title'], ENT_QUOTES, 'UTF-8') ?></a> — <?= htmlspecialchars((string) $ri['created_at'], ENT_QUOTES, 'UTF-8') ?></li>
         <?php endforeach; ?>
       </ul>
     <?php endif; ?>
@@ -136,3 +145,5 @@ try {
   </div>
 </body>
 </html>
+
+

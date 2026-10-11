@@ -48,3 +48,5 @@ try {
 }
 header('Location: /gallery/admin-list-images.php', true, 303);
 exit;
+
+

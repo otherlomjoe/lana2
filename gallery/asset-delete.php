@@ -17,5 +17,7 @@ $asset = (string) ($_POST['asset'] ?? '');
 if ($id > 0 && gallery_remove_image_asset($id, $asset)) {
     $_SESSION['gallery_admin_message'] = ucfirst($asset) . ' image removed from storage.';
 }
-header('Location: /gallery/admin-edit.php?id=' . $id);
+header('Location: /gallery/admin-image-edit.php?id=' . $id);
 exit;
+
+

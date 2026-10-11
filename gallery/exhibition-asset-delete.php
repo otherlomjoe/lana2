@@ -16,3 +16,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 header('Location: /gallery/admin-list-exhibitions.php');
 exit;
+

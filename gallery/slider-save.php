@@ -23,3 +23,5 @@ try {
     header('Location: /gallery/admin-slider-edit.php' . ($id > 0 ? '?id=' . $id : ''), true, 303);
     exit;
 }
+
+
