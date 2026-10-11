@@ -54,16 +54,7 @@ if ($item) {
 </head>
 <body>
   <div class="container admin-friendly">
-    <?php require __DIR__ . '/admin-nav.php'; ?>
-    <?php
-      $versionFile = dirname(__DIR__) . '/version.txt';
-      if (is_readable($versionFile)) {
-        $v = trim((string) file_get_contents($versionFile));
-        if ($v !== '') {
-          echo '<div id="deploy-version" class="deploy-version">v' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</div>';
-        }
-      }
-    ?>
+    <?php require __DIR__ . '/admin-nav.php'; ?>    
     <h1><?= $isNew ? 'Add Image' : 'Edit Image' ?></h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>

@@ -40,11 +40,11 @@ unset($_SESSION['gallery_admin_message']);
             <td class="ex-location"><?= htmlspecialchars((string) $exhibition['location']) ?></td>
             <td class="ex-dates"><?= htmlspecialchars((string) ($exhibition['startDate'] ?? '')) ?> - <?= htmlspecialchars((string) ($exhibition['endDate'] ?? '')) ?></td>
             <td class="ex-count"><?= (int) ($exhibition['imageCount'] ?? 0) ?></td>
-            <td class="ex-actions">
+            <td class="admin-friendly-actions ex-actions">
               <a class="btn btn-link" href="/gallery/admin-exhibition-edit.php?id=<?= (int) $exhibition['id'] ?>">Edit</a>
               <label class="form-check form-check-inline admin-toggle-spacing"><input type="checkbox" class="form-check-input ex-toggle" data-id="<?= (int) $exhibition['id'] ?>" <?= !empty($exhibition['active']) ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label"><?= !empty($exhibition['active']) ? 'Published' : 'Draft' ?></span></label>
-              | <a class="btn btn-link text-error" href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
-              | <button type="button" class="btn btn-link ex-shift" data-direction="-1" title="Move up" aria-label="Move up">Up</button>
+              <a class="btn btn-link text-error" href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
+              <button type="button" class="btn btn-link ex-shift" data-direction="-1" title="Move up" aria-label="Move up">Up</button>
               <button type="button" class="btn btn-link ex-shift" data-direction="1" title="Move down" aria-label="Move down">Down</button>
             </td>
           </tr>

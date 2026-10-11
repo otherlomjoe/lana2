@@ -56,12 +56,13 @@ unset($_SESSION['gallery_admin_message']);
             <td><?= htmlspecialchars((string) $item['title']) ?></td>
             <td><?= htmlspecialchars((string) $item['medium']) ?></td>
             <td><?= htmlspecialchars((string) $item['genre']) ?></td>
-            <td>
-              <a href="/gallery/work.html#<?= urlencode((string) $item['slug']) ?>" target="_blank">Preview</a> | <a href="/gallery/admin-image-edit.php?id=<?= (int) $item['id'] ?>">Edit</a>
+            <td class="admin-friendly-actions">
+              <a href="/gallery/work.html#<?= urlencode((string) $item['slug']) ?>" target="_blank">Preview</a>
+              <a href="/gallery/admin-image-edit.php?id=<?= (int) $item['id'] ?>">Edit</a>
               <label class="form-check form-check-inline admin-toggle-spacing"><input class="form-check-input image-toggle" type="checkbox" data-id="<?= (int) $item['id'] ?>" <?= !empty($item['active']) ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label"><?= !empty($item['active']) ? 'Published' : 'Draft' ?></span></label>
-              <?php if (!empty($item['deletedAt'])): ?> | <a href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> | <a href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?> | <a href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
+              <?php if (!empty($item['deletedAt'])): ?> <a href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?> <a href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
               <?php if ($filterExhibition > 0): ?>
-                | <button type="button" class="btn btn-link img-ex-shift" data-direction="-1" title="Move up" aria-label="Move up">▲</button>
+                <button type="button" class="btn btn-link img-ex-shift" data-direction="-1" title="Move up" aria-label="Move up">▲</button>
                 <button type="button" class="btn btn-link img-ex-shift" data-direction="1" title="Move down" aria-label="Move down">▼</button>
               <?php endif; ?>
             </td>

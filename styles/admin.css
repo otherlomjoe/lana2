@@ -132,3 +132,48 @@
 
 /* Consistent spacing for inline toggle labels in admin lists */
 .admin-toggle-spacing { margin-left: 8px; }
+
+/* Compact, single-line actions cell for admin lists (used by heroes/sliders/images/exhibitions) */
+.admin-friendly-actions {
+  white-space: nowrap;            /* keep actions on one line */
+  vertical-align: middle;        /* align with row content */
+  padding-left: 6px;             /* small pad to separate from previous columns */
+}
+.admin-friendly-actions > * {
+  display: inline-block;         /* ensure children sit inline */
+  vertical-align: middle;
+  margin: 0;                     /* spacing provided by separator pseudo-element */
+}
+
+/* Insert a visual separator between action items (CSS-driven instead of literal pipes) */
+.admin-friendly-actions > *:not(:last-child)::after {
+  content: " |";
+  color: #bbb;
+  margin-left: 8px;
+}
+
+.admin-friendly-actions a,
+.admin-friendly-actions button,
+.admin-friendly-actions form,
+.admin-friendly-actions label {
+  margin: 0;                      /* reset extra margins */
+}
+.admin-friendly-actions .form-check {
+  display: inline-block;          /* ensure toggle labels stay inline */
+  margin: 0;                      /* controlled by parent gap */
+}
+.admin-friendly-actions .btn-link { padding: 0; }
+
+/* Panel links (dashboard) use a similar separator pattern */
+.admin-panel-links a:not(:last-child)::after {
+  content: " |";
+  color: #bbb;
+  margin-left: 8px;
+}
+
+/* If a table gets narrow, ensure buttons don't overflow too aggressively */
+@media (max-width: 720px) {
+  .admin-friendly-actions { white-space: normal; }
+  .admin-friendly-actions > * { display: block; margin: 6px 0; }
+  .admin-panel-links a:not(:last-child)::after { content: ""; }
+}

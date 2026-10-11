@@ -65,7 +65,7 @@ try {
       <div class="col-md-3">
         <div class="panel panel-default">
           <div class="panel-heading">Images</div>
-          <div class="panel-body"><strong><?= (int) $counts['images'] ?></strong><br><a href="/gallery/admin-list-images.php">Manage images</a> | <a href="/gallery/admin-image-edit.php">Add new</a></div>
+          <div class="panel-body admin-panel-links"><strong><?= (int) $counts['images'] ?></strong><br><a href="/gallery/admin-list-images.php">Manage images</a> <a href="/gallery/admin-image-edit.php">Add new</a></div>
         </div>
       </div>
       <div class="col-md-3">
