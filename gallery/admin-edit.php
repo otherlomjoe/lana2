@@ -67,7 +67,7 @@ if ($item) {
     <h1><?= $isNew ? 'Add Image' : 'Edit Image' ?></h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-    <?php if ($item): ?>
+    <?php if ($isNew || $item): ?>
       <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= (int) ($item['id'] ?? 0) ?>">
         <fieldset><legend>Images</legend>
@@ -85,6 +85,7 @@ if ($item) {
             <?php if (!empty($item['thumbnail_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?><?php $thumbnailInfo = !empty($item['thumbnail_file']) && is_file($item['thumbnail_file']) ? @getimagesize($item['thumbnail_file']) : false; ?><?php if ($thumbnailInfo): ?> | <?= (int) $thumbnailInfo[0] ?> x <?= (int) $thumbnailInfo[1] ?> px; <?= number_format((int) filesize($item['thumbnail_file']) / 1024, 1) ?> KB<?php endif; ?></small></p><?php else: ?><p>No thumbnail is currently stored.</p><?php endif; ?>
             <input id="thumbnail-file" data-media-input="thumbnail" type="file" name="thumbnail" accept="image/*"><div data-media-preview="thumbnail-file"></div>
             <p class="help-block">Choose a replacement thumbnail. The filename should end in <strong>thumb</strong>.</p>
+            <input id="thumbnail-filename" type="text" readonly class="form-control" style="margin-top:8px;" placeholder="Thumbnail filename" value="<?= htmlspecialchars(basename((string) ($item['thumbnail_file'] ?? $item['thumbnail_url'] ?? '')), ENT_QUOTES, 'UTF-8') ?>">
             <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>
             <?php if (!empty($item['thumbnail_file'])): ?>
               <button type="button" class="btn btn-small" onclick="if(confirm('Remove the thumbnail from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='thumbnail';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove thumbnail</button>
@@ -150,20 +151,78 @@ if ($item) {
         updateDescriptionPreview();
       </script>
       <script>
-        document.getElementById('generate-thumbnail-btn').addEventListener('click', function () {
-          const form = this.form || document.querySelector('form');
-          if (!form) return;
-          let g = form.querySelector('input[name="generateThumbnail"]');
-          if (!g) {
-            g = document.createElement('input'); g.type = 'hidden'; g.name = 'generateThumbnail'; g.value = '1'; form.appendChild(g);
+        // Generate a correctly sized 200x165 thumbnail from the selected full image without submitting the form.
+        async function createThumbnailFileFromImage(file, width = 200, height = 165, mime = 'image/jpeg', quality = 0.9) {
+          return new Promise((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onerror = () => reject(new Error('Failed to read file'));
+            fr.onload = () => {
+              const img = new Image();
+              img.onerror = () => reject(new Error('Could not load image')); 
+              img.onload = () => {
+                const sw = img.width, sh = img.height;
+                // cover-fit: scale to cover the target and crop centered
+                const scale = Math.max(width / sw, height / sh);
+                const sWidth = Math.round(width / scale);
+                const sHeight = Math.round(height / scale);
+                const sx = Math.max(0, Math.round((sw - sWidth) / 2));
+                const sy = Math.max(0, Math.round((sh - sHeight) / 2));
+                const canvas = document.createElement('canvas');
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff'; ctx.fillRect(0,0,width,height);
+                ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, width, height);
+                canvas.toBlob(function (blob) {
+                  if (!blob) return reject(new Error('Canvas export failed'));
+                  try {
+                    const baseName = (file.name || 'thumbnail').replace(/\.[^.]+$/, '');
+                    const name = baseName + '-thumb.jpg';
+                    const thumbFile = new File([blob], name, { type: mime });
+                    resolve(thumbFile);
+                  } catch (e) {
+                    // Some browsers may not support File constructor; fallback to blob with name property
+                    blob.name = (file.name || 'thumbnail').replace(/\.[^.]+$/, '') + '-thumb.jpg';
+                    resolve(blob);
+                  }
+                }, mime, quality);
+              };
+              img.src = fr.result;
+            };
+            fr.readAsDataURL(file);
+          });
+        }
+
+        document.getElementById('generate-thumbnail-btn').addEventListener('click', async function () {
+          const fullInput = document.getElementById('full-image');
+          const thumbInput = document.getElementById('thumbnail-file');
+          if (!fullInput || !fullInput.files || !fullInput.files.length) {
+            alert('Please choose a full image first.');
+            return;
           }
-          let s = form.querySelector('input[name="save_mode"]');
-          if (!s) {
-            s = document.createElement('input'); s.type = 'hidden'; s.name = 'save_mode'; s.value = 'stay'; s.id = 'save_mode_hidden'; form.appendChild(s);
-          } else {
-            s.value = 'stay';
+          const file = fullInput.files[0];
+          try {
+            this.disabled = true;
+            this.textContent = 'Generating...';
+            const thumbFile = await createThumbnailFileFromImage(file, 200, 165);
+            // Set the generated file on the thumbnail input using DataTransfer
+            const dt = new DataTransfer();
+            dt.items.add(thumbFile);
+            thumbInput.files = dt.files;
+            // Trigger change so previews update
+            thumbInput.dispatchEvent(new Event('change', { bubbles: true }));
+            // show a brief status
+            const notice = document.createElement('div');
+            notice.className = 'alert alert-success';
+            notice.textContent = 'Thumbnail generated locally. You can continue editing and click Save when ready.';
+            const container = document.querySelector('.container');
+            container.insertBefore(notice, container.firstChild);
+            setTimeout(() => notice.remove(), 6000);
+          } catch (err) {
+            alert('Thumbnail generation failed: ' + (err && err.message ? err.message : err));
+          } finally {
+            this.disabled = false;
+            this.textContent = 'Generate correctly named 200 x 165 thumbnail';
           }
-          form.submit();
         });
       </script>
       <script>
@@ -223,11 +282,60 @@ if ($item) {
             .replace(/\s+/g, ' ')
             .trim()
             .replace(/\b\w/g, character => character.toUpperCase());
+          // also set a suggested thumbnail filename if empty
+          try {
+            const tf = document.getElementById('thumbnail-filename');
+            if (tf && !tf.value) {
+              const base = this.files[0].name.replace(/\.[^.]+$/, '').replace(/[-_]+$/, '');
+              tf.value = base + '-thumb.jpg';
+            }
+          } catch (e) {}
         });
         document.getElementById('thumbnail-file').addEventListener('change', function () {
           const name = this.files.length ? this.files[0].name.replace(/\.[^.]+$/, '') : '';
           document.getElementById('thumbnail-warning').hidden = !name || /thumb$/i.test(name);
+          // update filename display
+          try {
+            const tf = document.getElementById('thumbnail-filename');
+            if (tf) tf.value = this.files.length ? this.files[0].name : '';
+          } catch (e) {}
         });
+      </script>
+      <script>
+        // Duplicate-check before creating a NEW image: warns if a thumbnail with similar basename exists in the DB.
+        (function () {
+          var form = document.querySelector('form');
+          if (!form) return;
+          form.addEventListener('submit', async function (e) {
+            // only run on Add mode
+            if (!<?= $isNew ? 'true' : 'false' ?>) return;
+            try {
+              var tf = document.getElementById('thumbnail-filename');
+              var base = '';
+              if (tf && tf.value) base = tf.value.replace(/\.[^.]+$/, '').replace(/-thumb$/i, '');
+              if (!base) {
+                var full = document.getElementById('full-image');
+                if (full && full.files && full.files.length) base = (full.files[0].name || '').replace(/\.[^.]+$/, '').replace(/-thumb$/i, '');
+              }
+              base = base.trim();
+              if (!base) return;
+              var url = '/gallery/check-thumbnail.php?basename=' + encodeURIComponent(base);
+              var resp = await fetch(url, { credentials: 'same-origin' });
+              if (!resp.ok) return; // allow submit and let server handle errors
+              var data = await resp.json();
+              if (data && data.success && data.exists) {
+                var items = (data.items || []).map(function (it) { return '#' + it.id + ' ' + (it.title || ''); }).join('\n');
+                var msg = 'A thumbnail with a similar filename already exists:\n' + items + '\n\nContinuing may create a duplicate entry. Proceed?';
+                if (!confirm(msg)) {
+                  e.preventDefault();
+                }
+              }
+            } catch (err) {
+              // on any failure, do not block submit; server-side will handle duplicates if needed
+              return;
+            }
+          });
+        })();
       </script>
     <?php else: ?>
       <p>Image not found.</p>
