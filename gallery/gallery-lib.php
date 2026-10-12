@@ -1895,9 +1895,24 @@ function gallery_save_image(array $data, array $files = []): array
             ':id' => $imageId,
         ];
         try {
-            $stmt->execute($params);
+            foreach ($params as $k => $v) {
+                if (is_int($v)) {
+                    $stmt->bindValue($k, $v, PDO::PARAM_INT);
+                } elseif (is_bool($v)) {
+                    $stmt->bindValue($k, (int) $v, PDO::PARAM_INT);
+                } elseif ($v === null) {
+                    $stmt->bindValue($k, null, PDO::PARAM_NULL);
+                } else {
+                    $stmt->bindValue($k, (string) $v, PDO::PARAM_STR);
+                }
+            }
+            $stmt->execute();
         } catch (PDOException $e) {
-            file_put_contents(__DIR__ . '/debug-sql.log', date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND);
+            $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
+            if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
+                $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+            }
+            file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
             throw $e;
         }
     } else {
@@ -1932,9 +1947,24 @@ function gallery_save_image(array $data, array $files = []): array
             ':artwork_created_at' => $artworkCreatedAt !== '' ? $artworkCreatedAt : null,
         ];
         try {
-            $stmt->execute($params);
+            foreach ($params as $k => $v) {
+                if (is_int($v)) {
+                    $stmt->bindValue($k, $v, PDO::PARAM_INT);
+                } elseif (is_bool($v)) {
+                    $stmt->bindValue($k, (int) $v, PDO::PARAM_INT);
+                } elseif ($v === null) {
+                    $stmt->bindValue($k, null, PDO::PARAM_NULL);
+                } else {
+                    $stmt->bindValue($k, (string) $v, PDO::PARAM_STR);
+                }
+            }
+            $stmt->execute();
         } catch (PDOException $e) {
-            file_put_contents(__DIR__ . '/debug-sql.log', date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND);
+            $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
+            if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
+                $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+            }
+            file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
             throw $e;
         }
         $imageId = (int) $pdo->lastInsertId();
