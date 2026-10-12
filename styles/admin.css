@@ -1,5 +1,19 @@
 /* Admin-specific styles (loaded only on admin pages) */
 
+/* Admin CSS variables: centralize colors, spacing, radii and shadows for easier maintenance */
+:root {
+  --admin-primary: #0b5ed7;
+  --admin-primary-600: #0b5ed7;
+  --admin-primary-200: rgba(44,123,229,0.10);
+  --admin-bg: #ffffff;
+  --admin-muted: #bbb;
+  --admin-radius: 6px;
+  --admin-gap: 0.5rem;
+  --admin-shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
+  --admin-shadow-lg: 0 6px 18px rgba(11,94,215,0.12);
+}
+
+
 /* Exhibition image checkbox tiles */
 .ex-images-grid label.ex-image-tile {
   display: inline-block;
@@ -71,45 +85,51 @@
 
 /* Deploy/version badge shown on admin pages */
 .deploy-version {
-.deploy-version {
   position: fixed;
   top: 8px;
   left: 8px;
   background: rgba(0,0,0,0.6);
   color: #fff;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   z-index: 10000;
   border-radius: 4px;
   opacity: 0.9;
   pointer-events: none;
 }
-/* Public page links in the admin navigation (visually distinguish public pages) */
-.centered_menu .nav.nav-pills .public-nav { margin-left: 10px; }
-.centered_menu .nav.nav-pills .public-nav > a.public-link {
-  display: inline-flex !important;
+
+/* Public page links in the admin navigation (visually distinguish public pages)
+   Componentized as .btn-public and kept compatibility selectors for existing markup */
+.btn-public,
+.centered_menu .nav.nav-pills .public-nav > a.public-link,
+.centered_menu .nav.nav-pills li.public-nav > a.public-link {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(180deg, rgba(44,123,229,0.10), rgba(44,123,229,0.04));
-  color: #0b5ed7 !important; /* more noticeable Bootstrap blue */
+  gap: var(--admin-gap, 8px);
+  background: linear-gradient(180deg, var(--admin-primary-200, rgba(44,123,229,0.10)), rgba(44,123,229,0.04));
+  color: var(--admin-primary-600, #0b5ed7);
   border: 1px solid rgba(11,94,215,0.18);
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: var(--admin-radius, 6px);
   font-weight: 700;
   font-size: 0.95rem;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.03); /* subtle elevation */
+  box-shadow: var(--admin-shadow-sm, 0 1px 0 rgba(0,0,0,0.03));
   transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
   margin-left: 8px;
 }
-.centered_menu .nav.nav-pills .public-nav > a.public-link::before {
-  content: "\1F310"; /* globe emoji as fallback glyph (U+1F310) */
+.btn-public::before,
+.centered_menu .nav.nav-pills .public-nav > a.public-link::before,
+.centered_menu .nav.nav-pills li.public-nav > a.public-link::before {
+  content: "\1F310"; /* globe emoji fallback */
   display: inline-block;
   font-size: 1.05em;
   line-height: 1;
   margin-right: 4px;
   transform: translateY(-1px);
 }
-.centered_menu .nav.nav-pills .public-nav > a.public-link::after {
+.btn-public::after,
+.centered_menu .nav.nav-pills .public-nav > a.public-link::after,
+.centered_menu .nav.nav-pills li.public-nav > a.public-link::after {
   content: "Public";
   display: inline-block;
   margin-left: 6px;
@@ -121,13 +141,25 @@
   font-weight: 600;
   line-height: 1;
 }
+.btn-public:hover,
+.btn-public:focus,
 .centered_menu .nav.nav-pills .public-nav > a.public-link:hover,
 .centered_menu .nav.nav-pills .public-nav > a.public-link:focus {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(11,94,215,0.12);
+  box-shadow: var(--admin-shadow-lg, 0 6px 18px rgba(11,94,215,0.12));
   background: linear-gradient(180deg, rgba(44,123,229,0.14), rgba(44,123,229,0.06));
   text-decoration: none;
 }
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .btn-public,
+  .admin-friendly-actions a,
+  .admin-friendly-actions button {
+    transition: none !important;
+  }
+}
+
 /* Slightly dim the admin home link to contrast with admin actions */
 .nav.nav-pills > li:first-child > a { font-weight: 700; }
 
@@ -187,37 +219,6 @@
   .admin-panel-links a:not(:last-child)::after { content: ""; }
 }
 
-/* Stronger overrides for public-link visuals and action cell alignment (use high specificity) */
-.centered_menu .nav.nav-pills > li.public-nav > a.public-link,
-.centered_menu .nav.nav-pills li.public-nav > a.public-link {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  background: linear-gradient(180deg, rgba(44,123,229,0.12), rgba(44,123,229,0.06)) !important;
-  color: #0b5ed7 !important;
-  border: 1px solid rgba(11,94,215,0.18) !important;
-  padding: 6px 12px !important;
-  border-radius: 6px !important;
-  font-weight: 700 !important;
-  font-size: 0.95rem !important;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.03) !important;
-  margin-left: 8px !important;
-}
-.centered_menu .nav.nav-pills > li.public-nav > a.public-link::before,
-.centered_menu .nav.nav-pills li.public-nav > a.public-link::before {
-  content: "\1F310" !important;
-  margin-right: 6px !important;
-}
-.centered_menu .nav.nav-pills > li.public-nav > a.public-link::after,
-.centered_menu .nav.nav-pills li.public-nav > a.public-link::after {
-  content: "Public" !important;
-  margin-left: 8px !important;
-  background: rgba(11,94,215,0.12) !important;
-  color: rgba(11,94,215,0.95) !important;
-  padding: 2px 8px !important;
-  border-radius: 12px !important;
-  font-size: 0.75rem !important;
-  font-weight: 600 !important;
 }
 
 /* Ensure the actions cell has transparent background and no borders */
