@@ -273,3 +273,71 @@ td.admin-friendly-actions, td.admin-friendly-actions * {
   border-top: 1px solid var(--border) !important;
   background-clip: padding-box !important;
 }
+
+/* Layout helpers for editor + preview side-by-side blocks (hero, exhibition, description preview)
+   Ensure the left column (editor) expands to the available space and textareas fill it. */
+.hero-editor-layout,
+.exhibition-description-layout,
+.description-preview-layout,
+.description-preview-layout > div,
+.hero-editor-layout > div,
+.exhibition-description-layout > div {
+  box-sizing: border-box;
+}
+.hero-editor-layout,
+.exhibition-description-layout,
+.description-preview-layout {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.hero-editor-layout > div:first-child,
+.exhibition-description-layout > div:first-child,
+.description-preview-layout > div:first-child {
+  flex: 1 1 60%;
+  min-width: 0; /* allow flex child to shrink and let textarea use width:100% */
+}
+.hero-editor-layout > div:last-child,
+.exhibition-description-layout > div:last-child,
+.description-preview-layout > div:last-child {
+  flex: 0 0 360px;
+  max-width: 420px;
+}
+
+@media (max-width: 900px) {
+  .hero-editor-layout,
+  .exhibition-description-layout,
+  .description-preview-layout {
+    flex-direction: column;
+  }
+  .hero-editor-layout > div:last-child,
+  .exhibition-description-layout > div:last-child,
+  .description-preview-layout > div:last-child {
+    flex: none;
+    max-width: 100%;
+  }
+}
+
+/* Preview panel visual separation: subtle background, border, and shadow to distinguish from the editor */
+.admin-preview-frame {
+  background: #fbfdff; /* very subtle off-white */
+  border: 1px solid var(--border, #e6e6e6);
+  padding: 14px;
+  border-radius: var(--admin-radius, 6px);
+  box-shadow: 0 4px 12px rgba(11,94,215,0.04);
+  overflow: auto;
+}
+
+.admin-preview-label {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #222;
+}
+
+/* Make sure preview content can scroll without pushing page layout on tall content */
+.admin-preview-frame .page-content,
+.admin-preview-frame article {
+  max-height: 60vh;
+  overflow: auto;
+}
