@@ -197,8 +197,9 @@ ul#contact-info {
   text-align: center;
 }
 
-.centered_menu > div {
+.centered_menu > * {
   display: inline-block;
+  vertical-align: middle; /* ensures menu sits vertically centered with the title */
 }
 
 .centered_menu div {
