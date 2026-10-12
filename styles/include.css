@@ -1,0 +1,11 @@
+/* styles/include.css
+   Centralized Google Fonts import used by all HTML pages.
+   Using css2 API with display=swap for better performance.
+*/
+@import url('https://fonts.googleapis.com/css2?family=Syncopate&family=Abel&family=Source+Sans+Pro:wght@400;600&family=Maven+Pro&family=Oxygen&family=Open+Sans:wght@400;600&display=swap');
+
+/* Optionally expose a CSS variable for the site font stack */
+:root {
+  --site-sans: 'Source Sans Pro', 'Open Sans', Arial, sans-serif;
+  --site-display: 'Syncopate', 'Maven Pro', 'Abel', serif;
+}
