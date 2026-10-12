@@ -1,11 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
+require __DIR__ . '/admin-auth.php';
 
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
+gallery_require_admin();
 
 $slides = gallery_list_slider_images(true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
@@ -48,7 +45,7 @@ $csrf = gallery_set_csrf_token();
             <button type="button" class="btn btn-link slide-shift" data-direction="1" aria-label="Move slide down">Down</button>
             <a href="/gallery/admin-slider-edit.php?id=<?= (int) $slide['id'] ?>">Edit</a>
             <label class="form-check form-check-inline"><input type="checkbox" class="form-check-input slide-toggle" data-id="<?= (int) $slide['id'] ?>" <?= $slide['active'] ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label"><?= $slide['active'] ? 'Published' : 'Draft' ?></span></label>
-            <form method="post" action="/gallery/slider-action.php" style="display:inline" onsubmit="return confirm('Permanently delete this slide and its image? This cannot be undone.')"><input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="id" value="<?= (int) $slide['id'] ?>"><input type="hidden" name="action" value="hard-delete"><button type="submit" class="btn-link text-error">Delete</button></form>
+            <form method="post" action="/gallery/admin-slider-action.php" style="display:inline" onsubmit="return confirm('Permanently delete this slide and its image? This cannot be undone.')"><input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="id" value="<?= (int) $slide['id'] ?>"><input type="hidden" name="action" value="hard-delete"><button type="submit" class="btn-link text-error">Delete</button></form>
           </td>
         </tr>
       <?php endforeach; ?>
@@ -158,7 +155,7 @@ $csrf = gallery_set_csrf_token();
       const id = row.getAttribute('data-slide-id');
       const direction = ev.target.getAttribute('data-direction') || '-1';
       if (!id) return;
-      postForm('/gallery/slider-action.php', { id: id, action: 'shift', direction: direction }).then(json => {
+      postForm('/gallery/admin-slider-action.php', { id: id, action: 'shift', direction: direction }).then(json => {
         if (json && json.success) {
           if (direction === '-1') {
             const prev = row.previousElementSibling;
@@ -185,7 +182,7 @@ $csrf = gallery_set_csrf_token();
       if (!id) return;
       const newVal = checkbox.checked ? '1' : '0';
       checkbox.disabled = true;
-      postForm('/gallery/slider-action.php', { id: id, action: 'active', active: newVal }).then(json => {
+      postForm('/gallery/admin-slider-action.php', { id: id, action: 'active', active: newVal }).then(json => {
         if (json && json.success) {
           row.setAttribute('data-slide-active', newVal);
           const label = row.querySelector('.slide-active-label');

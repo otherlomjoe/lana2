@@ -1,10 +1,7 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = (int) ($_POST['id'] ?? 0);
     $asset = (string) ($_POST['asset'] ?? '');
@@ -16,4 +13,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 header('Location: /gallery/admin-list-exhibitions.php');
 exit;
-

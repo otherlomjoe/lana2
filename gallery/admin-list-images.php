@@ -1,12 +1,9 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
+require __DIR__ . '/admin-auth.php';
 
-session_start();
+gallery_require_admin();
 header('Content-Type: text/html; charset=utf-8');
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
 
 $pdo = gallery_init_db();
 if (!$pdo) {
@@ -60,7 +57,7 @@ unset($_SESSION['gallery_admin_message']);
               <a href="/gallery/work.html#<?= urlencode((string) $item['slug']) ?>" target="_blank">Preview</a>
               <a href="/gallery/admin-image-edit.php?id=<?= (int) $item['id'] ?>">Edit</a>
               <label class="form-check form-check-inline admin-toggle-spacing"><input class="form-check-input image-toggle" type="checkbox" data-id="<?= (int) $item['id'] ?>" <?= !empty($item['active']) ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label"><?= !empty($item['active']) ? 'Published' : 'Draft' ?></span></label>
-              <?php if (!empty($item['deletedAt'])): ?> <a href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?> <a href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
+              <?php if (!empty($item['deletedAt'])): ?> <a href="/gallery/admin-image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a href="/gallery/admin-image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?> <a href="/gallery/admin-image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
               <?php if ($filterExhibition > 0): ?>
                 <button type="button" class="btn btn-link img-ex-shift" data-direction="-1" title="Move up" aria-label="Move up">▲</button>
                 <button type="button" class="btn btn-link img-ex-shift" data-direction="1" title="Move down" aria-label="Move down">▼</button>
@@ -174,7 +171,7 @@ unset($_SESSION['gallery_admin_message']);
         const ex = row.getAttribute('data-ex-id');
         const direction = ev.target.getAttribute('data-direction') || '-1';
         if (!id || !ex) return;
-        postForm('/gallery/image-exhibition-action.php', { id: id, exhibition_id: ex, direction: direction }).then(json => {
+        postForm('/gallery/admin-image-exhibition-action.php', { id: id, exhibition_id: ex, direction: direction }).then(json => {
           if (json && json.success) {
             if (direction === '-1') {
               const prev = row.previousElementSibling;

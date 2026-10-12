@@ -1,7 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
 
-session_start();
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 
 $isFormSubmission = $_SERVER['REQUEST_METHOD'] === 'POST'
     && !str_contains(strtolower((string) ($_SERVER['CONTENT_TYPE'] ?? '')), 'application/json');
@@ -85,5 +86,3 @@ try {
     file_put_contents(__DIR__ . '/image-save-error.log', date('c') . ' ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n", FILE_APPEND);
     imageSaveError($e->getMessage(), 400);
 }
-
-

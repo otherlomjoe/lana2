@@ -1,11 +1,9 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
 
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    http_response_code(401);
-    exit('Unauthorized');
-}
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
+
 
 try {
     $csrf = (string) ($_POST['csrf'] ?? '');
@@ -45,5 +43,3 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 }
 header('Location: /gallery/admin-list-heroes.php', true, 303);
 exit;
-
-

@@ -1,11 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
 
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /gallery/admin-list-images.php');
@@ -19,5 +16,3 @@ if ($id > 0 && gallery_remove_image_asset($id, $asset)) {
 }
 header('Location: /gallery/admin-image-edit.php?id=' . $id);
 exit;
-
-

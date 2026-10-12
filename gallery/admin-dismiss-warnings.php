@@ -1,16 +1,13 @@
 <?php
-session_start();
+require __DIR__ . '/admin-auth.php';
+
+// admin_auth will start the session if needed and produce an appropriate response
+gallery_require_admin();
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'error' => 'Method not allowed']);
-    exit;
-}
-
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
     exit;
 }
 

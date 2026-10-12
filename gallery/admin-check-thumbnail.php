@@ -1,14 +1,10 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
 
-session_start();
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 header('Content-Type: application/json; charset=utf-8');
 
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
 
 $basename = trim((string) ($_GET['basename'] ?? $_POST['basename'] ?? ''));
 if ($basename === '') {
@@ -43,5 +39,3 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
-

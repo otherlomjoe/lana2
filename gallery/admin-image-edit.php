@@ -1,13 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
-
-session_start();
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 header('Content-Type: text/html; charset=utf-8');
-
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
 
 $pdo = gallery_init_db();
 if (!$pdo) {
@@ -70,7 +65,7 @@ if ($item) {
     <?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($isNew || $item): ?>
-      <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
+      <form method="post" action="/gallery/admin-image-save.php" enctype="multipart/form-data">
         <input type="hidden" name="id" value="<?= (int) ($item['id'] ?? 0) ?>">
         <fieldset><legend>Images</legend>
           <div class="control-group">
@@ -80,7 +75,7 @@ if ($item) {
             <p class="help-block">Choose a replacement full image.</p>
             <p class="help-block"><strong>Recommended:</strong> full image 2400×1600 px (or similar aspect ratio), sRGB JPEG/WEBP, keep file size under ~3 MB for reasonable upload and processing times.</p>
             <?php if (!empty($item['full_file'])): ?>
-              <button type="button" class="btn btn-small" onclick="if(confirm('Remove the full image from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='full';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove full image</button>
+              <button type="button" class="btn btn-small" onclick="if(confirm('Remove the full image from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/admin-asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='full';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove full image</button>
             <?php endif; ?>
           </div>
           <div class="control-group">
@@ -92,7 +87,7 @@ if ($item) {
             <input id="thumbnail-filename" type="text" readonly class="form-control" style="margin-top:8px;" placeholder="Thumbnail filename" value="<?= htmlspecialchars(basename((string) ($item['thumbnail_file'] ?? $item['thumbnail_url'] ?? '')), ENT_QUOTES, 'UTF-8') ?>">
             <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>
             <?php if (!empty($item['thumbnail_file'])): ?>
-              <button type="button" class="btn btn-small" onclick="if(confirm('Remove the thumbnail from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='thumbnail';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove thumbnail</button>
+              <button type="button" class="btn btn-small" onclick="if(confirm('Remove the thumbnail from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/admin-asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='thumbnail';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove thumbnail</button>
             <?php endif; ?>
             <button type="button" id="generate-thumbnail-btn" class="btn">Generate correctly named 200 x 165 thumbnail</button>
           </div>
@@ -133,7 +128,7 @@ if ($item) {
           <?php if (!empty($prevId)): ?>
             <button type="submit" name="save_mode" value="stay" class="btn" onclick="ensureGoto('prev')">Save and go to Prev</button>
           <?php endif; ?>
-          <?php if (!empty($item['deleted_at'])): ?><a class="btn" href="/gallery/image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a class="btn btn-danger" href="/gallery/image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?><a class="btn" href="/gallery/image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
+          <?php if (!empty($item['deleted_at'])): ?><a class="btn" href="/gallery/admin-image-restore.php?id=<?= (int) $item['id'] ?>">Undelete</a> <a class="btn btn-danger" href="/gallery/admin-image-delete-permanent.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Permanently delete this image and all files? This cannot be undone.')">Delete permanently</a><?php else: ?><a class="btn" href="/gallery/admin-image-delete.php?id=<?= (int) $item['id'] ?>" onclick="return confirm('Move this image to deleted items?')">Delete</a><?php endif; ?>
           <a class="btn" href="/gallery/admin-list-images.php">Cancel</a>
           <a class="btn" href="/gallery/admin-list-images.php">Close</a>
           <button type="button" class="btn" id="preview-work-btn">Preview</button>
@@ -354,7 +349,7 @@ if ($item) {
               }
               base = base.trim();
               if (!base) return;
-              var url = '/gallery/check-thumbnail.php?basename=' + encodeURIComponent(base);
+              var url = '/gallery/admin-check-thumbnail.php?basename=' + encodeURIComponent(base);
               var resp = await fetch(url, { credentials: 'same-origin' });
               if (!resp.ok) return; // allow submit and let server handle errors
               var data = await resp.json();

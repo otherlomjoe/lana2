@@ -1,11 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
+require __DIR__ . '/admin-auth.php';
 
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
+gallery_require_admin();
 
 $heroes = gallery_list_home_heroes(true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
@@ -44,7 +41,7 @@ $csrf = gallery_set_csrf_token();
             <button type="button" class="btn btn-link hero-shift" data-direction="1" aria-label="Move hero down">Down</button>
             <a href="/gallery/admin-hero-edit.php?id=<?= (int) $hero['id'] ?>">Edit</a>
             <label class="form-check form-check-inline admin-toggle-spacing"><input type="checkbox" class="form-check-input hero-toggle" data-id="<?= (int) $hero['id'] ?>" <?= $hero['visible'] ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label"><?= $hero['visible'] ? 'Published' : 'Draft' ?></span></label>
-            <form method="post" action="/gallery/hero-action.php" style="display:inline" onsubmit="return confirm('Permanently delete this hero and its image? This cannot be undone.')">
+            <form method="post" action="/gallery/admin-hero-action.php" style="display:inline" onsubmit="return confirm('Permanently delete this hero and its image? This cannot be undone.')">
               <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
               <input type="hidden" name="id" value="<?= (int) $hero['id'] ?>">
               <input type="hidden" name="action" value="hard-delete">
@@ -161,7 +158,7 @@ $csrf = gallery_set_csrf_token();
       const id = row.getAttribute('data-hero-id');
       const direction = ev.target.getAttribute('data-direction') || '-1';
       if (!id) return;
-      postForm('/gallery/hero-action.php', { id: id, action: 'shift', direction: direction }).then(json => {
+      postForm('/gallery/admin-hero-action.php', { id: id, action: 'shift', direction: direction }).then(json => {
         if (json && json.success) {
           if (direction === '-1') {
             const prev = row.previousElementSibling;
@@ -188,7 +185,7 @@ $csrf = gallery_set_csrf_token();
       if (!id) return;
       const newVal = cb.checked ? '1' : '0';
       cb.disabled = true;
-      postForm('/gallery/hero-action.php', { id: id, action: 'visibility', visible: newVal }).then(json => {
+      postForm('/gallery/admin-hero-action.php', { id: id, action: 'visibility', visible: newVal }).then(json => {
         if (json && json.success) {
           row.setAttribute('data-hero-visible', newVal);
           const label = row.querySelector('.hero-visible-label');

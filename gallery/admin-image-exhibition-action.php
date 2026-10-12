@@ -1,10 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    http_response_code(401);
-    exit('Unauthorized');
-}
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
+
 
 $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 $exhibitionId = (int) ($_POST['exhibition_id'] ?? $_GET['exhibition_id'] ?? 0);
@@ -48,5 +46,3 @@ try {
 }
 header('Location: /gallery/admin-list-images.php', true, 303);
 exit;
-
-

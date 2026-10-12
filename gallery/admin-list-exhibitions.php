@@ -1,12 +1,9 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
+require __DIR__ . '/admin-auth.php';
 
-session_start();
+gallery_require_admin();
 header('Content-Type: text/html; charset=utf-8');
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
 
 $pdo = gallery_init_db();
 $csrf = gallery_set_csrf_token();
@@ -43,7 +40,7 @@ unset($_SESSION['gallery_admin_message']);
             <td class="admin-friendly-actions ex-actions">
               <a class="btn btn-link" href="/gallery/admin-exhibition-edit.php?id=<?= (int) $exhibition['id'] ?>">Edit</a>
               <label class="form-check form-check-inline admin-toggle-spacing"><input type="checkbox" class="form-check-input ex-toggle" data-id="<?= (int) $exhibition['id'] ?>" <?= !empty($exhibition['active']) ? 'checked' : '' ?> aria-label="Toggle published"> <span class="form-check-label"><?= !empty($exhibition['active']) ? 'Published' : 'Draft' ?></span></label>
-              <a class="btn btn-link text-error" href="/gallery/exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
+              <a class="btn btn-link text-error" href="/gallery/admin-exhibition-delete.php?id=<?= (int) $exhibition['id'] ?>" onclick="return confirm('Delete this exhibition?')">Delete</a>
               <button type="button" class="btn btn-link ex-shift" data-direction="-1" title="Move up" aria-label="Move up">Up</button>
               <button type="button" class="btn btn-link ex-shift" data-direction="1" title="Move down" aria-label="Move down">Down</button>
             </td>

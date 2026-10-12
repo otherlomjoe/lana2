@@ -1,11 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
 
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    http_response_code(401);
-    exit('Unauthorized');
-}
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 
 $id = (int) ($_POST['id'] ?? 0);
 try {
@@ -23,5 +20,3 @@ try {
     header('Location: /gallery/admin-slider-edit.php' . ($id > 0 ? '?id=' . $id : ''), true, 303);
     exit;
 }
-
-

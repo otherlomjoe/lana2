@@ -1,11 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
 
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 
 $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 if ($id > 0) {
@@ -18,5 +15,3 @@ if ($id > 0) {
 }
 header('Location: /gallery/admin-list-exhibitions.php');
 exit;
-
-

@@ -1,16 +1,13 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
 
-session_start();
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
+
 $isFormSubmission = $_SERVER['REQUEST_METHOD'] === 'POST'
     && !str_contains(strtolower((string) ($_SERVER['CONTENT_TYPE'] ?? '')), 'application/json');
 
 try {
-    if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-        exit;
-    }
 
     $payload = $_POST;
     if (empty($payload) && !empty($_SERVER['CONTENT_TYPE']) && str_contains($_SERVER['CONTENT_TYPE'], 'application/json')) {
@@ -39,5 +36,3 @@ try {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
-

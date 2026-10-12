@@ -1,11 +1,7 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
-
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 
 $id = (int) ($_GET['id'] ?? 0);
 $slide = $id > 0 ? gallery_get_slider_image($id) : null;
@@ -34,7 +30,7 @@ $csrf = gallery_set_csrf_token();
     <h1><?= $slide ? 'Edit slide' : 'Add slide' ?></h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-    <form method="post" action="/gallery/slider-save.php" enctype="multipart/form-data">
+    <form method="post" action="/gallery/admin-slider-save.php" enctype="multipart/form-data">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
       <input type="hidden" name="id" value="<?= (int) ($slide['id'] ?? 0) ?>">
       <div class="control-group"><label for="slide-image">Slide image</label><?php if (!empty($slide['image'])): ?><p><img src="<?= htmlspecialchars($slide['image'], ENT_QUOTES, 'UTF-8') ?>" alt="" style="max-width:320px;height:auto;"><br><small>Current image</small></p><?php endif; ?><input id="slide-image" type="file" name="image" accept="image/jpeg,image/png,image/webp"<?= $slide ? '' : ' required' ?>><p class="help-block"><strong>Recommended size: 1600 &times; 600px</strong> (landscape banner), JPG/PNG/WEBP, under 10 MB.</p></div>

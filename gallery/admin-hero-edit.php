@@ -1,11 +1,8 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
+require __DIR__ . '/admin-auth.php';
+gallery_require_admin();
 
-session_start();
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
 
 $id = (int) ($_GET['id'] ?? 0);
 $hero = $id > 0 ? gallery_get_home_hero($id) : null;
@@ -50,7 +47,7 @@ $csrf = gallery_set_csrf_token();
       </div>
     <?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-    <form method="post" action="/gallery/hero-save.php" enctype="multipart/form-data">
+    <form method="post" action="/gallery/admin-hero-save.php" enctype="multipart/form-data">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
       <input type="hidden" name="id" value="<?= (int) ($hero['id'] ?? 0) ?>">
       <div class="control-group"><label for="hero-title">Title</label><input id="hero-title" type="text" name="title" required value="<?= htmlspecialchars((string) ($hero['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><p class="help-block">Shown as the main heading on the homepage panel and hero page.</p></div>

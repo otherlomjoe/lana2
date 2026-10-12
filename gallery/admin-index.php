@@ -1,13 +1,9 @@
 <?php
 require __DIR__ . '/gallery-lib.php';
+require __DIR__ . '/admin-auth.php';
 
-session_start();
+gallery_require_admin();
 header('Content-Type: text/html; charset=utf-8');
-
-if (empty($_SESSION['gallery_admin_authenticated']) || $_SESSION['gallery_admin_authenticated'] !== true) {
-    header('Location: /gallery/admin-login.php');
-    exit;
-}
 
 $pdo = gallery_init_db();
 if (!$pdo) {
