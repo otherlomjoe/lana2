@@ -341,3 +341,21 @@ td.admin-friendly-actions, td.admin-friendly-actions * {
   max-height: 60vh;
   overflow: auto;
 }
+
+/* Force left-column textareas in editor/preview layouts to use the available width */
+.hero-editor-layout > div:first-child textarea,
+.exhibition-description-layout > div:first-child textarea,
+.description-preview-layout > div:first-child textarea,
+.description-editor textarea,
+.admin-friendly .description-editor textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* In cases where a .control-group rule limits width, ensure the editor column overrides it */
+.exhibition-description-layout .control-group,
+.hero-editor-layout .control-group,
+.description-preview-layout .control-group {
+  max-width: 100%;
+}

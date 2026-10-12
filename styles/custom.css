@@ -1091,14 +1091,15 @@ body {
 .admin-friendly .control-group textarea {
   display: block;
   width: 100%;
-  max-width: 480px;
   box-sizing: border-box;
+  /* Removed max-width cap so editor/textarea can expand to the available column width */
+  max-width: none;
 }
 .admin-friendly .help-block {
   color: #666;
   font-size: 12px;
   margin: 2px 0 0;
-  max-width: 480px;
+  max-width: none;
 }
 .admin-friendly .admin-help-card {
   background: #eef6ff;
