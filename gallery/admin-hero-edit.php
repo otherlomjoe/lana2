@@ -16,8 +16,11 @@ if ($id > 0 && !$hero) {
 $exhibitions = gallery_list_exhibitions(gallery_init_db(), true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
-$warning = $_SESSION['gallery_admin_message_warning'] ?? '';
-unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error'], $_SESSION['gallery_admin_message_warning']);
+$warnings = $_SESSION['gallery_admin_warnings'] ?? [];
+$warnings_for = $_SESSION['gallery_admin_warnings_for_id'] ?? null;
+$dismissed_for = $_SESSION['gallery_admin_warnings_dismissed_for'] ?? null;
+// Do not unset warnings here; dismissal endpoint clears them when user dismisses.
+unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
 $csrf = gallery_set_csrf_token();
 ?>
 <!DOCTYPE html>
@@ -35,7 +38,17 @@ $csrf = gallery_set_csrf_token();
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1><?= $hero ? 'Edit home hero' : 'Create home hero' ?></h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-    <?php if ($warning !== ''): ?><div class="alert alert-warning"><?= htmlspecialchars($warning, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <?php if (!empty($warnings) && is_array($warnings) && ($dismissed_for !== $warnings_for)): ?>
+      <div class="alert alert-warning">
+        <button type="button" class="close gallery-warnings-dismiss" data-for="<?= htmlspecialchars((string) $warnings_for, ENT_QUOTES, 'UTF-8') ?>" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <strong>Warnings:</strong>
+        <ul>
+          <?php foreach ($warnings as $w): ?>
+            <li><?= htmlspecialchars((string) $w, ENT_QUOTES, 'UTF-8') ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    <?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <form method="post" action="/gallery/hero-save.php" enctype="multipart/form-data">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">

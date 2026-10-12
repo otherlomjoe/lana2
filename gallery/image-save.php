@@ -37,7 +37,18 @@ try {
     $result = gallery_save_image($payload, $_FILES ?? []);
 
     if ($isFormSubmission) {
+        // Non-blocking warnings from the save process will be appended to the admin message so the
+        // user sees them immediately. The full warnings array is also kept in session.gallery_admin_warnings
+        // for more detailed display if desired.
         $_SESSION['gallery_admin_message'] = 'Image saved successfully.';
+        if (!empty($result['warnings']) && is_array($result['warnings'])) {
+            $_SESSION['gallery_admin_warnings'] = $result['warnings'];
+            $_SESSION['gallery_admin_warnings_for_id'] = !empty($result['id']) ? (int) $result['id'] : null;
+            // append a concise inline summary for immediate visibility in the flash message
+            $short = implode(' | ', array_map(function ($s) { return preg_replace('/\s+\s*/', ' ', trim($s)); }, $result['warnings']));
+            $_SESSION['gallery_admin_message'] .= ' Warnings: ' . $short;
+        }
+
         $saveMode = ($_POST['save_mode'] ?? 'list');
         $destination = $saveMode === 'stay'
             ? '/gallery/admin-image-edit.php?id=' . (int) $result['id']

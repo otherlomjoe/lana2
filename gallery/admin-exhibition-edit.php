@@ -28,6 +28,10 @@ usort($images, function(array $a, array $b) {
 });
 $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
+$warnings = $_SESSION['gallery_admin_warnings'] ?? [];
+$warnings_for = $_SESSION['gallery_admin_warnings_for_id'] ?? null;
+$dismissed_for = $_SESSION['gallery_admin_warnings_dismissed_for'] ?? null;
+// Keep warnings in session until explicitly dismissed by the admin
 unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
 ?>
 <!DOCTYPE html>
@@ -45,6 +49,17 @@ unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error
     <?php require __DIR__ . '/admin-nav.php'; ?>
     <h1><?= $exhibition ? 'Edit Exhibition' : 'Create Exhibition' ?></h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <?php if (!empty($warnings) && is_array($warnings) && ($dismissed_for !== $warnings_for)): ?>
+      <div class="alert alert-warning">
+        <button type="button" class="close gallery-warnings-dismiss" data-for="<?= htmlspecialchars((string) $warnings_for, ENT_QUOTES, 'UTF-8') ?>" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <strong>Warnings:</strong>
+        <ul>
+          <?php foreach ($warnings as $w): ?>
+            <li><?= htmlspecialchars((string) $w, ENT_QUOTES, 'UTF-8') ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    <?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <form method="post" action="/gallery/exhibition-save.php" enctype="multipart/form-data">
       <input type="hidden" name="id" value="<?= (int) $id ?>">

@@ -1879,6 +1879,50 @@ function gallery_save_image(array $data, array $files = []): array
         throw new InvalidArgumentException('The thumbnail file does not exist on disk.');
     }
 
+    // Non-blocking recommended-dimensions and file-size checks. These produce warnings only and do not prevent save.
+    $warnings = [];
+    // Full image recommendations
+    $recommendedFullW = 2400;
+    $recommendedFullH = 1600;
+    $recommendedFullMaxBytes = 3 * 1024 * 1024; // 3 MB
+    if ($fullPath !== '' && is_file($fullPath)) {
+        $fullSize = @filesize($fullPath);
+        $fullInfo = @getimagesize($fullPath);
+        if ($fullInfo && isset($fullInfo[0], $fullInfo[1])) {
+            $fw = (int) $fullInfo[0];
+            $fh = (int) $fullInfo[1];
+            if ($fw < $recommendedFullW || $fh < $recommendedFullH) {
+                $warnings[] = "Full image is smaller than recommended {$recommendedFullW}×{$recommendedFullH} px ({$fw}×{$fh}).";
+            }
+        } else {
+            $warnings[] = 'Could not determine dimensions for the full image.';
+        }
+        if ($fullSize !== false && $fullSize > $recommendedFullMaxBytes) {
+            $warnings[] = 'Full image file size is larger than recommended 3 MB (' . round($fullSize / 1024 / 1024, 2) . ' MB).';
+        }
+    }
+
+    // Thumbnail recommendations
+    $recommendedThumbW = 200;
+    $recommendedThumbH = 165;
+    $recommendedThumbMaxBytes = 100 * 1024; // 100 KB
+    if ($thumbPath !== '' && is_file($thumbPath)) {
+        $thumbSize = @filesize($thumbPath);
+        $thumbInfo = @getimagesize($thumbPath);
+        if ($thumbInfo && isset($thumbInfo[0], $thumbInfo[1])) {
+            $tw = (int) $thumbInfo[0];
+            $th = (int) $thumbInfo[1];
+            if ($tw !== $recommendedThumbW || $th !== $recommendedThumbH) {
+                $warnings[] = "Thumbnail is not the recommended {$recommendedThumbW}×{$recommendedThumbH} px (found {$tw}×{$th}).";
+            }
+        } else {
+            $warnings[] = 'Could not determine dimensions for the thumbnail.';
+        }
+        if ($thumbSize !== false && $thumbSize > $recommendedThumbMaxBytes) {
+            $warnings[] = 'Thumbnail file size is larger than recommended 100 KB (' . round($thumbSize / 1024, 1) . ' KB).';
+        }
+    }
+
     $slug = gallery_slugify((string) ($data['slug'] ?? $title));
     $slug = gallery_create_slug_exists($pdo, $slug, $imageId);
 
@@ -2048,7 +2092,12 @@ function gallery_save_image(array $data, array $files = []): array
 
     $pdo->commit();
 
-    return ['id' => $imageId, 'slug' => $slug, 'title' => $title, 'thumbnail' => $thumbUrl, 'full' => $fullUrl, 'orientation' => $orientation];
+    $ret = ['id' => $imageId, 'slug' => $slug, 'title' => $title, 'thumbnail' => $thumbUrl, 'full' => $fullUrl, 'orientation' => $orientation];
+    if (!empty($warnings)) {
+        $ret['warnings'] = $warnings;
+    }
+
+    return $ret;
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();

@@ -18,7 +18,8 @@ $lookups = gallery_lookup_values($pdo);
 $exhibitions = gallery_list_exhibitions($pdo, true);
 $message = $_SESSION['gallery_admin_message'] ?? '';
 $error = $_SESSION['gallery_admin_message_error'] ?? '';
-unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error']);
+$warnings = $_SESSION['gallery_admin_warnings'] ?? [];
+unset($_SESSION['gallery_admin_message'], $_SESSION['gallery_admin_message_error'], $_SESSION['gallery_admin_warnings']);
 $id = (int) ($_GET['id'] ?? 0);
 $isNew = $id === 0;
 $item = null;
@@ -57,6 +58,16 @@ if ($item) {
     <?php require __DIR__ . '/admin-nav.php'; ?>    
     <h1><?= $isNew ? 'Add Image' : 'Edit Image' ?></h1>
     <?php if ($message !== ''): ?><div class="alert alert-success"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+    <?php if (!empty($warnings) && is_array($warnings)): ?>
+      <div class="alert alert-warning">
+        <strong>Warnings:</strong>
+        <ul>
+          <?php foreach ($warnings as $w): ?>
+            <li><?= htmlspecialchars((string) $w, ENT_QUOTES, 'UTF-8') ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    <?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
     <?php if ($isNew || $item): ?>
       <form method="post" action="/gallery/image-save.php" enctype="multipart/form-data">
@@ -67,6 +78,7 @@ if ($item) {
             <?php if (!empty($item['full_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['full_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current full image" style="max-width:320px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['full_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?></small></p><?php else: ?><p>No full image is currently stored.</p><?php endif; ?>
             <input id="full-image" data-media-input="full image" type="file" name="full" accept="image/*"<?= $isNew ? ' required' : '' ?>><div data-media-preview="full-image"></div>
             <p class="help-block">Choose a replacement full image.</p>
+            <p class="help-block"><strong>Recommended:</strong> full image 2400×1600 px (or similar aspect ratio), sRGB JPEG/WEBP, keep file size under ~3 MB for reasonable upload and processing times.</p>
             <?php if (!empty($item['full_file'])): ?>
               <button type="button" class="btn btn-small" onclick="if(confirm('Remove the full image from storage and the database?')){var f=document.createElement('form');f.method='post';f.action='/gallery/asset-delete.php';f.style.display='none';var i1=document.createElement('input');i1.type='hidden';i1.name='id';i1.value='<?= (int) $item['id'] ?>';f.appendChild(i1);var i2=document.createElement('input');i2.type='hidden';i2.name='asset';i2.value='full';f.appendChild(i2);document.body.appendChild(f);f.submit();}">Remove full image</button>
             <?php endif; ?>
@@ -76,6 +88,7 @@ if ($item) {
             <?php if (!empty($item['thumbnail_url'])): ?><p><img src="<?= htmlspecialchars((string) $item['thumbnail_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Current thumbnail" style="max-width:200px;max-height:165px;height:auto;"><br><small><?= htmlspecialchars((string) ($item['thumbnail_file'] ?? ''), ENT_QUOTES, 'UTF-8') ?><?php $thumbnailInfo = !empty($item['thumbnail_file']) && is_file($item['thumbnail_file']) ? @getimagesize($item['thumbnail_file']) : false; ?><?php if ($thumbnailInfo): ?> | <?= (int) $thumbnailInfo[0] ?> x <?= (int) $thumbnailInfo[1] ?> px; <?= number_format((int) filesize($item['thumbnail_file']) / 1024, 1) ?> KB<?php endif; ?></small></p><?php else: ?><p>No thumbnail is currently stored.</p><?php endif; ?>
             <input id="thumbnail-file" data-media-input="thumbnail" type="file" name="thumbnail" accept="image/*"><div data-media-preview="thumbnail-file"></div>
             <p class="help-block">Choose a replacement thumbnail. The filename should end in <strong>thumb</strong>.</p>
+            <p class="help-block"><strong>Recommended:</strong> thumbnail 200×165 px (exact), optimized JPEG/WEBP, keep file size under ~100 KB for fast loading.</p>
             <input id="thumbnail-filename" type="text" readonly class="form-control" style="margin-top:8px;" placeholder="Thumbnail filename" value="<?= htmlspecialchars(basename((string) ($item['thumbnail_file'] ?? $item['thumbnail_url'] ?? '')), ENT_QUOTES, 'UTF-8') ?>">
             <div id="thumbnail-warning" class="alert alert-warning" hidden>Thumbnail filenames should end in <strong>thumb</strong>, for example image-namethumb.jpg.</div>
             <?php if (!empty($item['thumbnail_file'])): ?>
@@ -90,7 +103,7 @@ if ($item) {
         <div class="control-group"><label>Public price</label><input type="text" name="pricePublic" value="<?= htmlspecialchars((string) ($item['price_public'] ?? '')) ?>"></div>
         <div class="control-group"><label>Artwork creation date (editable)</label><input type="date" name="artworkCreatedAt" value="<?= htmlspecialchars((string) ($item['artwork_created_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><p class="help-block">This is the modifiable artwork date. New uploads default to the image EXIF date where available, otherwise the file timestamp.</p></div>
         <div class="control-group"><label><input type="checkbox" name="sold" value="1"<?= empty($item['available']) ? ' checked' : '' ?>> Sold</label></div>
-        <div class="control-group"><label>Prints available</label><input type="checkbox" name="printsAvailable" value="1" <?= !empty($item['prints_available']) ? 'checked' : '' ?>></div>
+        <div class="control-group"><label><input type="checkbox" name="printsAvailable" value="1" <?= !empty($item['prints_available']) ? 'checked' : '' ?>> Prints available</label></div>
         <div class="control-group"><label>Medium <span class="searchable-badge">Searchable</span></label><input type="text" name="medium" value="<?= htmlspecialchars((string) ($item['medium'] ?? '')) ?>" list="medium-options"><datalist id="medium-options"><?php foreach ($lookups['mediums'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
         <div class="control-group"><label>Genre <span class="searchable-badge">Searchable</span></label><input type="text" name="genre" value="<?= htmlspecialchars((string) ($item['genre'] ?? '')) ?>" list="genre-options"><datalist id="genre-options"><?php foreach ($lookups['genres'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>
         <div class="control-group"><label>Collection <span class="searchable-badge">Searchable</span></label><input type="text" name="collection" value="<?= htmlspecialchars((string) ($item['collection'] ?? '')) ?>" list="collection-options"><datalist id="collection-options"><?php foreach ($lookups['collections'] as $value): ?><option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"><?php endforeach; ?></datalist></div>

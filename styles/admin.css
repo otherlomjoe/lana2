@@ -228,6 +228,26 @@ td.admin-friendly-actions, td.admin-friendly-actions * {
 }
 
 /* Align checkbox vertically with links and remove extra offset */
+.admin-friendly .control-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Mark required fields (JS will add .required spans to labels) */
+.admin-friendly label .required {
+  color: var(--admin-primary);
+  margin-left: 6px;
+  font-weight: 700;
+}
+
+/* Align checkbox and its label in one line when label contains the input */
+.admin-friendly .control-group label input[type="checkbox"] {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Align checkbox vertically with links and remove extra offset */
 .admin-friendly-actions .form-check-input,
 .admin-friendly-actions input[type="checkbox"] {
   margin-top: 0 !important;
