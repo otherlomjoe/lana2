@@ -27,6 +27,32 @@ function gallery_database(): ?PDO
     }
 }
 
+function gallery_safe_execute(PDOStatement $stmt, array $params = []): bool
+{
+    // Bind parameters explicitly and execute, writing a debug log on failure.
+    foreach ($params as $k => $v) {
+        if (is_int($v)) {
+            $stmt->bindValue($k, $v, PDO::PARAM_INT);
+        } elseif (is_bool($v)) {
+            $stmt->bindValue($k, (int) $v, PDO::PARAM_INT);
+        } elseif ($v === null) {
+            $stmt->bindValue($k, null, PDO::PARAM_NULL);
+        } else {
+            $stmt->bindValue($k, (string) $v, PDO::PARAM_STR);
+        }
+    }
+    try {
+        return (bool) $stmt->execute();
+    } catch (PDOException $e) {
+        $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
+        if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
+            $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+        }
+        file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
+        throw $e;
+    }
+}
+
 function gallery_ensure_upload_directories(): void
 {
     $directories = [
@@ -1474,7 +1500,7 @@ function gallery_save_exhibition(array $data, array $files = []): array
 
     if ($id > 0) {
         $existingStmt = $pdo->prepare('SELECT hero_file, thumbnail_file, hero_image, thumbnail_url FROM exhibitions WHERE id = :id LIMIT 1');
-        $existingStmt->execute([':id' => $id]);
+        gallery_safe_execute($existingStmt, [':id' => $id]);
         $existing = $existingStmt->fetch();
         if (!$existing) {
             throw new InvalidArgumentException('Exhibition not found.');
@@ -1716,7 +1742,7 @@ function gallery_save_image(array $data, array $files = []): array
     $isUpdate = $imageId !== null;
     if ($isUpdate) {
         $existingStmt = $pdo->prepare('SELECT full_file, thumbnail_file, full_url, thumbnail_url, artwork_created_at FROM images WHERE id = :id LIMIT 1');
-        $existingStmt->execute([':id' => $imageId]);
+        gallery_safe_execute($existingStmt, [':id' => $imageId]);
         $existing = $existingStmt->fetch();
         if (!$existing) {
             throw new InvalidArgumentException('Image not found.');
@@ -1794,7 +1820,7 @@ function gallery_save_image(array $data, array $files = []): array
         // Query candidates that contain the basename, then verify exact basename equality in PHP
         $checkStmt = $pdo->prepare('SELECT id, thumbnail_file, thumbnail_url FROM images WHERE (thumbnail_file IS NOT NULL AND thumbnail_file LIKE :like) OR (thumbnail_url IS NOT NULL AND thumbnail_url LIKE :like)');
         $like = '%' . $thumbBase;
-        $checkStmt->execute([':like' => $like]);
+        gallery_safe_execute($checkStmt, [':like' => $like]);
         $foundExact = false;
         while ($row = $checkStmt->fetch(PDO::FETCH_ASSOC)) {
             if (!empty($row['thumbnail_file']) && basename($row['thumbnail_file']) === $thumbBase) {
