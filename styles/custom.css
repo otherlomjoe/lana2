@@ -1,6 +1,20 @@
 /***** BASE CSS *****/
 
 
+:root {
+  --brand-primary: #628FC0;
+  --brand-accent: #97bfe0;
+  --text-default: #454444;
+  --muted: #666666;
+  --muted-light: #999999;
+  --bg-panel: #fafafa;
+  --border: #e5e5e5;
+  --success: #28a745;
+  --info: #17a2b8;
+  --radius: 6px;
+  --form-padding: 8px;
+}
+
 /* Site Name */
 
 #divSiteTitle {text-decoration:none;}
@@ -141,8 +155,8 @@ img {max-width:100%;height:auto;width:auto;-moz-box-sizing:border-box;-webkit-bo
 /* Additional */
 
 /* Admin UX enhancements */
-.badge-success { background-color: #28a745; color: #fff; }
-.badge-secondary { background-color: #6c757d; color: #fff; }
+.badge-success { background-color: var(--success); color: #fff; }
+.badge-secondary { background-color: var(--muted); color: #fff; }
 
 .ex-row-highlight { animation: highlightFlash 1s ease; }
 @keyframes highlightFlash {
@@ -155,9 +169,31 @@ img {max-width:100%;height:auto;width:auto;-moz-box-sizing:border-box;-webkit-bo
 table.table tbody tr { transition: transform .32s cubic-bezier(.2,.8,.2,1), background-color .3s ease; }
 
 /* improve admin form readability for non-technical users */
-.gallery-admin-form label { font-size: 15px; color: #333; }
-.gallery-admin-form input, .gallery-admin-form textarea, .gallery-admin-form select { padding: 8px 10px; border-radius: 6px; border: 1px solid #dcdcdc; }
-.gallery-admin-form .help-block { color: #666; font-size: 13px; }
+
+/* Consolidated admin form styles: use CSS variables for easy theming */
+.gallery-admin-form {
+    max-width: 700px;
+}
+.gallery-admin-form .control-group { margin-bottom: 14px; }
+.gallery-admin-form label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-default);
+}
+.gallery-admin-form input,
+.gallery-admin-form textarea,
+.gallery-admin-form select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--form-padding);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    color: var(--text-default);
+}
+.gallery-admin-form textarea { min-height: 110px; resize: vertical; }
+.gallery-admin-form .help-block { color: var(--muted); font-size: 13px; }
 
 /* searchable tag badge */
 .searchable-badge { display: inline-block; margin-left: 8px; font-size: 12px; padding: 3px 8px; border-radius: 12px; background: #17a2b8; color: #fff; }
