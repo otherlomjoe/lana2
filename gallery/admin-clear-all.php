@@ -103,7 +103,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 __DIR__ . '/uploads/exhibitions/thumbs',
                 __DIR__ . '/uploads/heroes',
                 __DIR__ . '/uploads/sliders',
-                __DIR__ . '/all/imported',
             ];
             $removed = 0;
             foreach ($dirs as $d) {

@@ -37,7 +37,6 @@ function gallery_ensure_upload_directories(): void
         __DIR__ . '/uploads/exhibitions/thumbs',
         __DIR__ . '/uploads/heroes',
         __DIR__ . '/uploads/sliders',
-        __DIR__ . '/all/imported',
     ];
 
     foreach ($directories as $directory) {
@@ -1865,7 +1864,7 @@ function gallery_save_image(array $data, array $files = []): array
     try {
     if ($isUpdate) {
         $stmt = $pdo->prepare('UPDATE images SET slug = :slug, title = :title, full_file = :full_file, thumbnail_file = :thumbnail_file, full_url = :full_url, thumbnail_url = :thumbnail_url, price_public = :price_public, price_private = :price_private, prints_available = :prints_available, active = :active, available = :available, medium = :medium, medium_id = :medium_id, genre = :genre, genre_id = :genre_id, collection = :collection, collection_id = :collection_id, award_title = :award_title, award_description = :award_description, dimensions = :dimensions, description = :description, location = :location, private_notes = :private_notes, copies_sold = :copies_sold, orientation = :orientation, alt_text = :alt_text, artwork_created_at = :artwork_created_at, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
-        $stmt->execute([
+        $params = [
             ':slug' => $slug,
             ':title' => $title,
             ':full_file' => $fullPath,
@@ -1894,10 +1893,16 @@ function gallery_save_image(array $data, array $files = []): array
             ':alt_text' => $altText,
             ':artwork_created_at' => $artworkCreatedAt !== '' ? $artworkCreatedAt : null,
             ':id' => $imageId,
-        ]);
+        ];
+        try {
+            $stmt->execute($params);
+        } catch (PDOException $e) {
+            file_put_contents(__DIR__ . '/debug-sql.log', date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND);
+            throw $e;
+        }
     } else {
         $stmt = $pdo->prepare('INSERT INTO images (slug, title, full_file, thumbnail_file, full_url, thumbnail_url, price_public, price_private, prints_available, active, available, medium, medium_id, genre, genre_id, collection, collection_id, award_title, award_description, dimensions, description, location, private_notes, copies_sold, orientation, alt_text, artwork_created_at, created_at, updated_at) VALUES (:slug, :title, :full_file, :thumbnail_file, :full_url, :thumbnail_url, :price_public, :price_private, :prints_available, :active, :available, :medium, :medium_id, :genre, :genre_id, :collection, :collection_id, :award_title, :award_description, :dimensions, :description, :location, :private_notes, :copies_sold, :orientation, :alt_text, :artwork_created_at, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)');
-        $stmt->execute([
+        $params = [
             ':slug' => $slug,
             ':title' => $title,
             ':full_file' => $fullPath,
@@ -1925,7 +1930,13 @@ function gallery_save_image(array $data, array $files = []): array
             ':orientation' => $orientation,
             ':alt_text' => $altText,
             ':artwork_created_at' => $artworkCreatedAt !== '' ? $artworkCreatedAt : null,
-        ]);
+        ];
+        try {
+            $stmt->execute($params);
+        } catch (PDOException $e) {
+            file_put_contents(__DIR__ . '/debug-sql.log', date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND);
+            throw $e;
+        }
         $imageId = (int) $pdo->lastInsertId();
     }
 
