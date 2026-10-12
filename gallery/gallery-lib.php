@@ -1841,9 +1841,9 @@ function gallery_save_image(array $data, array $files = []): array
     if ($imageId === null && $thumbPath !== '') {
         $thumbBase = basename((string) $thumbPath);
         // Query candidates that contain the basename, then verify exact basename equality in PHP
-        $checkStmt = $pdo->prepare('SELECT id, thumbnail_file, thumbnail_url FROM images WHERE (thumbnail_file IS NOT NULL AND thumbnail_file LIKE :like) OR (thumbnail_url IS NOT NULL AND thumbnail_url LIKE :like)');
+        $checkStmt = $pdo->prepare('SELECT id, thumbnail_file, thumbnail_url FROM images WHERE (thumbnail_file IS NOT NULL AND thumbnail_file LIKE :like1) OR (thumbnail_url IS NOT NULL AND thumbnail_url LIKE :like2)');
         $like = '%' . $thumbBase;
-        gallery_safe_execute($checkStmt, [':like' => $like]);
+        gallery_safe_execute($checkStmt, [':like1' => $like, ':like2' => $like]);
         $foundExact = false;
         while ($row = $checkStmt->fetch(PDO::FETCH_ASSOC)) {
             if (!empty($row['thumbnail_file']) && basename($row['thumbnail_file']) === $thumbBase) {
