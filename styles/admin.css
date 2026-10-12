@@ -19,10 +19,10 @@
   display: inline-block;
   width: 160px;
   vertical-align: top;
-  border: 1px solid #eee;
+  border: 1px solid var(--border);
   padding: 8px;
   border-radius: 6px;
-  background: #fff;
+  background: var(--admin-bg);
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
   cursor: pointer;
 }
@@ -49,7 +49,7 @@
 
 /* Visual indicator when selected */
 .ex-image-tile.checked {
-  border-color: #007bff;
+  border-color: var(--admin-primary);
   box-shadow: 0 8px 20px rgba(0,123,255,0.12);
 }
 .ex-image-tile input[type="checkbox"] { /* hide default checkbox but keep accessible */
@@ -66,22 +66,22 @@
 
 /* Make sure checked tiles have a visible border for printing and high-contrast */
 @media (prefers-contrast: more) {
-  .ex-image-tile.checked { outline: 3px solid #007bff; }
+  .ex-image-tile.checked { outline: 3px solid var(--admin-primary); }
 }
 
 /* Ordered checkbox list for admin exhibition images (no thumbnails) */
-.ex-images-list { list-style: none; padding: 0; margin: 0; max-height: 480px; overflow: auto; border: 1px solid #eee; border-radius: 6px; }
-.ex-images-list li { border-bottom: 1px solid #f5f5f5; }
+.ex-images-list { list-style: none; padding: 0; margin: 0; max-height: 480px; overflow: auto; border: 1px solid var(--border); border-radius: var(--admin-radius); }
+.ex-images-list li { border-bottom: 1px solid var(--bg-panel); }
 .ex-images-list li:last-child { border-bottom: none; }
 .ex-images-list label { display: flex; align-items: center; padding: 8px 10px; cursor: pointer; }
 .ex-images-list input[type="checkbox"] { margin-right: 12px; }
 .ex-images-list .item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ex-images-list input[type="checkbox"]:checked + .item-title { font-weight: 600; color: #007bff; }
+.ex-images-list input[type="checkbox"]:checked + .item-title { font-weight: 600; color: var(--admin-primary); }
 .ex-images-list label:focus-within { background: #fbfdff; }
 
 /* Stronger visual highlight when an item is checked */
-.ex-images-list label.checked { background: #e9f7ff; border-left: 4px solid #007bff; }
-.ex-images-list label.checked .item-title { color: #0056b3; }
+.ex-images-list label.checked { background: var(--admin-primary-200); border-left: 4px solid var(--admin-primary); }
+.ex-images-list label.checked .item-title { color: var(--admin-primary); }
 
 /* Deploy/version badge shown on admin pages */
 .deploy-version {
@@ -89,7 +89,7 @@
   top: 8px;
   left: 8px;
   background: rgba(0,0,0,0.6);
-  color: #fff;
+  color: var(--admin-bg);
   padding: 6px 10px;
   font-size: 0.75rem;
   z-index: 10000;
@@ -242,14 +242,14 @@ td.admin-friendly-actions, td.admin-friendly-actions * {
 
 /* If Bootstrap is adding background to odd table rows, force white for the table body rows in admin lists */
 .admin-friendly .table.table-striped tbody > tr {
-  background-color: #fff !important;
+  background-color: var(--admin-bg) !important;
 }
 .admin-friendly .table.table-striped tbody > tr:nth-child(odd) {
-  background-color: #fff !important;
+  background-color: var(--admin-bg) !important;
 }
 
 /* If there's a stray rule adding borders between cells, neutralize it for admin lists */
 .admin-friendly .table.table-striped tbody > tr > td {
-  border-top: 1px solid #eee !important;
+  border-top: 1px solid var(--border) !important;
   background-clip: padding-box !important;
 }
