@@ -294,13 +294,13 @@ td.admin-friendly-actions, td.admin-friendly-actions * {
 .hero-editor-layout > div:first-child,
 .exhibition-description-layout > div:first-child,
 .description-preview-layout > div:first-child {
-  flex: 1 1 60%;
+  flex: 1 1 70%;
   min-width: 0; /* allow flex child to shrink and let textarea use width:100% */
 }
 .hero-editor-layout > div:last-child,
 .exhibition-description-layout > div:last-child,
 .description-preview-layout > div:last-child {
-  flex: 0 0 360px;
+  flex: 0 0 320px;
   max-width: 420px;
 }
 
