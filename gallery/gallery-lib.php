@@ -44,7 +44,10 @@ function gallery_safe_execute(PDOStatement $stmt, array $params = []): bool
     try {
         return (bool) $stmt->execute();
     } catch (PDOException $e) {
-        $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+        $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
+        if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
+            $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+        }
         file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
         throw $e;
     }
@@ -1957,7 +1960,10 @@ function gallery_save_image(array $data, array $files = []): array
             }
             $stmt->execute();
         } catch (PDOException $e) {
-            $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+            $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
+            if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
+                $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+            }
             file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
             throw $e;
         }
@@ -2006,7 +2012,10 @@ function gallery_save_image(array $data, array $files = []): array
             }
             $stmt->execute();
         } catch (PDOException $e) {
-            $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+            $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
+            if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
+                $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
+            }
             file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
             throw $e;
         }
