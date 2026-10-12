@@ -44,10 +44,7 @@ function gallery_safe_execute(PDOStatement $stmt, array $params = []): bool
     try {
         return (bool) $stmt->execute();
     } catch (PDOException $e) {
-        $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
-        if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
-            $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
-        }
+        $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
         file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
         throw $e;
     }
@@ -699,7 +696,8 @@ function gallery_set_home_hero_visibility(int $id, bool $visible): bool
 {
     $pdo = gallery_init_db();
     if (!$pdo) return false;
-    return $pdo->prepare('UPDATE home_heroes SET visible = :visible, updated_at = CURRENT_TIMESTAMP WHERE id = :id')->execute([':visible' => $visible ? 1 : 0, ':id' => $id]);
+    $stmt = $pdo->prepare('UPDATE home_heroes SET visible = :visible, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+    return (bool) gallery_safe_execute($stmt, [':visible' => $visible ? 1 : 0, ':id' => $id]);
 }
 
 function gallery_hard_delete_home_hero(int $id): bool
@@ -710,7 +708,8 @@ function gallery_hard_delete_home_hero(int $id): bool
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
     if (!$row) return false;
-    $deleted = $pdo->prepare('DELETE FROM home_heroes WHERE id = :id')->execute([':id' => $id]);
+    $stmt = $pdo->prepare('DELETE FROM home_heroes WHERE id = :id');
+    $deleted = (bool) gallery_safe_execute($stmt, [':id' => $id]);
     if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) @unlink($row['image_file']);
     return $deleted;
 }
@@ -720,20 +719,23 @@ function gallery_shift_home_hero(int $id, int $direction): bool
     $pdo = gallery_init_db();
     if (!$pdo || !in_array($direction, [-1, 1], true)) return false;
     $stmt = $pdo->prepare('SELECT id, display_order FROM home_heroes WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $id]);
+    gallery_safe_execute($stmt, [':id' => $id]);
     $current = $stmt->fetch();
     if (!$current) return false;
     $operator = $direction < 0 ? '<' : '>';
     $sort = $direction < 0 ? 'DESC' : 'ASC';
     $neighborStmt = $pdo->prepare("SELECT id, display_order FROM home_heroes WHERE display_order {$operator} :display_order ORDER BY display_order {$sort}, id {$sort} LIMIT 1");
-    $neighborStmt->execute([':display_order' => (int) $current['display_order']]);
+    gallery_safe_execute($neighborStmt, [':display_order' => (int) $current['display_order']]);
     $neighbor = $neighborStmt->fetch();
     if (!$neighbor) return false;
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id')->execute([':display_order' => -1, ':id' => $id]);
-        $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
-        $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
+        $stmt1 = $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt1, [':display_order' => -1, ':id' => $id]);
+        $stmt2 = $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt2, [':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
+        $stmt3 = $pdo->prepare('UPDATE home_heroes SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt3, [':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
         $pdo->commit();
         return true;
     } catch (Throwable $e) {
@@ -884,7 +886,8 @@ function gallery_set_slider_image_active(int $id, bool $active): bool
 {
     $pdo = gallery_init_db();
     if (!$pdo) return false;
-    return $pdo->prepare('UPDATE home_slider_images SET active = :active, updated_at = CURRENT_TIMESTAMP WHERE id = :id')->execute([':active' => $active ? 1 : 0, ':id' => $id]);
+    $stmt = $pdo->prepare('UPDATE home_slider_images SET active = :active, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+    return (bool) gallery_safe_execute($stmt, [':active' => $active ? 1 : 0, ':id' => $id]);
 }
 
 /**
@@ -894,7 +897,8 @@ function gallery_set_image_active(int $id, bool $active): bool
 {
     $pdo = gallery_init_db();
     if (!$pdo) return false;
-    return $pdo->prepare('UPDATE images SET active = :active, updated_at = CURRENT_TIMESTAMP WHERE id = :id')->execute([':active' => $active ? 1 : 0, ':id' => $id]);
+    $stmt = $pdo->prepare('UPDATE images SET active = :active, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+    return (bool) gallery_safe_execute($stmt, [':active' => $active ? 1 : 0, ':id' => $id]);
 }
 
 function gallery_hard_delete_slider_image(int $id): bool
@@ -905,7 +909,8 @@ function gallery_hard_delete_slider_image(int $id): bool
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
     if (!$row) return false;
-    $deleted = $pdo->prepare('DELETE FROM home_slider_images WHERE id = :id')->execute([':id' => $id]);
+    $stmt = $pdo->prepare('DELETE FROM home_slider_images WHERE id = :id');
+    $deleted = (bool) gallery_safe_execute($stmt, [':id' => $id]);
     if ($deleted && !empty($row['image_file']) && is_file($row['image_file'])) @unlink($row['image_file']);
     return $deleted;
 }
@@ -926,9 +931,12 @@ function gallery_shift_slider_image(int $id, int $direction): bool
     if (!$neighbor) return false;
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => -1, ':id' => $id]);
-        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
-        $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
+        $stmt1 = $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt1, [':display_order' => -1, ':id' => $id]);
+        $stmt2 = $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt2, [':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
+        $stmt3 = $pdo->prepare('UPDATE home_slider_images SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt3, [':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
         $pdo->commit();
         return true;
     } catch (Throwable $e) {
@@ -954,22 +962,26 @@ function gallery_shift_exhibition(int $id, int $direction): bool
     if ($current['display_order'] === null) {
         // set to a large value so it appears at end, then normalize
         $max = (int) $pdo->query('SELECT COALESCE(MAX(display_order), 0) FROM exhibitions')->fetchColumn();
-        $pdo->prepare('UPDATE exhibitions SET display_order = :do WHERE id = :id')->execute([':do' => $max + 1, ':id' => $id]);
+        $stmt = $pdo->prepare('UPDATE exhibitions SET display_order = :do WHERE id = :id');
+        gallery_safe_execute($stmt, [':do' => $max + 1, ':id' => $id]);
         $current['display_order'] = $max + 1;
     }
 
     $operator = $direction < 0 ? '<' : '>';
     $sort = $direction < 0 ? 'DESC' : 'ASC';
     $neighborStmt = $pdo->prepare("SELECT id, display_order FROM exhibitions WHERE display_order {$operator} :display_order ORDER BY display_order {$sort}, id {$sort} LIMIT 1");
-    $neighborStmt->execute([':display_order' => (int) $current['display_order']]);
+    gallery_safe_execute($neighborStmt, [':display_order' => (int) $current['display_order']]);
     $neighbor = $neighborStmt->fetch();
     if (!$neighbor) return false;
 
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => -1, ':id' => $id]);
-        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
-        $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id')->execute([':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
+        $stmt1 = $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt1, [':display_order' => -1, ':id' => $id]);
+        $stmt2 = $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt2, [':display_order' => (int) $current['display_order'], ':id' => $neighbor['id']]);
+        $stmt3 = $pdo->prepare('UPDATE exhibitions SET display_order = :display_order WHERE id = :id');
+        gallery_safe_execute($stmt3, [':display_order' => (int) $neighbor['display_order'], ':id' => $id]);
         $pdo->commit();
         return true;
     } catch (Throwable $e) {
@@ -994,10 +1006,11 @@ function gallery_shift_image_in_exhibition(int $imageId, int $exhibitionId, int 
 
     // ensure a numeric sort_order exists
     if ($current['sort_order'] === null) {
-        $max = (int) $pdo->prepare('SELECT COALESCE(MAX(sort_order), 0) FROM image_exhibitions WHERE exhibition_id = :exhibition_id')->execute([':exhibition_id' => $exhibitionId]) ?: 0;
-        // re-query to get value properly
-        $max = (int) $pdo->query('SELECT COALESCE(MAX(sort_order), 0) FROM image_exhibitions WHERE exhibition_id = ' . (int) $exhibitionId)->fetchColumn();
-        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :so WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':so' => $max + 1, ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $maxStmt = $pdo->prepare('SELECT COALESCE(MAX(sort_order), 0) FROM image_exhibitions WHERE exhibition_id = :exhibition_id');
+        gallery_safe_execute($maxStmt, [':exhibition_id' => $exhibitionId]);
+        $max = (int) $maxStmt->fetchColumn() ?: 0;
+        $stmtUpdate = $pdo->prepare('UPDATE image_exhibitions SET sort_order = :so WHERE image_id = :image_id AND exhibition_id = :exhibition_id');
+        gallery_safe_execute($stmtUpdate, [':so' => $max + 1, ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
         $current['sort_order'] = $max + 1;
     }
 
@@ -1010,9 +1023,12 @@ function gallery_shift_image_in_exhibition(int $imageId, int $exhibitionId, int 
 
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => -1, ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
-        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => (int) $current['sort_order'], ':image_id' => $neighbor['image_id'], ':exhibition_id' => $exhibitionId]);
-        $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id')->execute([':sort_order' => (int) $neighbor['sort_order'], ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $stmt1 = $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id');
+        gallery_safe_execute($stmt1, [':sort_order' => -1, ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
+        $stmt2 = $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id');
+        gallery_safe_execute($stmt2, [':sort_order' => (int) $current['sort_order'], ':image_id' => $neighbor['image_id'], ':exhibition_id' => $exhibitionId]);
+        $stmt3 = $pdo->prepare('UPDATE image_exhibitions SET sort_order = :sort_order WHERE image_id = :image_id AND exhibition_id = :exhibition_id');
+        gallery_safe_execute($stmt3, [':sort_order' => (int) $neighbor['sort_order'], ':image_id' => $imageId, ':exhibition_id' => $exhibitionId]);
         $pdo->commit();
         return true;
     } catch (Throwable $e) {
@@ -1026,7 +1042,7 @@ function gallery_set_exhibition_active(int $id, bool $active): bool
     $pdo = gallery_init_db();
     if (!$pdo) return false;
     $stmt = $pdo->prepare('UPDATE exhibitions SET active = :active WHERE id = :id');
-    return (bool) $stmt->execute([':active' => $active ? 1 : 0, ':id' => $id]);
+    return (bool) gallery_safe_execute($stmt, [':active' => $active ? 1 : 0, ':id' => $id]);
 }
 
 function gallery_clear_directory_files(string $dir): int
@@ -1105,7 +1121,8 @@ function gallery_clear_images_only(): int
 
 function gallery_ensure_tag_links(PDO $pdo, int $imageId, array $tags): void
 {
-    $pdo->prepare('DELETE FROM image_tags WHERE image_id = :image_id')->execute([':image_id' => $imageId]);
+    $stmt = $pdo->prepare('DELETE FROM image_tags WHERE image_id = :image_id');
+    gallery_safe_execute($stmt, [':image_id' => $imageId]);
 
     foreach ($tags as $tag) {
         $tagName = trim((string) $tag);
@@ -1118,7 +1135,8 @@ function gallery_ensure_tag_links(PDO $pdo, int $imageId, array $tags): void
             continue;
         }
 
-        $pdo->prepare('INSERT INTO image_tags (image_id, tag_id) VALUES (:image_id, :tag_id)')->execute([
+        $stmt = $pdo->prepare('INSERT INTO image_tags (image_id, tag_id) VALUES (:image_id, :tag_id)');
+        gallery_safe_execute($stmt, [
             ':image_id' => $imageId,
             ':tag_id' => $tagId,
         ]);
@@ -1127,7 +1145,8 @@ function gallery_ensure_tag_links(PDO $pdo, int $imageId, array $tags): void
 
 function gallery_ensure_image_exhibitions(PDO $pdo, int $imageId, array $exhibitionIds): void
 {
-    $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :image_id')->execute([':image_id' => $imageId]);
+    $stmt = $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :image_id');
+    gallery_safe_execute($stmt, [':image_id' => $imageId]);
 
     foreach ($exhibitionIds as $index => $exhibitionId) {
         $exhibitionId = (int) $exhibitionId;
@@ -1135,7 +1154,8 @@ function gallery_ensure_image_exhibitions(PDO $pdo, int $imageId, array $exhibit
             continue;
         }
 
-        $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, :sort_order)')->execute([
+        $stmt = $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, :sort_order)');
+        gallery_safe_execute($stmt, [
             ':image_id' => $imageId,
             ':exhibition_id' => $exhibitionId,
             ':sort_order' => $index,
@@ -1572,7 +1592,8 @@ function gallery_save_exhibition(array $data, array $files = []): array
     // Server-side normalization: if exhibition is unpublished, ensure any home heroes linked to it are hidden.
     if (isset($activeVal) && (int) $activeVal === 0) {
         try {
-            $pdo->prepare('UPDATE home_heroes SET visible = 0 WHERE exhibition_id = :id')->execute([':id' => $exhibitionId]);
+            $stmt = $pdo->prepare('UPDATE home_heroes SET visible = 0 WHERE exhibition_id = :id');
+            gallery_safe_execute($stmt, [':id' => $exhibitionId]);
         } catch (Throwable $e) {
             // ignore failures to avoid blocking exhibition save
         }
@@ -1580,9 +1601,11 @@ function gallery_save_exhibition(array $data, array $files = []): array
 
     if (array_key_exists('imageIds', $data)) {
         $imageIds = array_map('intval', (array) $data['imageIds']);
-        $pdo->prepare('DELETE FROM image_exhibitions WHERE exhibition_id = :exhibition_id')->execute([':exhibition_id' => $exhibitionId]);
+        $stmt = $pdo->prepare('DELETE FROM image_exhibitions WHERE exhibition_id = :exhibition_id');
+        gallery_safe_execute($stmt, [':exhibition_id' => $exhibitionId]);
         foreach ($imageIds as $index => $imageId) {
-            $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, :sort_order)')->execute([
+            $stmtInsert = $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, :sort_order)');
+            gallery_safe_execute($stmtInsert, [
                 ':image_id' => $imageId,
                 ':exhibition_id' => $exhibitionId,
                 ':sort_order' => $index,
@@ -1934,10 +1957,7 @@ function gallery_save_image(array $data, array $files = []): array
             }
             $stmt->execute();
         } catch (PDOException $e) {
-            $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
-            if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
-                $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
-            }
+            $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
             file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
             throw $e;
         }
@@ -1986,10 +2006,7 @@ function gallery_save_image(array $data, array $files = []): array
             }
             $stmt->execute();
         } catch (PDOException $e) {
-            $logPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'gallery-debug-sql.log';
-            if (!is_dir(dirname($logPath)) || !is_writable(dirname($logPath))) {
-                $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
-            }
+            $logPath = __DIR__ . DIRECTORY_SEPARATOR . 'debug-sql.log';
             file_put_contents($logPath, date('c') . ' ' . $e->getMessage() . "\nSQL: " . $stmt->queryString . "\nParams: " . print_r($params, true) . "\n\n", FILE_APPEND | LOCK_EX);
             throw $e;
         }
@@ -2004,9 +2021,11 @@ function gallery_save_image(array $data, array $files = []): array
 
     if (array_key_exists('exhibition', $data)) {
         $exhibitionId = (int) $data['exhibition'];
-        $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :image_id')->execute([':image_id' => $imageId]);
+        $stmt = $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :image_id');
+        gallery_safe_execute($stmt, [':image_id' => $imageId]);
         if ($exhibitionId > 0) {
-            $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, 0)')->execute([
+            $stmt = $pdo->prepare('INSERT INTO image_exhibitions (image_id, exhibition_id, sort_order) VALUES (:image_id, :exhibition_id, 0)');
+            gallery_safe_execute($stmt, [
                 ':image_id' => $imageId,
                 ':exhibition_id' => $exhibitionId,
             ]);
@@ -2053,7 +2072,8 @@ function gallery_soft_delete_image(int $imageId): bool
         throw new RuntimeException('Could not archive the thumbnail image.');
     }
 
-    return $pdo->prepare('UPDATE images SET deleted_at = CURRENT_TIMESTAMP, deleted_full_file = :deleted_full, deleted_thumbnail_file = :deleted_thumb, available = 0 WHERE id = :id')->execute([
+    $stmt = $pdo->prepare('UPDATE images SET deleted_at = CURRENT_TIMESTAMP, deleted_full_file = :deleted_full, deleted_thumbnail_file = :deleted_thumb, available = 0 WHERE id = :id');
+    return (bool) gallery_safe_execute($stmt, [
         ':deleted_full' => $deletedFull,
         ':deleted_thumb' => $deletedThumb,
         ':id' => $imageId,
@@ -2088,7 +2108,8 @@ function gallery_restore_image(int $imageId): bool
         }
     }
 
-    return $pdo->prepare('UPDATE images SET deleted_at = NULL, deleted_full_file = NULL, deleted_thumbnail_file = NULL, available = 1 WHERE id = :id')->execute([':id' => $imageId]);
+    $stmt = $pdo->prepare('UPDATE images SET deleted_at = NULL, deleted_full_file = NULL, deleted_thumbnail_file = NULL, available = 1 WHERE id = :id');
+    return (bool) gallery_safe_execute($stmt, [':id' => $imageId]);
 }
 
 function gallery_delete_image(int $imageId): bool
@@ -2110,9 +2131,12 @@ function gallery_hard_delete_image(int $imageId): bool
         return false;
     }
 
-    $pdo->prepare('DELETE FROM image_tags WHERE image_id = :id')->execute([':id' => $imageId]);
-    $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :id')->execute([':id' => $imageId]);
-    $deleted = $pdo->prepare('DELETE FROM images WHERE id = :id')->execute([':id' => $imageId]);
+    $stmt = $pdo->prepare('DELETE FROM image_tags WHERE image_id = :id');
+    gallery_safe_execute($stmt, [':id' => $imageId]);
+    $stmt = $pdo->prepare('DELETE FROM image_exhibitions WHERE image_id = :id');
+    gallery_safe_execute($stmt, [':id' => $imageId]);
+    $stmt = $pdo->prepare('DELETE FROM images WHERE id = :id');
+    $deleted = (bool) gallery_safe_execute($stmt, [':id' => $imageId]);
 
     if ($deleted) {
         foreach (['full_file', 'thumbnail_file', 'deleted_full_file', 'deleted_thumbnail_file'] as $column) {
@@ -2147,7 +2171,8 @@ function gallery_remove_image_asset(int $imageId, string $asset): bool
         @unlink($file);
     }
 
-    return $pdo->prepare("UPDATE images SET {$column} = NULL, {$urlColumn} = NULL WHERE id = :id")->execute([':id' => $imageId]);
+    $stmt = $pdo->prepare("UPDATE images SET {$column} = NULL, {$urlColumn} = NULL WHERE id = :id");
+    return (bool) gallery_safe_execute($stmt, [':id' => $imageId]);
 }
 
 function gallery_require_auth(): void
