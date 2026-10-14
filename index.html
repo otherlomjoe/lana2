@@ -249,7 +249,8 @@
                   </div>
 
                   <div class="span6">
-                    <h3>Instagram: <a href="https://www.instagram.com/arty_adventures_with_lana/" target="_blank" rel="noopener">arty_adventures_with_lana</a></h3>
+                    <h3><a href="https://www.instagram.com/arty_adventures_with_lana/" target="_blank"
+                        rel="noopener">arty_adventures_with_lana</a> Instagram</h3>
 
                     <div id="instagram-feed">
                     </div>
@@ -298,6 +299,39 @@
               .then(function (html) {
                 var target = document.getElementById("instagram-feed");
                 if (target) target.innerHTML = html;
+
+                // after injecting the feed, adjust the Facebook iframe height to visually match
+                function adjustSocialHeights() {
+                  try {
+                    var insta = document.getElementById('instagram-feed');
+                    var fbWrapper = document.querySelector('#fb-plugin > div');
+                    var fbIframe = document.querySelector('#fb-plugin iframe');
+                    if (!insta || !fbIframe || !fbWrapper) return;
+
+                    // measure the rendered instagram feed height (including margin)
+                    var rect = insta.getBoundingClientRect();
+                    var h = insta.scrollHeight || Math.ceil(rect.height);
+
+                    // set a minimum and maximum so we don't produce odd sizes
+                    var minH = 200; var maxH = 900;
+                    h = Math.max(minH, Math.min(maxH, h));
+
+                    fbWrapper.style.height = h + 'px';
+                    fbIframe.style.height = h + 'px';
+                  } catch (e) {
+                    console.error('adjustSocialHeights error', e);
+                  }
+                }
+
+                // delay to allow images to load and re-measure
+                setTimeout(adjustSocialHeights, 300);
+                // also trigger on window resize (debounced)
+                var resizeTimer;
+                window.addEventListener('resize', function () {
+                  clearTimeout(resizeTimer);
+                  resizeTimer = setTimeout(adjustSocialHeights, 200);
+                });
+
               })
               .catch(function (err) {
                 console.error("Failed to load Instagram feed:", err);
