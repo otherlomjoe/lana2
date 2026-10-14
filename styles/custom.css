@@ -300,10 +300,16 @@ img {
 }
 
 /* Instagram feed styles (merged from styles.css) */
+:root { --social-feed-height: 500px; }
+
 .instagram-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
+  /* force a uniform visual height to match the Facebook iframe on desktop */
+  height: var(--social-feed-height);
+  grid-auto-rows: 1fr; /* ensure rows stretch to fill the container */
+  overflow: hidden;
 }
 
 .instagram-card {
@@ -313,19 +319,23 @@ img {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%; /* make cards stretch to the auto row height */
 }
 
 .insta-thumb {
   width: 100%;
-  height: auto;
   display: block;
   object-fit: cover;
-  aspect-ratio: 4 / 3;
+  /* image area takes the majority of the card so grid rows look balanced */
+  flex: 1 1 60%;
+  min-height: 0;
 }
 
 .insta-body {
   padding: 8px 10px;
-  flex: 1 1 auto;
+  flex: 0 0 40%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .insta-caption {
@@ -349,6 +359,28 @@ img {
 
 #instagram-feed { min-height: 2rem; }
 .instagram-error { color: #a00; font-style: italic; }
+
+/* Facebook plugin wrapper: make the iframe match the same visual height */
+#fb-plugin > div {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: var(--social-feed-height) !important;
+  overflow: hidden;
+}
+#fb-plugin iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+}
+
+/* On small screens relax the fixed height so both feeds are usable */
+@media (max-width: 800px) {
+  :root { --social-feed-height: 360px; }
+  .instagram-grid { height: var(--social-feed-height); overflow:auto; }
+  #fb-plugin > div { height: var(--social-feed-height) !important; }
+}
+
 
 /* Modal styles for viewing full post */
 .insta-modal {

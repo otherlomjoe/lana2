@@ -19,11 +19,15 @@ if (empty($accessToken)) {
 }
 
 $endpoint = "https://graph.instagram.com/me/media";
+// allow callers to request a different limit via ?limit=n (cap for safety)
+$requested_limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 12;
+$limit = max(1, min(12, $requested_limit));
+
 $params = [
     // request additional fields: timestamp, like and comments counts, and children for carousel
     "fields" => "id,caption,media_url,thumbnail_url,permalink,media_type,timestamp,like_count,comments_count,children",
     "access_token" => $accessToken,
-    "limit" => 12
+    "limit" => $limit
 ];
 
 $url = $endpoint . "?" . http_build_query($params);

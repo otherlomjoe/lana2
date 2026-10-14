@@ -249,7 +249,7 @@
                   </div>
 
                   <div class="span6">
-                    <h3>Instagram</h3>
+                    <h3>Instagram: <a href="https://www.instagram.com/arty_adventures_with_lana/" target="_blank" rel="noopener">arty_adventures_with_lana</a></h3>
 
                     <div id="instagram-feed">
                     </div>
@@ -286,6 +286,8 @@
             var params = new URLSearchParams();
             if (debug) params.set("debug", "1");
             params.set("_", Date.now()); // cache-buster
+            // request a smaller set of images (6) for the homepage
+            params.set("limit", "6");
             var url = "instagram-feed.php?" + params.toString();
 
             fetch(url, { credentials: 'same-origin' })
