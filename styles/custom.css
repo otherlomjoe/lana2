@@ -982,41 +982,67 @@ body {
 }
 
 /* Award styling on work page */
+
+.award-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .award-badge {
   display: inline-block;
   background: #fff6d6;
   padding: 6px 10px;
   border-radius: 6px;
-  margin-right: 10px;
+  margin-right: 0;
   border: 1px solid #eedfa8;
-  font-weight: 800;
+  font-weight: 700;
   color: #2b2b00;
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .award-desc {
   display: inline-block;
-  margin-left: 8px;
+  margin-left: 0;
   background: linear-gradient(90deg, #fffef0, #fff7d9);
-  padding: 6px 12px;
-  border-radius: 6px;
-  color: #1f2d3a;
-  font-weight: 700;
-  font-size: 1rem;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: #102028;
+  font-weight: 800;
+  font-size: 1.05rem;
   line-height: 1.2;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
   vertical-align: middle;
 }
 
 /* Stack nicely on small screens */
 @media (max-width: 767px) {
+  .award-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+  }
   .award-desc,
   .award-badge {
     display: block;
     margin: 8px 0;
   }
 }
+
+/* Small star element placed before the description */
+.award-star {
+  display: inline-block;
+  color: #c59a3d;
+  font-weight: 900;
+  margin-right: 6px;
+  font-size: 1.05rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+/* ensure award-desc aligns nicely when star is present */
+.award-desc { vertical-align: middle; }
 
 /* Search input sizing */
 #filter-search {

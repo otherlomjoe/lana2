@@ -240,6 +240,7 @@
 
                     <!-- Mobile Fallback -->
                     <div id="fb-mobile-message" style="display: none">
+                      
                       <p>
                         Facebook feed isn’t available on mobile.
                         <a href="https://www.facebook.com/lanaleighsartyadventures" target="_blank">Tap here to view our
@@ -289,19 +290,72 @@
             params.set("_", Date.now()); // cache-buster
             // request a smaller set of images (6) for the homepage
             params.set("limit", "6");
+            params.set("json", "1");
             var url = "instagram-feed.php?" + params.toString();
+
+            // state for paging
+            var nextCursor = null;
+            var loading = false;
+
+            function appendFeed(html) {
+              var target = document.getElementById("instagram-feed");
+              if (!target) return;
+              // append content
+              target.insertAdjacentHTML('beforeend', html);
+            }
+
+            function renderLoadMore() {
+              var existing = document.getElementById('insta-load-more');
+              if (existing) existing.remove();
+              if (!nextCursor) return;
+              var btn = document.createElement('button');
+              btn.id = 'insta-load-more';
+              btn.className = 'btn btn-small btn-info';
+              btn.textContent = 'Load more';
+              btn.style.display = 'block';
+              btn.style.marginTop = '12px';
+              btn.addEventListener('click', function () {
+                if (loading) return;
+                loading = true;
+                btn.textContent = 'Loading...';
+                fetch('instagram-feed.php?json=1&limit=6&after=' + encodeURIComponent(nextCursor), { credentials: 'same-origin' })
+                  .then(function (res) { if (!res.ok) throw new Error('Network error'); return res.json(); })
+                  .then(function (data) {
+                    if (data && data.html) {
+                      appendFeed(data.html);
+                      nextCursor = data.next_cursor || null;
+                      renderLoadMore();
+                      // re-run layout adjustments after images load
+                      waitForImages(document.getElementById('instagram-feed'), 3000).then(function () { adjustSocialHeightsOnce(); });
+                    }
+                  })
+                  .catch(function (e) { console.error('Load more failed', e); })
+                  .finally(function () { loading = false; btn.textContent = 'Load more'; });
+              });
+              var target = document.getElementById('instagram-feed');
+              if (target) target.parentNode.insertBefore(btn, target.nextSibling);
+            }
 
             fetch(url, { credentials: 'same-origin' })
               .then(function (res) {
                 if (!res.ok) throw new Error("Network response was not ok: " + res.status);
-                return res.text();
+                // try json first
+                return res.json().catch(function () { return res.text(); });
               })
-              .then(function (html) {
+              .then(function (data) {
                 var target = document.getElementById("instagram-feed");
-                if (target) target.innerHTML = html;
+                if (!target) return;
+
+                if (typeof data === 'string') {
+                  // fallback: server returned HTML
+                  target.innerHTML = data;
+                } else if (data && data.html) {
+                  target.innerHTML = data.html;
+                  nextCursor = data.next_cursor || null;
+                }
 
                 // after injecting the feed, adjust the Facebook iframe height to visually match
-                function adjustSocialHeights() {
+                function adjustSocialHeightsOnce() {
                   try {
                     var insta = document.getElementById('instagram-feed');
                     var fbWrapper = document.querySelector('#fb-plugin > div');
@@ -312,8 +366,8 @@
                     var rect = insta.getBoundingClientRect();
                     var h = insta.scrollHeight || Math.ceil(rect.height);
 
-                    // set a minimum and maximum so we don't produce odd sizes
-                    var minH = 200; var maxH = 900;
+                    // set reasonable bounds to avoid extreme sizes
+                    var minH = 200; var maxH = 1600;
                     h = Math.max(minH, Math.min(maxH, h));
 
                     fbWrapper.style.height = h + 'px';
@@ -323,14 +377,68 @@
                   }
                 }
 
-                // delay to allow images to load and re-measure
-                setTimeout(adjustSocialHeights, 300);
-                // also trigger on window resize (debounced)
+                // Wait for images in the injected feed to load (so height is stable)
+                function waitForImages(container, timeout) {
+                  return new Promise(function (resolve) {
+                    try {
+                      var imgs = container.querySelectorAll('img');
+                      if (!imgs || imgs.length === 0) return resolve();
+                      var toLoad = imgs.length;
+                      var done = false;
+                      var timer = setTimeout(function () { if (!done) { done = true; resolve(); } }, timeout || 3000);
+
+                      imgs.forEach(function (img) {
+                        if (img.complete && img.naturalHeight) {
+                          toLoad -= 1;
+                          if (toLoad === 0 && !done) { done = true; clearTimeout(timer); resolve(); }
+                        } else {
+                          img.addEventListener('load', function () {
+                            if (done) return;
+                            toLoad -= 1;
+                            if (toLoad === 0 && !done) { done = true; clearTimeout(timer); resolve(); }
+                          });
+                          img.addEventListener('error', function () {
+                            if (done) return;
+                            toLoad -= 1;
+                            if (toLoad === 0 && !done) { done = true; clearTimeout(timer); resolve(); }
+                          });
+                        }
+                      });
+                    } catch (e) { resolve(); }
+                  });
+                }
+
+                // measure repeatedly until height stabilises (useful for images loading in sequence)
+                waitForImages(document.getElementById('instagram-feed'), 4000).then(function () {
+                  var attempts = 0;
+                  var lastHeight = 0;
+                  function measureLoop() {
+                    var insta = document.getElementById('instagram-feed');
+                    if (!insta) return;
+                    var h = insta.scrollHeight || insta.getBoundingClientRect().height;
+                    // first adjust immediately
+                    adjustSocialHeightsOnce();
+                    // if height changed significantly, try again (up to 6 times)
+                    if (Math.abs(h - lastHeight) > 6 && attempts < 6) {
+                      lastHeight = h;
+                      attempts += 1;
+                      setTimeout(measureLoop, 300);
+                    }
+                  }
+                  measureLoop();
+                });
+
+                // also trigger on window resize (debounced) and re-measure after images have time to reflow
                 var resizeTimer;
                 window.addEventListener('resize', function () {
                   clearTimeout(resizeTimer);
-                  resizeTimer = setTimeout(adjustSocialHeights, 200);
+                  resizeTimer = setTimeout(function () {
+                    waitForImages(document.getElementById('instagram-feed'), 1500).then(function () { adjustSocialHeightsOnce(); });
+                  }, 250);
                 });
+
+                // render Load more button if more pages available
+                renderLoadMore();
 
               })
               .catch(function (err) {

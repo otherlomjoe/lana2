@@ -30,6 +30,11 @@ $params = [
     "limit" => $limit
 ];
 
+// support cursor paging via ?after=CURSOR
+if (!empty($_GET['after'])) {
+    $params['after'] = $_GET['after'];
+}
+
 $url = $endpoint . "?" . http_build_query($params);
 
 // Enable debug output when called with ?debug=1
@@ -38,7 +43,9 @@ $debug = !empty($_GET['debug']);
 // Simple filesystem cache to reduce API calls and improve resilience
 $cache_ttl = 300; // seconds
 $cache_dir = __DIR__ . '/gallery/cache';
-$cache_file = $cache_dir . '/instagram.json';
+// use per-request cache files so paginated requests don't collide
+$cache_key = md5($url);
+$cache_file = $cache_dir . '/instagram.' . $cache_key . '.json';
 
 if (!is_dir($cache_dir)) {
     @mkdir($cache_dir, 0755, true);
@@ -167,7 +174,8 @@ if (!empty($data['error'])) {
 }
 
 if (!empty($data["data"])) {
-    echo '<div class="instagram-grid">';
+    $out = '';
+    $out .= '<div class="instagram-grid">';
     foreach ($data["data"] as $item) {
         $thumb = $item["thumbnail_url"] ?? $item["media_url"] ?? '';
         $media = $item["media_url"] ?? '';
@@ -187,26 +195,26 @@ if (!empty($data["data"])) {
                     . 'data-comments="' . htmlspecialchars((string)$comments, ENT_QUOTES) . '" '
                     . 'data-permalink="' . htmlspecialchars($link, ENT_QUOTES) . '" ';
 
-        echo '<article class="instagram-card" ' . $data_attrs . '>';
-        echo '<a class="insta-link" href="' . htmlspecialchars($link, ENT_QUOTES) . '" target="_blank" rel="noopener">';
-        echo '<img class="insta-thumb" src="' . htmlspecialchars($thumb, ENT_QUOTES) . '" alt="' . htmlspecialchars($caption_full, ENT_QUOTES) . '" loading="lazy">';
-        echo '</a>';
-        echo '<div class="insta-body">';
-        echo '<p class="insta-caption">' . $caption . '</p>';
-        echo '<div class="insta-meta">';
-        echo '<div class="meta-left">';
-        if ($likes !== null) echo '<span class="meta-likes">&#10084; ' . $likes . '</span>';
-        if ($comments !== null) echo '<span class="meta-comments">&#128172; ' . $comments . '</span>';
-        echo '</div>';
-        if ($ts) echo '<time datetime="' . htmlspecialchars($ts, ENT_QUOTES) . '">' . htmlspecialchars(date('j M Y', strtotime($ts))) . '</time>';
-        echo '</div>'; // insta-meta
-        echo '</div>'; // insta-body
-        echo '</article>';
+        $out .= '<article class="instagram-card" ' . $data_attrs . '>';
+        $out .= '<a class="insta-link" href="' . htmlspecialchars($link, ENT_QUOTES) . '" target="_blank" rel="noopener">';
+        $out .= '<img class="insta-thumb" src="' . htmlspecialchars($thumb, ENT_QUOTES) . '" alt="' . htmlspecialchars($caption_full, ENT_QUOTES) . '" loading="lazy">';
+        $out .= '</a>';
+        $out .= '<div class="insta-body">';
+        $out .= '<p class="insta-caption">' . $caption . '</p>';
+        $out .= '<div class="insta-meta">';
+        $out .= '<div class="meta-left">';
+        if ($likes !== null) $out .= '<span class="meta-likes">&#10084; ' . $likes . '</span>';
+        if ($comments !== null) $out .= '<span class="meta-comments">&#128172; ' . $comments . '</span>';
+        $out .= '</div>';
+        if ($ts) $out .= '<time datetime="' . htmlspecialchars($ts, ENT_QUOTES) . '">' . htmlspecialchars(date('j M Y', strtotime($ts))) . '</time>';
+        $out .= '</div>'; // insta-meta
+        $out .= '</div>'; // insta-body
+        $out .= '</article>';
     }
-    echo '</div>';
+    $out .= '</div>';
 
-    // modal container (injected with feed so no additional HTML edits required)
-    echo '<div id="insta-modal" class="insta-modal" aria-hidden="true">'
+    // modal container and script (only include on first page to avoid duplicates)
+    $modal_html = '<div id="insta-modal" class="insta-modal" aria-hidden="true">'
        . '<div class="modal-inner">'
        . '<button class="close-btn" aria-label="Close">Close</button>'
        . '<div class="media-pane"><div class="media-wrap"></div></div>'
@@ -219,8 +227,7 @@ if (!empty($data["data"])) {
        . '</div>'
        . '</div>';
 
-    // small inline script to wire modal opening (delegated handler)
-    echo '<script> (function(){ '
+    $modal_script = '<script> (function(){ '
       . 'document.addEventListener("click", function(ev){ '
         . 'var card = ev.target.closest && ev.target.closest(".instagram-card"); '
         . 'if (!card) return; ev.preventDefault(); '
@@ -244,6 +251,26 @@ if (!empty($data["data"])) {
       . 'document.addEventListener("click", function(ev){ var close = ev.target.closest && ev.target.closest(".close-btn"); var modal = document.getElementById("insta-modal"); if (close && modal) { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); } }, false); '
       . 'document.addEventListener("keydown", function(ev){ var modal = document.getElementById("insta-modal"); if (ev.key === "Escape" && modal && modal.classList.contains("open")) { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); } }, false); '
     . '})(); </script>';
+
+    // prepare final output — include modal only for first page
+    $out = $out;
+    if (empty($_GET['after'])) {
+        $out .= $modal_html . $modal_script;
+    }
+
+    // if json requested, return json with html and paging cursor
+    if (!empty($_GET['json'])) {
+        $next_cursor = null;
+        if (!empty($data['paging']['cursors']['after'])) {
+            $next_cursor = $data['paging']['cursors']['after'];
+        }
+        $result = ['html' => $out, 'next_cursor' => $next_cursor];
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+        return;
+    }
+
+    echo $out;
 
 } else {
     if ($debug) {
