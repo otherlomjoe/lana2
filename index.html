@@ -367,16 +367,17 @@
                     var rect = insta.getBoundingClientRect();
                     var h = insta.scrollHeight || Math.ceil(rect.height);
 
-                    // add a small buffer to account for iframe chrome, borders and rounding
-                    var buffer = 40;
+                    // add a larger buffer to account for iframe chrome, borders and rounding
+                    var buffer = 120;
 
                     // set reasonable bounds to avoid extreme sizes (raise min so FB isn't too short)
-                    var minH = 300; var maxH = 2000;
+                    var minH = 500; var maxH = 5000;
                     h = Math.max(minH, Math.min(maxH, h + buffer));
 
-                    // apply heights and some overflow handling to reduce inner scrollbars
+                    // apply heights and allow visible overflow so page scrollbar is used if iframe still needs internal scroll
                     fbWrapper.style.height = h + 'px';
-                    fbWrapper.style.overflow = 'hidden';
+                    fbWrapper.style.overflow = 'visible';
+                    fbWrapper.style.maxHeight = 'none';
 
                     var w = Math.round(insta.clientWidth || insta.getBoundingClientRect().width || 500);
 
@@ -411,6 +412,7 @@
                       oldIframe.style.height = h + 'px';
                       oldIframe.style.minHeight = h + 'px';
                       try { oldIframe.setAttribute('height', Math.round(h)); } catch (e) {}
+                      oldIframe.setAttribute('scrolling', 'no');
                     } else {
                       // create a fresh iframe with the desired dimensions and src
                       var newIframe = document.createElement('iframe');
@@ -418,11 +420,15 @@
                       newIframe.setAttribute('width', w);
                       newIframe.setAttribute('height', Math.round(h));
                       newIframe.style.border = 'none';
-                      newIframe.style.overflow = 'hidden';
+                      newIframe.style.overflow = 'visible';
                       newIframe.style.height = h + 'px';
-                      newIframe.setAttribute('scrolling', 'yes');
+                      newIframe.style.minHeight = h + 'px';
+                      newIframe.setAttribute('scrolling', 'no');
                       newIframe.setAttribute('frameborder', '0');
                       newIframe.setAttribute('allowtransparency', 'true');
+
+                      // ensure the iframe uses the full wrapper space and doesn't introduce an extra scrollbar
+                      newIframe.style.display = 'block';
 
                       if (oldIframe && oldIframe.parentNode) {
                         oldIframe.parentNode.replaceChild(newIframe, oldIframe);
