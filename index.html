@@ -360,8 +360,8 @@
                     var insta = document.getElementById('instagram-feed');
                     // prefer the top-level fb-plugin container but fall back to the inner div
                     var fbWrapper = document.querySelector('#fb-plugin') || document.querySelector('#fb-plugin > div');
-                    var fbIframe = document.querySelector('#fb-plugin iframe');
-                    if (!insta || !fbIframe || !fbWrapper) return;
+                    var oldIframe = document.querySelector('#fb-plugin iframe');
+                    if (!insta || !fbWrapper) return;
 
                     // measure the rendered instagram feed height (including margin)
                     var rect = insta.getBoundingClientRect();
@@ -377,16 +377,62 @@
                     // apply heights and some overflow handling to reduce inner scrollbars
                     fbWrapper.style.height = h + 'px';
                     fbWrapper.style.overflow = 'hidden';
-                    fbIframe.style.height = h + 'px';
-                    fbIframe.style.minHeight = h + 'px';
 
-                    // also set the iframe height attribute (some embed scripts read this)
-                    try { fbIframe.setAttribute('height', Math.round(h)); } catch (e) {}
+                    var w = Math.round(insta.clientWidth || insta.getBoundingClientRect().width || 500);
 
-                    // ensure the iframe repaints/reflows
-                    fbIframe.style.display = 'block';
+                    // determine base src for the embed
+                    var baseSrc = null;
+                    if (oldIframe && oldIframe.getAttribute('data-original-src')) {
+                      baseSrc = oldIframe.getAttribute('data-original-src');
+                    } else if (oldIframe && oldIframe.getAttribute('src')) {
+                      baseSrc = oldIframe.getAttribute('src');
+                      // remember original for future adjustments
+                      try { oldIframe.setAttribute('data-original-src', baseSrc); } catch (e) {}
+                    } else {
+                      // nothing to do
+                      return;
+                    }
+
+                    var newSrc = baseSrc;
+                    try {
+                      var u = new URL(baseSrc);
+                      u.searchParams.set('height', Math.round(h));
+                      u.searchParams.set('width', w);
+                      newSrc = u.toString();
+                    } catch (e) {
+                      // fallback string manipulation
+                      newSrc = baseSrc.replace(/([&?])height=\d+/, '$1height=' + Math.round(h));
+                      if (newSrc === baseSrc) newSrc = baseSrc + (baseSrc.indexOf('?') === -1 ? '?' : '&') + 'height=' + Math.round(h);
+                      newSrc = newSrc.replace(/([&?])width=\d+/, '$1width=' + w);
+                    }
+
+                    // if iframe exists and already matches, just update styles
+                    if (oldIframe && oldIframe.getAttribute('src') === newSrc) {
+                      oldIframe.style.height = h + 'px';
+                      oldIframe.style.minHeight = h + 'px';
+                      try { oldIframe.setAttribute('height', Math.round(h)); } catch (e) {}
+                    } else {
+                      // create a fresh iframe with the desired dimensions and src
+                      var newIframe = document.createElement('iframe');
+                      newIframe.setAttribute('src', newSrc);
+                      newIframe.setAttribute('width', w);
+                      newIframe.setAttribute('height', Math.round(h));
+                      newIframe.style.border = 'none';
+                      newIframe.style.overflow = 'hidden';
+                      newIframe.style.height = h + 'px';
+                      newIframe.setAttribute('scrolling', 'yes');
+                      newIframe.setAttribute('frameborder', '0');
+                      newIframe.setAttribute('allowtransparency', 'true');
+
+                      if (oldIframe && oldIframe.parentNode) {
+                        oldIframe.parentNode.replaceChild(newIframe, oldIframe);
+                      } else {
+                        fbWrapper.appendChild(newIframe);
+                      }
+                    }
+
                     // small forced reflow
-                    void fbIframe.offsetHeight;
+                    void fbWrapper.offsetHeight;
                   } catch (e) {
                     console.error('adjustSocialHeights error', e);
                   }
