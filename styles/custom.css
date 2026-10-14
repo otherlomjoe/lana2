@@ -299,6 +299,23 @@ img {
   color: var(--white);
 }
 
+/* Instagram feed styles (merged from styles.css) */
+.instagram-feed-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.instagram-item img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+}
+
+#instagram-feed { min-height: 2rem; }
+.instagram-error { color: #a00; font-style: italic; }
+
 .ex-row-highlight {
   animation: highlightFlash 1s ease;
 }
