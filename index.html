@@ -358,7 +358,8 @@
                 function adjustSocialHeightsOnce() {
                   try {
                     var insta = document.getElementById('instagram-feed');
-                    var fbWrapper = document.querySelector('#fb-plugin > div');
+                    // prefer the top-level fb-plugin container but fall back to the inner div
+                    var fbWrapper = document.querySelector('#fb-plugin') || document.querySelector('#fb-plugin > div');
                     var fbIframe = document.querySelector('#fb-plugin iframe');
                     if (!insta || !fbIframe || !fbWrapper) return;
 
@@ -366,12 +367,26 @@
                     var rect = insta.getBoundingClientRect();
                     var h = insta.scrollHeight || Math.ceil(rect.height);
 
-                    // set reasonable bounds to avoid extreme sizes
-                    var minH = 200; var maxH = 1600;
-                    h = Math.max(minH, Math.min(maxH, h));
+                    // add a small buffer to account for iframe chrome, borders and rounding
+                    var buffer = 40;
 
+                    // set reasonable bounds to avoid extreme sizes (raise min so FB isn't too short)
+                    var minH = 300; var maxH = 2000;
+                    h = Math.max(minH, Math.min(maxH, h + buffer));
+
+                    // apply heights and some overflow handling to reduce inner scrollbars
                     fbWrapper.style.height = h + 'px';
+                    fbWrapper.style.overflow = 'hidden';
                     fbIframe.style.height = h + 'px';
+                    fbIframe.style.minHeight = h + 'px';
+
+                    // also set the iframe height attribute (some embed scripts read this)
+                    try { fbIframe.setAttribute('height', Math.round(h)); } catch (e) {}
+
+                    // ensure the iframe repaints/reflows
+                    fbIframe.style.display = 'block';
+                    // small forced reflow
+                    void fbIframe.offsetHeight;
                   } catch (e) {
                     console.error('adjustSocialHeights error', e);
                   }

@@ -458,9 +458,9 @@
           const safeDesc = escapedDesc
             ? `<span class="award-desc">${escapedDesc}</span>`
             : "";
-          // Swap order: description first, then compact badge. Wrap for layout control.
+          // Description should be the prominent badge with the star before it; title becomes a secondary badge.
           document.getElementById("art-award").innerHTML =
-            `<div class="award-wrap">` + ` <span class="award-star">★</span> ` + safeDesc + ` <span class="award-badge">${item.awardTitle}</span>` + `</div>`;
+            `<div class="award-wrap">` + (escapedDesc ? `<span class="award-desc">★ ${escapedDesc}</span>` : '') + ` <span class="award-badge">${item.awardTitle}</span>` + `</div>`;
         }
 
         // Public price / value under description

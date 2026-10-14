@@ -990,31 +990,32 @@ body {
   flex-wrap: wrap;
 }
 
-.award-badge {
-  display: inline-block;
-  background: #fff6d6;
-  padding: 6px 10px;
-  border-radius: 6px;
-  margin-right: 0;
-  border: 1px solid #eedfa8;
-  font-weight: 700;
-  color: #2b2b00;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-  font-size: 0.9rem;
-}
-
+/* Description is the primary badge: bright yellow, bold and prominent */
 .award-desc {
   display: inline-block;
-  margin-left: 0;
-  background: linear-gradient(90deg, #fffef0, #fff7d9);
-  padding: 8px 14px;
-  border-radius: 8px;
-  color: #102028;
-  font-weight: 800;
+  background: #ffd400; /* bright yellow */
+  color: #0b0b0b;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 900;
   font-size: 1.05rem;
   line-height: 1.2;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.12);
+  border: 1px solid #ffcf00;
   vertical-align: middle;
+}
+
+/* Award title becomes a secondary, softer badge */
+.award-badge {
+  display: inline-block;
+  background: #fff7d0; /* softer pale yellow */
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #f0e0a0;
+  color: #2b2b00;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  font-size: 0.9rem;
 }
 
 /* Stack nicely on small screens */
@@ -1030,18 +1031,7 @@ body {
   }
 }
 
-/* Small star element placed before the description */
-.award-star {
-  display: inline-block;
-  color: #c59a3d;
-  font-weight: 900;
-  margin-right: 6px;
-  font-size: 1.05rem;
-  line-height: 1;
-  vertical-align: middle;
-}
-
-/* ensure award-desc aligns nicely when star is present */
+/* ensure award-desc aligns nicely */
 .award-desc { vertical-align: middle; }
 
 /* Search input sizing */
