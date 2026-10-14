@@ -413,7 +413,7 @@
                       oldIframe.style.height = h + 'px';
                       oldIframe.style.minHeight = h + 'px';
                       try { oldIframe.setAttribute('height', Math.round(h)); } catch (e) { }
-                      oldIframe.setAttribute('scrolling', 'no');
+                      oldIframe.setAttribute('scrolling', 'yes');
                     } else {
                       // create a fresh iframe with the desired dimensions and src
                       var newIframe = document.createElement('iframe');
@@ -424,7 +424,7 @@
                       newIframe.style.overflow = 'visible';
                       newIframe.style.height = h + 'px';
                       newIframe.style.minHeight = h + 'px';
-                      newIframe.setAttribute('scrolling', 'no');
+                      newIframe.setAttribute('scrolling', 'yes');
                       newIframe.setAttribute('frameborder', '0');
                       newIframe.setAttribute('allowtransparency', 'true');
 
